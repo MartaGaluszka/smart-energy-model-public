@@ -1,0 +1,158 @@
+.se-header ion-toolbar {
+  --background: var(--bg);
+  --border-color: transparent;
+}
+
+.se-brand {
+  display: flex;
+  flex-direction: column;
+  padding-left: 4px;
+  line-height: 1.1;
+}
+
+.se-brand__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.se-brand__tagline {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.se-home {
+  --background: var(--bg);
+}
+
+.se-page {
+  padding: 4px 12px 32px;
+}
+
+.se-card {
+  --background: var(--surface);
+  margin: 10px 0;
+}
+
+.se-offline-badge {
+  --background: var(--cost);
+  --color: #fafaf8;
+  margin-bottom: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.se-sync-card .se-sync-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.se-sync-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.se-sync-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.se-sync-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.se-sync-message {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--cost);
+  line-height: 1.4;
+
+  &--info {
+    color: var(--text-muted);
+  }
+}
+
+.se-sync-btn {
+  --background: var(--solar);
+  --background-activated: var(--solar-pressed);
+  --color: var(--text);
+  --border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.se-kpi-grid {
+  padding: 0;
+}
+
+.se-banner {
+  border-left: 3px solid var(--solar);
+}
+
+.se-banner__row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.se-banner__icon {
+  font-size: 20px;
+  color: var(--solar-pressed);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.se-banner__text {
+  font-size: 13px;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.se-banner__more {
+  --color: var(--solar-pressed);
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.se-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 4px 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.se-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.se-suggestion__title {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.se-suggestion__body {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.se-demo-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 16px;
+}

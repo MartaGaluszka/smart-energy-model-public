@@ -1,0 +1,287 @@
+<ion-header [translucent]="true" class="se-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/more" text="Więcej"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="font-serif">Symulator</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content #ionContent [fullscreen]="true" class="se-simulator" *ngIf="state as s">
+  <div class="se-page">
+
+    <ion-card class="se-card se-info-card">
+      <ion-card-content>
+        <p>
+          <strong>Jak korzystać z symulatora:</strong> najpierw wpisz stawki z faktury za prąd
+          (przynajmniej energię strefa 1 i 2) i zapisz, potem wybierz okres i kliknij
+          "Policz rachunek".
+        </p>
+        <p>
+          Twoja taryfa zmieniała się w ciągu roku? Możesz zapisać kilka stawek z różnymi datami
+          "Ważne od" — kalkulator sam dopasuje właściwą stawkę do każdego pod-okresu przy liczeniu
+          rachunku. Jeśli nie masz jeszcze żadnej zapisanej stawki, użyjemy domyślnej taryfy Tauron.
+        </p>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Formularz stawek (T2.4) — najpierw taryfa, potem okres (patrz uwagi UX 2026-07-29) -->
+    <div class="se-section-title">
+      <ion-icon name="receipt-outline"></ion-icon>
+      <span>Dodaj / edytuj stawkę</span>
+    </div>
+    <ion-card class="se-card">
+      <ion-card-content>
+        <div class="se-form-grid" *ngIf="!s.loadingRates; else ratesSpinner">
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">Taryfa</ion-label>
+            <ion-input [value]="s.form.tariff_name" (ionChange)="onField('tariff_name', $any($event.target).value)"></ion-input>
+          </ion-item>
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">Ważne od</ion-label>
+            <ion-datetime-button datetime="dtValidFrom"></ion-datetime-button>
+          </ion-item>
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">Energia strefa 1 [zł/kWh]</ion-label>
+            <ion-input type="number" inputmode="decimal" step="0.01"
+              [value]="s.form.price_zone1_day"
+              (ionChange)="onField('price_zone1_day', $any($event.target).value)"></ion-input>
+          </ion-item>
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">Energia strefa 2 [zł/kWh]</ion-label>
+            <ion-input type="number" inputmode="decimal" step="0.01"
+              [value]="s.form.price_zone2_night"
+              (ionChange)="onField('price_zone2_night', $any($event.target).value)"></ion-input>
+          </ion-item>
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">Dystrybucja z1 [zł/kWh]</ion-label>
+            <ion-input type="number" inputmode="decimal" step="0.01"
+              [value]="s.form.distribution_zone1"
+              (ionChange)="onField('distribution_zone1', $any($event.target).value)"></ion-input>
+          </ion-item>
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">Dystrybucja z2 [zł/kWh]</ion-label>
+            <ion-input type="number" inputmode="decimal" step="0.01"
+              [value]="s.form.distribution_zone2"
+              (ionChange)="onField('distribution_zone2', $any($event.target).value)"></ion-input>
+          </ion-item>
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">Opłata stała [zł/mies.]</ion-label>
+            <ion-input type="number" inputmode="decimal" step="0.01"
+              [value]="s.form.subscription_fee_monthly"
+              (ionChange)="onField('subscription_fee_monthly', $any($event.target).value)"></ion-input>
+          </ion-item>
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">Opłata mocowa [zł/mies.]</ion-label>
+            <ion-input type="number" inputmode="decimal" step="0.01"
+              [value]="s.form.power_fee_monthly"
+              (ionChange)="onField('power_fee_monthly', $any($event.target).value)"></ion-input>
+          </ion-item>
+        </div>
+        <ng-template #ratesSpinner>
+          <div class="se-center"><ion-spinner name="crescent"></ion-spinner></div>
+        </ng-template>
+
+        <div class="se-form-actions">
+          <ion-button expand="block" class="se-btn-secondary" [disabled]="s.savingRates" (click)="saveRates()">
+            <ion-spinner *ngIf="s.savingRates" name="crescent" slot="start"></ion-spinner>
+            Zapisz stawkę
+          </ion-button>
+          <ion-button fill="clear" size="small" class="se-btn-link" (click)="startNewRate()">
+            + Dodaj kolejną stawkę (inna data)
+          </ion-button>
+        </div>
+        <p class="se-ok-note" *ngIf="s.saveMessage">{{ s.saveMessage }}</p>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Historia zapisanych stawek — może być kilka (zmiana taryfy w ciągu roku) -->
+    <ng-container *ngIf="s.history.length > 0">
+      <div class="se-section-title">
+        <ion-icon name="time-outline"></ion-icon>
+        <span>Historia stawek ({{ s.history.length }})</span>
+      </div>
+      <ion-card class="se-card se-history-card">
+        <ion-card-content>
+          <div
+            class="se-history-row"
+            *ngFor="let rate of s.history"
+            (click)="editRate(rate)"
+          >
+            <div class="se-history-main">
+              <span class="se-history-date">Od {{ formatDate(rate.valid_from) }}</span>
+              <span class="se-history-rates">
+                Strefa 1: {{ rate.price_zone1_day }} zł/kWh · Strefa 2: {{ rate.price_zone2_night }} zł/kWh
+              </span>
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              color="danger"
+              [disabled]="s.deletingValidFrom === rate.valid_from"
+              (click)="deleteRate(rate, $event)"
+            >
+              <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </ng-container>
+
+    <!-- Okres — na końcu, tuż przed przyciskiem, zgodnie z naturalnym tokiem: najpierw stawki, potem za jaki okres liczymy -->
+    <div class="se-section-title">
+      <ion-icon name="calendar-outline"></ion-icon>
+      <span>Okres symulacji</span>
+    </div>
+    <ion-card class="se-card">
+      <ion-card-content>
+        <ion-item lines="none" class="se-field">
+          <ion-label position="stacked">Od</ion-label>
+          <ion-datetime-button datetime="dtPeriodStart"></ion-datetime-button>
+        </ion-item>
+        <ion-item lines="none" class="se-field">
+          <ion-label position="stacked">Do</ion-label>
+          <ion-datetime-button datetime="dtPeriodEnd"></ion-datetime-button>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-button expand="block" class="se-btn-primary" [disabled]="s.simulating" (click)="runSimulation()">
+      <ion-spinner *ngIf="s.simulating" name="crescent" slot="start"></ion-spinner>
+      Policz rachunek
+    </ion-button>
+
+    <p class="se-chart-error" *ngIf="s.error">{{ s.error }}</p>
+
+    <!-- Wynik: kwoty (T2.7 netto+brutto razem) OD RAZU pod przyciskiem — bez przewijania do
+         wykresu, zgodnie z uwagami UX 2026-07-29. Karta z wykresem jest niżej (patrz dalej),
+         bo do samego porównania kwot nie jest niezbędna.
+         `#resultSection` MUSI być poza `*ngIf` (widoczność przez [hidden]) — inaczej
+         @ViewChild('resultSection') bywa `undefined` w momencie pierwszego auto-scrolla,
+         z tego samego powodu co canvas wykresu niżej (Angular nie zdąża wstawić elementu do
+         DOM po *ngIf, zanim subskrypcja stanu odpali scrollToResult()). -->
+    <div #resultSection class="se-section-title" [hidden]="!s.result">
+      <ion-icon name="cash-outline"></ion-icon>
+      <span>Wynik symulacji</span>
+    </div>
+    <ng-container *ngIf="s.result as r">
+      <p class="se-vat-note">Netto — suma pozycji jak na fakturze. Brutto — z VAT 23%, czyli kwota "do zapłaty".</p>
+      <div class="se-kpi-row">
+        <ion-card class="se-card se-kpi se-kpi--compact">
+          <ion-card-content>
+            <span class="se-kpi__value">{{ formatPln(r.cost_no_pv_gross_pln) }}</span>
+            <span class="se-kpi__sub">netto {{ formatPln(r.cost_no_pv_net_pln) }}</span>
+            <span class="se-kpi__label">Bez paneli</span>
+          </ion-card-content>
+        </ion-card>
+        <ion-card class="se-card se-kpi se-kpi--compact">
+          <ion-card-content>
+            <span class="se-kpi__value se-kpi__value--solar">{{ formatPln(r.cost_with_pv_gross_pln) }}</span>
+            <span class="se-kpi__sub">netto {{ formatPln(r.cost_with_pv_net_pln) }}</span>
+            <span class="se-kpi__label">Z PV</span>
+          </ion-card-content>
+        </ion-card>
+        <ion-card class="se-card se-kpi se-kpi--compact">
+          <ion-card-content>
+            <span class="se-kpi__value se-kpi__value--moss">{{ formatPln(r.savings_gross_pln) }}</span>
+            <span class="se-kpi__sub">netto {{ formatPln(r.savings_net_pln) }}</span>
+            <span class="se-kpi__label">Oszczędność</span>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- T2.6: mini tabela kWh — dach (produkcja) / sieć (import) / oddanie (eksport) -->
+      <ion-card class="se-card">
+        <ion-card-content>
+          <p class="se-mini-kwh">
+            Dach (produkcja): <strong>{{ formatKwh(r.production_kwh) }}</strong>
+            · Sieć (import): <strong>{{ formatKwh(r.import_kwh) }}</strong>
+            · Oddanie (eksport): <strong>{{ formatKwh(r.export_kwh) }}</strong>
+            <br />
+            Autokonsumpcja: <strong>{{ formatKwh(r.self_consumed_kwh) }}</strong>
+          </p>
+        </ion-card-content>
+      </ion-card>
+    </ng-container>
+
+    <!-- Wykres (T2.5) -->
+    <!-- Uwaga: karta z <canvas> jest MONTOWANA ZAWSZE (widoczność przez [hidden]), a nie przez
+         *ngIf — inaczej @ViewChild('billCanvas') jest `undefined` w momencie pierwszego
+         renderChart() (subskrypcja stanu odpala się synchronicznie, zanim Angular zdąży
+         wstawić <canvas> do DOM po *ngIf), więc wykres nigdy się nie rysował. -->
+    <div class="se-section-title" [hidden]="!s.result">
+      <ion-icon name="bar-chart-outline"></ion-icon>
+      <span>Wykres</span>
+    </div>
+
+    <ion-card class="se-card se-chart-card" [hidden]="!s.result">
+      <ion-card-content>
+        <div class="se-chart-wrap">
+          <canvas #billCanvas></canvas>
+        </div>
+        <div class="se-legend">
+          <span class="se-legend__item"><i class="se-swatch se-swatch--grid"></i>Bez paneli</span>
+          <span class="se-legend__item"><i class="se-swatch se-swatch--solar"></i>Z PV</span>
+          <span class="se-legend__item"><i class="se-swatch se-swatch--moss"></i>Oszczędność</span>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <p class="se-demo-note">
+      Formuła §7.3: koszt bez PV ≈ zużycie domu × stawki; z PV ≈ import z sieci × stawki.
+      VAT 23% (T2.7) doliczany na końcu. Depozyt RCEm (T2.8) jeszcze nie wliczony.
+    </p>
+  </div>
+
+  <!-- ion-datetime w modalach — zamiast natywnego <input type="date">, żeby mieć spójny,
+       zawsze POLSKI (locale="pl-PL") kalendarz na wszystkich platformach (Safari/WebKit na iOS
+       nie rysuje żadnej ikonki na natywnym polu, a język/format zależy od ustawień systemu,
+       nie apki). -->
+  <ion-modal [keepContentsMounted]="true">
+    <ng-template>
+      <ion-datetime
+        id="dtValidFrom"
+        presentation="date"
+        locale="pl-PL"
+        [firstDayOfWeek]="1"
+        [showDefaultButtons]="true"
+        doneText="Gotowe"
+        cancelText="Anuluj"
+        [value]="s.form.valid_from"
+        (ionChange)="onValidFrom($any($event.target).value)"
+      ></ion-datetime>
+    </ng-template>
+  </ion-modal>
+
+  <ion-modal [keepContentsMounted]="true">
+    <ng-template>
+      <ion-datetime
+        id="dtPeriodStart"
+        presentation="date"
+        locale="pl-PL"
+        [firstDayOfWeek]="1"
+        [showDefaultButtons]="true"
+        doneText="Gotowe"
+        cancelText="Anuluj"
+        [value]="s.periodStart"
+        (ionChange)="onPeriodStart($any($event.target).value)"
+      ></ion-datetime>
+    </ng-template>
+  </ion-modal>
+
+  <ion-modal [keepContentsMounted]="true">
+    <ng-template>
+      <ion-datetime
+        id="dtPeriodEnd"
+        presentation="date"
+        locale="pl-PL"
+        [firstDayOfWeek]="1"
+        [showDefaultButtons]="true"
+        doneText="Gotowe"
+        cancelText="Anuluj"
+        [value]="s.periodEnd"
+        (ionChange)="onPeriodEnd($any($event.target).value)"
+      ></ion-datetime>
+    </ng-template>
+  </ion-modal>
+</ion-content>

@@ -1,0 +1,250 @@
+.se-simulator {
+  --background: var(--bg);
+}
+
+.se-info-card {
+  ion-card-content {
+    padding: 12px 14px;
+  }
+
+  p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 0 0 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  strong {
+    color: var(--text);
+  }
+}
+
+.se-form-actions {
+  display: flex;
+  flex-direction: column;
+}
+
+.se-btn-link {
+  --color: var(--solar-pressed);
+  font-size: 12px;
+  margin: 2px auto 0;
+  text-transform: none;
+}
+
+.se-history-card ion-card-content {
+  padding: 4px 4px;
+}
+
+.se-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--surface-2, #ebe6dc);
+  cursor: pointer;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.se-history-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.se-history-date {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.se-history-rates {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.se-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+}
+
+.se-field {
+  --background: transparent;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  margin-bottom: 4px;
+}
+
+.se-field ion-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+// `ion-datetime-button` zamiast natywnego `<input type="date">` — gwarantuje ten sam wygląd
+// i POLSKI język kalendarza (locale="pl-PL" na `ion-datetime`) na każdej platformie, zamiast
+// polegać na (niespójnym) natywnym pickerze przeglądarki/systemu (Safari/WebKit na iOS nie
+// rysuje żadnej ikonki, Chromium inną niż my; oba używają języka systemu, nie apki).
+ion-datetime-button {
+  margin-top: 4px;
+  width: 100%;
+
+  &::part(native) {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 8px 10px;
+    background: var(--surface-2, #ebe6dc);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+  }
+}
+
+// Modal ion-datetime: "maj 2026" w nagłówku to WŁAŚCIWIE przycisk (Ionic dodaje
+// `part="month-year-button"`) który otwiera kółko wyboru miesiąc/rok, a PONOWNE kliknięcie
+// w to samo miejsce zamyka je i wraca do widoku dni — to wbudowany mechanizm Ionic
+// (potwierdzone: host dostaje klasę `month-year-picker-open`, `aria-label` zmienia się na
+// "Hide year picker"), tylko domyślnie wygląda jak zwykły tekst, więc nie było widać,
+// że to przycisk. Dajemy mu wygląd "chipa" — zawsze, a szczególnie w stanie otwartym —
+// żeby było jasne, że można w niego kliknąć ponownie, aby wrócić do kalendarza.
+ion-datetime {
+  &::part(month-year-button) {
+    background: var(--surface-2, #ebe6dc);
+    border-radius: 16px;
+    padding: 4px 12px;
+  }
+
+  &.month-year-picker-open::part(month-year-button) {
+    background: var(--solar);
+    color: #fff;
+  }
+}
+
+.se-center {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.se-vat-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 4px 8px;
+  text-align: center;
+}
+
+.se-btn-primary {
+  --background: var(--solar);
+  --background-activated: var(--solar-pressed);
+  --color: #fff;
+  margin: 12px 0 8px;
+  font-weight: 600;
+}
+
+.se-btn-secondary {
+  --background: var(--surface-2, #ebe6dc);
+  --color: var(--text);
+  margin-top: 10px;
+}
+
+.se-ok-note {
+  color: var(--moss);
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
+.se-chart-error {
+  color: var(--cost);
+  font-size: 13px;
+  margin: 8px 4px;
+}
+
+// `[hidden]` samo w sobie NIE wystarcza na `.se-section-title`/`ion-card` — obie mają
+// własne reguły `display` (klasa globalna / style hosta Ionic) o takiej samej specyficzności
+// jak atrybut `[hidden]`, a reguły autora (nasze) zawsze biją domyślny arkusz przeglądarki
+// `[hidden] { display: none }`. Efekt: sekcja wyniku była zawsze widoczna, nawet gdy
+// `s.result` było `null`. Wymuszamy `display: none` explicite dla obu elementów.
+.se-section-title[hidden],
+.se-chart-card[hidden] {
+  display: none !important;
+}
+
+.se-chart-card ion-card-content {
+  padding: 12px 10px 8px;
+}
+
+.se-chart-wrap {
+  position: relative;
+  height: 220px;
+}
+
+.se-legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.se-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.se-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+
+  &--grid { background: var(--grid); }
+  &--solar { background: var(--solar); }
+  &--moss { background: var(--moss); }
+}
+
+.se-kpi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.se-kpi--compact ion-card-content {
+  padding: 10px 6px;
+  text-align: center;
+}
+
+.se-kpi__value--solar { color: var(--solar-pressed); }
+.se-kpi__value--moss { color: var(--moss); }
+
+// T2.7: druga, mniejsza kwota (netto) pod główną wartością (brutto) w każdej karcie KPI —
+// obie widoczne naraz, bez przełącznika (patrz uwagi UX 2026-07-29).
+.se-kpi__sub {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.se-mini-kwh {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 360px) {
+  .se-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

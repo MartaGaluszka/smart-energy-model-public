@@ -1,0 +1,20 @@
+# Smart Home PV — wpisy CRON (skopiuj przez: crontab config/crontab.smart-energy-model)
+# Lub: ./mlops/install_cron.sh  (po zamknięciu crontab -e / vim)
+
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+# Codziennie 5:00 — sync FoxESS + pogoda + prognoza 3 dni
+0 5 * * * /path/to/smart-energy-model/mlops/daily_workflow.sh >> /path/to/smart-energy-model/logs/cron.log 2>&1  # smart-energy-model: sync + prognoza 3 dni
+
+# Codziennie 12:00 — odświeżenie pogody + prognoza + bateria przed tanio 13–15
+0 12 * * * /path/to/smart-energy-model/mlops/midday_forecast.sh >> /path/to/smart-energy-model/logs/cron.log 2>&1  # smart-energy-model: odświeżenie pogody
+
+# Codziennie 16:00 — sync + prognoza + bateria przed szczytem wieczornym
+0 16 * * * /path/to/smart-energy-model/mlops/peak_arrival.sh >> /path/to/smart-energy-model/logs/cron.log 2>&1  # smart-energy-model: peak arrival
+
+# Codziennie 22:42 — FoxESS closeout + actual vs predicted
+42 22 * * * /path/to/smart-energy-model/mlops/evening_closeout.sh >> /path/to/smart-energy-model/logs/cron.log 2>&1  # smart-energy-model: closeout
+
+# Niedziela 5:00 — retrening modelu
+0 5 * * 0 cd /path/to/smart-energy-model && /path/to/smart-energy-model/venv/bin/python scripts/train/train_hourly_model_tuning.py >> /path/to/smart-energy-model/logs/train.log 2>&1  # smart-energy-model: retrening niedziela

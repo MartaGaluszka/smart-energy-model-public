@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16
+    container_name: smart_energy_db
+    environment:
+      POSTGRES_DB: smart_energy
+      POSTGRES_USER: smart_energy
+      POSTGRES_PASSWORD: smart_energy_dev_password
+    volumes:
+      - smart_energy_pg_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smart_energy -d smart_energy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build: .
+    image: smart-energy-model-api
+    container_name: smart_energy_api
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://smart_energy:smart_energy_dev_password@db:5432/smart_energy
+      DATABASE_PATH: /app/data/energy_model.db
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me-not-for-production}
+      # TZ: cała reszta systemu (mlops na hoście, foxess_fetch_all.py, timestampy w SQLite)
+      # liczy czas lokalny naiwnie (bez offsetu) — kontener musi używać tej samej strefy,
+      # inaczej porównania "ile minut temu" (np. cooldown w foxess_sync.sync_incremental) wychodzą ujemne.
+      TZ: Europe/Warsaw
+      # FOXESS_DEVICE_SN — z .env (env_file); nie nadpisuj pustą wartością
+    volumes:
+      - ./data:/app/data:rw
+      - ./models:/app/models:ro
+      - ./src:/app/src:ro
+      - ./api:/app/api:ro
+      - ./config:/app/config:ro
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+volumes:
+  smart_energy_pg_data:

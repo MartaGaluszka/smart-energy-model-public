@@ -1,0 +1,17 @@
+<ion-header [translucent]="true" class="se-header">
+  <ion-toolbar>
+    <ion-title class="font-serif">Sync</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="se-placeholder-content">
+  <div class="se-placeholder">
+    <ion-icon name="cloud-download-outline"></ion-icon>
+    <h2 class="font-serif">Synchronizacja FoxESS</h2>
+    <p>
+      Tu trafi historia zakresów dat, status ostatniego sync (<code>foxess_device_meta.fetched_at</code>)
+      oraz obsługa limitu API Fox (40402). Endpoint docelowy: <code>POST /api/v1/foxess/sync</code>.
+    </p>
+    <ion-badge class="se-badge">W przygotowaniu — Faza 1 (T1.7–T1.11)</ion-badge>
+  </div>
+</ion-content>

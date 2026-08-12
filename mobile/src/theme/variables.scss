@@ -1,0 +1,95 @@
+// Smart Energy — motyw "Solar Graphite"
+// Jasny theme: bursztyn (--solar) + grafit (--text/--grid); zielen (--moss)
+// wylacznie jako akcent "oszczednosc / plus / ROI OK".
+// Zrodlo tokenow: docs/PROJEKT_APLIKACJA_MOBILNA.md §3
+
+:root {
+  // --- Solar Graphite design tokens ---
+  --bg: #F2F0EB;
+  --surface: #FAFAF8;
+  --text: #1A1D21;
+  --text-muted: #5C636A;
+  --border: #E3DFD6;
+  --solar: #E6A012;
+  --solar-pressed: #C9860A;
+  --moss: #4F6F52;
+  --grid: #3D4450;
+  --cost: #C45C26;
+
+  --font-serif: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+
+  // --- Ionic core palette bound to Solar Graphite ---
+  --ion-font-family: var(--font-ui);
+  --ion-background-color: var(--bg);
+  --ion-background-color-rgb: 242, 240, 235;
+  --ion-text-color: var(--text);
+  --ion-text-color-rgb: 26, 29, 33;
+  --ion-border-color: var(--border);
+  --ion-item-background: var(--surface);
+  --ion-toolbar-background: var(--bg);
+  --ion-tab-bar-background: var(--surface);
+  --ion-tab-bar-border-color: var(--border);
+  --ion-card-background: var(--surface);
+
+  --ion-color-primary: #E6A012;
+  --ion-color-primary-rgb: 230, 160, 18;
+  --ion-color-primary-contrast: #1A1D21;
+  --ion-color-primary-contrast-rgb: 26, 29, 33;
+  --ion-color-primary-shade: #C9860A;
+  --ion-color-primary-tint: #EAAC2E;
+
+  --ion-color-secondary: #3D4450;
+  --ion-color-secondary-rgb: 61, 68, 80;
+  --ion-color-secondary-contrast: #FAFAF8;
+  --ion-color-secondary-contrast-rgb: 250, 250, 248;
+  --ion-color-secondary-shade: #363C46;
+  --ion-color-secondary-tint: #515762;
+
+  --ion-color-success: #4F6F52;
+  --ion-color-success-rgb: 79, 111, 82;
+  --ion-color-success-contrast: #FAFAF8;
+  --ion-color-success-contrast-rgb: 250, 250, 248;
+  --ion-color-success-shade: #46624A;
+  --ion-color-success-tint: #607D63;
+
+  --ion-color-warning: #C45C26;
+  --ion-color-warning-rgb: 196, 92, 38;
+  --ion-color-warning-contrast: #FAFAF8;
+  --ion-color-warning-contrast-rgb: 250, 250, 248;
+  --ion-color-warning-shade: #AD5121;
+  --ion-color-warning-tint: #CB6C3B;
+
+  --ion-color-danger: #C45C26;
+  --ion-color-danger-rgb: 196, 92, 38;
+  --ion-color-danger-contrast: #FAFAF8;
+  --ion-color-danger-contrast-rgb: 250, 250, 248;
+  --ion-color-danger-shade: #AD5121;
+  --ion-color-danger-tint: #CB6C3B;
+
+  --ion-color-medium: #5C636A;
+  --ion-color-medium-rgb: 92, 99, 106;
+  --ion-color-medium-contrast: #FAFAF8;
+  --ion-color-medium-contrast-rgb: 250, 250, 248;
+  --ion-color-medium-shade: #51575D;
+  --ion-color-medium-tint: #6C7379;
+
+  --ion-color-dark: #1A1D21;
+  --ion-color-light: #F2F0EB;
+}
+
+// Kolor "grid" (pobor z sieci / seria "Tauron") jako dodatkowa paleta ion-color-grid
+.ion-color-grid {
+  --ion-color-base: var(--grid);
+  --ion-color-contrast: #FAFAF8;
+}
+
+.ion-color-moss {
+  --ion-color-base: var(--moss);
+  --ion-color-contrast: #FAFAF8;
+}
+
+.ion-color-cost {
+  --ion-color-base: var(--cost);
+  --ion-color-contrast: #FAFAF8;
+}
