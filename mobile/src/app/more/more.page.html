@@ -1,0 +1,72 @@
+<ion-header [translucent]="true" class="se-header">
+  <ion-toolbar>
+    <ion-title class="font-serif">Więcej</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="se-more">
+  <div class="se-page">
+
+    <ion-card class="se-card">
+      <ion-card-content>
+        <h2 class="font-serif se-more__title">Smart Energy</h2>
+        <p class="se-more__text">
+          Aplikacja mobilna do rachunków, ROI i doradczego zarządzania magazynem energii —
+          na bazie realnych danych z instalacji PV, a nie z folderu sprzedawcy.
+        </p>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card class="se-card">
+      <ion-card-header>
+        <ion-card-title class="se-more__subtitle">Moduły</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list lines="none" class="se-source-list">
+          <ion-item button detail routerLink="/tabs/simulator">
+            <ion-icon slot="start" name="calculator-outline"></ion-icon>
+            <ion-label>
+              <h3>Symulator rachunków</h3>
+              <p>Stawki z faktury + koszt bez PV vs z PV</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card class="se-card">
+      <ion-card-header>
+        <ion-card-title class="se-more__subtitle">Źródła danych</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list lines="none" class="se-source-list">
+          <ion-item><ion-icon slot="start" name="flash-outline"></ion-icon><ion-label>FoxESS Cloud — produkcja, SoC, przepływy energii</ion-label></ion-item>
+          <ion-item><ion-icon slot="start" name="partly-sunny-outline"></ion-icon><ion-label>Open-Meteo — pogoda i prognoza PV</ion-label></ion-item>
+          <ion-item><ion-icon slot="start" name="cash-outline"></ion-icon><ion-label>PSE RCEm — depozyt net-billing</ion-label></ion-item>
+          <ion-item><ion-icon slot="start" name="receipt-outline"></ion-icon><ion-label>Tauron — stawki i rozliczenie G12w</ion-label></ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card class="se-card">
+      <ion-card-header>
+        <ion-card-title class="se-more__subtitle">Polityka doradczo-only</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p class="se-more__text">
+          Mój system na razie tylko doradza i wyświetla powiadomienia na dashboardzie. Pokazuje, ile
+          BYŚMY zaoszczędzili, gdybyśmy włączyli automatykę. Dopiero gdy po roku testów upewnię się,
+          że algorytm się nie myli, udostępnię przycisk do fizycznego sterowania falownikiem.
+        </p>
+        <ul class="se-more__list">
+          <li>Ryzyko kosztowe przy błędzie algorytmu (ładowanie w droższej strefie).</li>
+          <li>Limit i niestabilność API FoxESS; brak dojrzałego OAuth sterowania.</li>
+          <li>Konieczność zebrania sezonu zimowego i letniego do walidacji.</li>
+          <li>Odpowiedzialność użytkownika — opt-in dopiero po dowodach.</li>
+        </ul>
+      </ion-card-content>
+    </ion-card>
+
+    <p class="se-demo-note">Smart Energy · brak brandingu FoxESS · dane demonstracyjne (MVP)</p>
+  </div>
+</ion-content>

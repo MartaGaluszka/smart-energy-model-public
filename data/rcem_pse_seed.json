@@ -1,0 +1,22 @@
+{
+  "_source": "https://www.pse.pl/oire/rcem-rynkowa-miesieczna-cena-energii-elektrycznej",
+  "_note": "RCEm netto [zł/MWh], bez VAT. corrected_* gdy PSE opublikowało skorygowaną wartość.",
+  "2025-01": {"rce_pln_mwh": 480.01},
+  "2025-02": {"rce_pln_mwh": 442.02},
+  "2025-03": {"rce_pln_mwh": 182.96, "corrected_rce_pln_mwh": 178.84},
+  "2025-04": {"rce_pln_mwh": 163.19},
+  "2025-05": {"rce_pln_mwh": 216.97},
+  "2025-06": {"rce_pln_mwh": 136.30},
+  "2025-07": {"rce_pln_mwh": 284.83},
+  "2025-08": {"rce_pln_mwh": 214.68},
+  "2025-09": {"rce_pln_mwh": 279.71},
+  "2025-10": {"rce_pln_mwh": 334.02, "corrected_rce_pln_mwh": 340.84},
+  "2025-11": {"rce_pln_mwh": 382.88},
+  "2025-12": {"rce_pln_mwh": 466.08},
+  "2026-01": {"rce_pln_mwh": 551.96},
+  "2026-02": {"rce_pln_mwh": 339.01, "corrected_rce_pln_mwh": 331.39},
+  "2026-03": {"rce_pln_mwh": 191.95},
+  "2026-04": {"rce_pln_mwh": 132.92},
+  "2026-05": {"rce_pln_mwh": 191.37},
+  "2026-06": {"rce_pln_mwh": 273.20}
+}

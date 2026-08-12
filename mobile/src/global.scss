@@ -1,0 +1,218 @@
+/*
+ * App Global CSS
+ * ----------------------------------------------------------------------------
+ * Put style rules here that you want to apply globally. These styles are for
+ * the entire app and not just one component. Additionally, this file can be
+ * used as an entry point to import other CSS/Sass files to be included in the
+ * output CSS.
+ * For more information on global stylesheets, visit the documentation:
+ * https://ionicframework.com/docs/layout/global-stylesheets
+ */
+
+/* Core CSS required for Ionic components to work properly */
+@import "@ionic/angular/css/core.css";
+
+/* Basic CSS for apps built with Ionic */
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+
+/* Optional CSS utils that can be commented out */
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+/**
+ * Ionic Dark Mode
+ * -----------------------------------------------------
+ * For more info, please see:
+ * https://ionicframework.com/docs/theming/dark-mode
+ */
+
+/* @import "@ionic/angular/css/palettes/dark.always.css"; */
+/* @import "@ionic/angular/css/palettes/dark.class.css"; */
+/* Solar Graphite jest z definicji jasnym motywem — nie podpinamy auto dark mode. */
+/* @import "@ionic/angular/css/palettes/dark.system.css"; */
+
+/* Smart Energy — global rules */
+h1, h2, h3, .font-serif {
+  font-family: var(--font-serif);
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+ion-content {
+  --background: var(--bg);
+}
+
+ion-card {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+/* Wspólne klasy Solar Graphite (używane przez wiele stron/tabów) */
+.se-header ion-toolbar {
+  --background: var(--bg);
+  --border-color: transparent;
+}
+
+.se-page {
+  padding: 4px 12px 32px;
+}
+
+.se-card {
+  --background: var(--surface);
+  margin: 10px 0;
+}
+
+.se-demo-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 16px;
+}
+
+.se-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 4px 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Karta KPI (Home + Prognoza) — wspólna, bo używana w wielu tabach/komponentach. */
+.se-kpi {
+  margin: 6px 0;
+  text-align: left;
+
+  ion-card-content {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+.se-kpi__icon {
+  font-size: 22px;
+  margin-bottom: 4px;
+
+  &--solar { color: var(--solar); }
+  &--moss { color: var(--moss); }
+  &--grid { color: var(--grid); }
+  &--warning { color: var(--cost); }
+  &--cost { color: var(--cost); }
+}
+
+.se-kpi__value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+
+  small {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+}
+
+.se-kpi__label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.se-badge {
+  --background: var(--surface);
+  --color: var(--text-muted);
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.se-placeholder-content {
+  --background: var(--bg);
+}
+
+.se-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 48px 28px 24px;
+
+  ion-icon {
+    font-size: 40px;
+    color: var(--solar);
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    margin: 0;
+  }
+
+  p {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+    max-width: 320px;
+  }
+
+  code {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1px 6px;
+    font-size: 12px;
+  }
+}
+
+.se-more {
+  --background: var(--bg);
+}
+
+.se-more__title {
+  margin: 0 0 6px;
+}
+
+.se-more__subtitle {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.se-more__text {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.se-more__list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.se-source-list {
+  --background: transparent;
+
+  ion-item {
+    --background: transparent;
+    --padding-start: 0;
+    --min-height: 38px;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  ion-icon {
+    color: var(--solar-pressed);
+  }
+}

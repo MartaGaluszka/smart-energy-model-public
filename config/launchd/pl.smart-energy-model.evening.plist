@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- Siatka bezpieczeństwa: stała godzina 22:42, gdyby pl.smart-energy-model.evening-dynamic
+     (co 10 min, zachód słońca + margines) z jakiegoś powodu nie zadziałał danego dnia.
+     record_evening_closeout() jest idempotentne — nadpisuje wiersz dnia, więc podwójne
+     uruchomienie tego samego dnia jest bezpieczne. -->
+<dict>
+  <key>Label</key>
+  <string>pl.smart-energy-model.evening</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>__PROJECT_ROOT__/mlops/evening_closeout.sh >> __PROJECT_ROOT__/logs/cron.log 2>&1</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>22</integer>
+    <key>Minute</key>
+    <integer>42</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>__PROJECT_ROOT__/logs/launchd-evening.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__PROJECT_ROOT__/logs/launchd-evening.err.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

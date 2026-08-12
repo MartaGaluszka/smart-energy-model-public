@@ -1,0 +1,126 @@
+<ion-header [translucent]="true" class="se-header">
+  <ion-toolbar>
+    <div class="se-brand" slot="start">
+      <span class="se-brand__title font-serif">Smart Energy</span>
+      <span class="se-brand__tagline">Dachowy Bilans</span>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="se-home">
+  <div class="se-page">
+
+    <!-- Sync status -->
+    <ion-card class="se-card se-sync-card" *ngIf="sync$ | async as sync">
+      <ion-card-content>
+        <ion-badge *ngIf="sync.offline" class="se-offline-badge">Offline — dane demo</ion-badge>
+        <div class="se-sync-row">
+          <div class="se-sync-info">
+            <span class="se-sync-label">Ostatnia synchronizacja Fox</span>
+            <span class="se-sync-value">{{ minutesAgo(sync.lastSyncedAt) }}</span>
+          </div>
+          <ion-button
+            class="se-sync-btn"
+            [disabled]="sync.syncing"
+            (click)="onSync()"
+          >
+            <ion-icon
+              *ngIf="!sync.syncing"
+              slot="start"
+              name="cloud-download-outline"
+            ></ion-icon>
+            <ion-spinner *ngIf="sync.syncing" slot="start" name="crescent"></ion-spinner>
+            {{ sync.syncing ? 'Synchronizuję…' : 'Pobierz dane Fox' }}
+          </ion-button>
+        </div>
+        <p
+          *ngIf="sync.message"
+          class="se-sync-message"
+          [ngClass]="{ 'se-sync-message--info': sync.messageKind === 'info' }"
+        >{{ sync.message }}</p>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- KPI grid -->
+    <ng-container *ngIf="kpi$ | async as kpi">
+      <ion-grid class="se-kpi-grid">
+        <ion-row>
+          <ion-col size="6">
+            <ion-card class="se-card se-kpi">
+              <ion-card-content>
+                <ion-icon name="sunny-outline" class="se-kpi__icon se-kpi__icon--solar"></ion-icon>
+                <span class="se-kpi__value">{{ kpi.productionKwh }} <small>kWh</small></span>
+                <span class="se-kpi__label" *ngIf="(sync$ | async) as sync">
+                  Produkcja {{ isNotToday(sync.dataDay) ? '(' + formatDay(sync.dataDay) + ')' : 'dziś' }}
+                </span>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+          <ion-col size="6">
+            <ion-card class="se-card se-kpi">
+              <ion-card-content>
+                <ion-icon [name]="socIcon(kpi.socPercent)" class="se-kpi__icon" [ngClass]="'se-kpi__icon--' + socColor(kpi.socPercent)"></ion-icon>
+                <span class="se-kpi__value">{{ kpi.socPercent }} <small>%</small></span>
+                <span class="se-kpi__label">SoC baterii</span>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col size="6">
+            <ion-card class="se-card se-kpi">
+              <ion-card-content>
+                <ion-icon name="arrow-down-circle-outline" class="se-kpi__icon se-kpi__icon--grid"></ion-icon>
+                <span class="se-kpi__value">{{ kpi.gridImportKwh }} <small>kWh</small></span>
+                <span class="se-kpi__label">Import z sieci</span>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+          <ion-col size="6">
+            <ion-card class="se-card se-kpi">
+              <ion-card-content>
+                <ion-icon name="arrow-up-circle-outline" class="se-kpi__icon se-kpi__icon--moss"></ion-icon>
+                <span class="se-kpi__value">{{ kpi.gridExportKwh }} <small>kWh</small></span>
+                <span class="se-kpi__label">Eksport do sieci</span>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ng-container>
+
+    <!-- Advise-only banner (§9.6) -->
+    <ion-card class="se-card se-banner">
+      <ion-card-content>
+        <div class="se-banner__row">
+          <ion-icon name="information-circle-outline" class="se-banner__icon"></ion-icon>
+          <p class="se-banner__text">
+            System na razie tylko <strong>doradza</strong> i wyświetla sugestie. Nie steruje falownikiem —
+            przycisk sterowania odblokujemy dopiero po roku walidacji algorytmu.
+          </p>
+        </div>
+        <ion-button fill="clear" size="small" class="se-banner__more" routerLink="/tabs/more">
+          Dowiedz się więcej
+          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Suggestions feed preview -->
+    <div class="se-section-title">
+      <ion-icon name="notifications-outline"></ion-icon>
+      <span>Sugestie</span>
+    </div>
+    <ng-container *ngIf="suggestions$ | async as suggestions">
+      <ion-card class="se-card" *ngFor="let s of suggestions">
+        <ion-card-content class="se-suggestion">
+          <span class="se-suggestion__title">{{ s.title }}</span>
+          <span class="se-suggestion__body">{{ s.body }}</span>
+        </ion-card-content>
+      </ion-card>
+      <p *ngIf="!suggestions.length" class="se-demo-note">Brak nowych sugestii.</p>
+    </ng-container>
+
+    <p class="se-demo-note">Dane demonstracyjne — integracja z API FoxESS w toku.</p>
+  </div>
+</ion-content>

@@ -1,0 +1,46 @@
+# Połączenie z FoxEss Cloud API (opcjonalne - dla przyszłego użycia)
+foxesscloud==2.9.15
+python-dotenv==1.2.1
+
+# Analiza danych i ML (wersje pin — venv Python 3.9, 2026-08-06)
+pandas==2.3.3
+numpy==2.0.2
+scikit-learn==1.6.1
+xgboost==2.1.4
+
+# Wizualizacje
+matplotlib==3.9.4
+seaborn==0.13.2
+plotly==6.9.0
+streamlit==1.50.0
+shap==0.46.0
+
+# Baza danych
+# sqlite3 - wbudowane w Python
+
+# Jupyter
+jupyter==1.1.1
+ipykernel==6.31.0
+notebook==7.5.6
+
+# Narzędzia
+tqdm==4.69.1
+astral==3.2
+pytz==2026.2
+joblib==1.5.3
+
+# FastAPI backend (api/) — Faza 0 aplikacji mobilnej (docs/ZADANIA_IMPLEMENTACJA_MOBILNA.md)
+# Uwaga: venv projektu to Python 3.9 — wersje niżej wybrane pod kątem zgodności z 3.9.
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.12
+pydantic-settings==2.6.1
+email-validator==2.2.0
+pyjwt==2.10.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+cryptography==43.0.3
+httpx==0.28.1
+pytest==8.3.4
+eval_type_backport==0.4.0  # wymagane przez pydantic v2 pod Python 3.9 (składnia `X | None`)
