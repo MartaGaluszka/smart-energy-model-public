@@ -1,6 +1,6 @@
 # Smart Energy Model
 
-[![CI](https://github.com/MartaGaluszka/smart-energy-model/actions/workflows/ci.yml/badge.svg)](https://github.com/MartaGaluszka/smart-energy-model/actions/workflows/ci.yml)
+[![CI](https://github.com/MartaGaluszka/smart-energy-model-public/actions/workflows/ci.yml/badge.svg)](https://github.com/MartaGaluszka/smart-energy-model-public/actions/workflows/ci.yml)
 
 **Autor:** Marta Gałuszka  
 **Typ:** projekt portfolio / naukowy (instalacja domowa PV + magazyn FoxESS)  
