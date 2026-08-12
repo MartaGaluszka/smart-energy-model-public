@@ -1,0 +1,43 @@
+month,model,mae,days
+2025-06,"RF z etykietami (fog, rain, snow)",3.9104587155056962,8
+2025-06,RF bez etykiet (baseline),3.9123564742313417,8
+2025-06,XGBoost,4.528861686706542,8
+2025-07,"RF z etykietami (fog, rain, snow)",3.0676512348276646,10
+2025-07,RF bez etykiet (baseline),2.9800656433594104,10
+2025-07,XGBoost,3.9385910293579096,10
+2025-08,"RF z etykietami (fog, rain, snow)",4.204794191641913,9
+2025-08,RF bez etykiet (baseline),4.365732280085873,9
+2025-08,XGBoost,5.620870942857532,9
+2025-09,"RF z etykietami (fog, rain, snow)",4.245718171311718,9
+2025-09,RF bez etykiet (baseline),4.228261511359008,9
+2025-09,XGBoost,4.805927291870118,9
+2025-10,"RF z etykietami (fog, rain, snow)",4.362025360883858,5
+2025-10,RF bez etykiet (baseline),4.4361016909590445,5
+2025-10,XGBoost,4.268387250900269,5
+2025-11,"RF z etykietami (fog, rain, snow)",2.9477448921867087,8
+2025-11,RF bez etykiet (baseline),2.858528751189684,8
+2025-11,XGBoost,3.7115285283327104,8
+2025-12,"RF z etykietami (fog, rain, snow)",1.655515381067369,3
+2025-12,RF bez etykiet (baseline),1.7450218846241958,3
+2025-12,XGBoost,2.387229561805725,3
+2026-01,"RF z etykietami (fog, rain, snow)",3.8187035990955955,3
+2026-01,RF bez etykiet (baseline),3.676980576398387,3
+2026-01,XGBoost,4.574154032548269,3
+2026-02,"RF z etykietami (fog, rain, snow)",2.9099292695624017,4
+2026-02,RF bez etykiet (baseline),3.1604617243641786,4
+2026-02,XGBoost,3.636435846030712,4
+2026-03,"RF z etykietami (fog, rain, snow)",6.224037804413172,3
+2026-03,RF bez etykiet (baseline),6.044394472883577,3
+2026-03,XGBoost,6.887120784759522,3
+2026-04,"RF z etykietami (fog, rain, snow)",5.53655708507345,7
+2026-04,RF bez etykiet (baseline),5.615763076835857,7
+2026-04,XGBoost,5.569566396985736,7
+2026-05,"RF z etykietami (fog, rain, snow)",1.935884406096358,6
+2026-05,RF bez etykiet (baseline),1.8749604824852364,6
+2026-05,XGBoost,2.240830898284912,6
+2026-06,"RF z etykietami (fog, rain, snow)",4.926701255421874,4
+2026-06,RF bez etykiet (baseline),5.022895614323395,4
+2026-06,XGBoost,5.616440574645997,4
+2026-07,"RF z etykietami (fog, rain, snow)",7.531573960903687,4
+2026-07,RF bez etykiet (baseline),7.434473148403687,4
+2026-07,XGBoost,7.7390117301940915,4

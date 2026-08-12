@@ -6,7 +6,7 @@
 **Typ:** projekt portfolio / naukowy (instalacja domowa PV + magazyn FoxESS)  
 **Metryki ML / MLOps:** [`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md)
 
-> Kopia publiczna: bez lokalnego `.env`, bez bazy/danych surowych, bez dokładnego GPS/SN instalacji oraz bez prywatnych materiałów na obronę. Notebook prezentacji: [`03_prezentacja_dyplomowa.ipynb`](notebooks/03_prezentacja_dyplomowa.ipynb).
+> Kopia publiczna: bez lokalnego `.env`, bez bazy/danych surowych, bez dokładnego GPS/SN instalacji oraz bez prywatnych materiałów na obronę. Notebooki badawcze i prezentacyjne: `01`–`07` w [`notebooks/`](notebooks/).
 
 ---
 
@@ -48,9 +48,10 @@ Mapa skryptów: [`scripts/README.md`](scripts/README.md) · MLOps: [`mlops/READM
 
 1. **Środowisko** — `python3 -m venv venv`, `source venv/bin/activate`, `pip install -r requirements.txt`, skopiuj `.env.example` → `.env` (szczegóły: [`QUICK_START.md`](QUICK_START.md))
 2. **Dane** — import do `data/raw/` albo synchronizacja FoxESS API (README §5 · [`docs/FOXESS_KROK_PO_KROKU.md`](docs/FOXESS_KROK_PO_KROKU.md))
-3. **Prezentacja** — [`notebooks/03_prezentacja_dyplomowa.ipynb`](notebooks/03_prezentacja_dyplomowa.ipynb)
+3. **EDA** — [`notebooks/01_EDA_analiza_danych.ipynb`](notebooks/01_EDA_analiza_danych.ipynb)
+4. **ML** — [`notebooks/02_ML_predykcja_PV.ipynb`](notebooks/02_ML_predykcja_PV.ipynb)
 
-Dokumentacja EDA/ML: [`docs/01_EDA_analiza.md`](docs/01_EDA_analiza.md) · [`docs/02_ML_predykcja_PV.md`](docs/02_ML_predykcja_PV.md) · [`docs/03_ZALOZENIA_I_DECYZJE.md`](docs/03_ZALOZENIA_I_DECYZJE.md).
+Prezentacja: slajdy [`03_prezentacja_dyplomowa.ipynb`](notebooks/03_prezentacja_dyplomowa.ipynb) · demo kodu [`04_prezentacja_kod.ipynb`](notebooks/04_prezentacja_kod.ipynb) · raport [`05_raport_wynikow.ipynb`](notebooks/05_raport_wynikow.ipynb) · Green IT [`06_aspekt_srodowiskowy.ipynb`](notebooks/06_aspekt_srodowiskowy.ipynb) · SHAP [`07_SHAP_interpretowalnosc.ipynb`](notebooks/07_SHAP_interpretowalnosc.ipynb)
 
 ---
 
@@ -281,9 +282,10 @@ Szczegóły i tabele: **[`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md)** (
 | | |
 |--|--|
 | Prezentacja (slajdy) | [`notebooks/03_prezentacja_dyplomowa.ipynb`](notebooks/03_prezentacja_dyplomowa.ipynb) |
-| Raport wyników | [`reports/model_comparison.md`](reports/model_comparison.md) |
-| Green IT (§8) | [`reports/green_it_summary.md`](reports/green_it_summary.md) |
-| SHAP (interpretowalność) | [`reports/shap_interpretation.md`](reports/shap_interpretation.md) |
+| Demo kodu (Run All) | [`notebooks/04_prezentacja_kod.ipynb`](notebooks/04_prezentacja_kod.ipynb) |
+| Raport wyników | [`notebooks/05_raport_wynikow.ipynb`](notebooks/05_raport_wynikow.ipynb) · [`reports/model_comparison.md`](reports/model_comparison.md) |
+| Green IT (§8) | [`notebooks/06_aspekt_srodowiskowy.ipynb`](notebooks/06_aspekt_srodowiskowy.ipynb) · [`reports/green_it_summary.md`](reports/green_it_summary.md) |
+| SHAP (interpretowalność) | [`notebooks/07_SHAP_interpretowalnosc.ipynb`](notebooks/07_SHAP_interpretowalnosc.ipynb) · [`reports/shap_interpretation.md`](reports/shap_interpretation.md) |
 | Założenia | [`docs/03_ZALOZENIA_I_DECYZJE.md`](docs/03_ZALOZENIA_I_DECYZJE.md) |
 | Status ML/MLOps | [`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md) |
 | FoxESS | [`docs/FOXESS_KROK_PO_KROKU.md`](docs/FOXESS_KROK_PO_KROKU.md) |
