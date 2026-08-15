@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-08-11  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (weekly 09.08) · `data/processed/hourly_model_tuning_summary_production.csv` (okno do 2026-08-10) · `data/processed/forecasts/forecast_validation.csv`
+**Stan na:** 2026-08-15  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (weekly 09.08) · `data/processed/hourly_model_tuning_summary_production.csv` · `data/processed/forecasts/forecast_validation.csv` (closeouty do **14.08**)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -32,8 +32,8 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 
 | Okres | n | MAPE raw 5:00 | MAPE raw 12:00 |
 |-------|--:|-------------:|---------------:|
-| Era dual **27.07–10.08** | 15 | **9,4%** | **9,2%** |
-| Całość **14.07–10.08** | 28 | 16,7% | 14,8% |
+| Era dual **27.07–14.08** | 19 | **9,4%** | **9,3%** |
+| Całość **14.07–14.08** | 32 | 15,8% | 14,2% |
 
 *(Całość wciąga burzowy tydzień przed dual — do narracji używaj ery dual jako „jak działa teraz”.)*
 
@@ -66,6 +66,7 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Decyzje (PVE, ICON, 16 cech) | [`03_ZALOZENIA_I_DECYZJE.md`](03_ZALOZENIA_I_DECYZJE.md) |
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
+| Pogoda 15–17.08 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) |
 
 ---
 

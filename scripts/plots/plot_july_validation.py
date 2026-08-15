@@ -67,8 +67,8 @@ RETRAIN_SEGMENTS: list[tuple[str, str, str]] = [
     ),
     (
         '2026-07-27',
-        '2026-08-10',
-        'era produkcyjna dual (po 26.07; weekly 02.08 + 09.08 = odświeżenie wag)',
+        '2099-12-31',
+        'era produkcyjna dual (po 26.07; weekly = odświeżenie wag; do ostatniego closeoutu)',
     ),
 ]
 
@@ -333,7 +333,7 @@ def build_july_error_summary(
     lines.append('')
     lines.append(
         'Podział według **zmian logiki / targetu / cech** (nie każdy niedzielny odśwież wag). '
-        'Weekly 02.08 / 09.08 wchodzą w erę dual 27.07–10.08. '
+        'Weekly retreningi wchodzą w erę dual od 27.07 (do ostatniego closeoutu). '
         'Szczegóły: `docs/NOTATKA_RETRENINGI_LIPIEC_2026.md`.'
     )
     lines.append('')
@@ -346,8 +346,9 @@ def build_july_error_summary(
         g = m[(day >= start) & (day <= end)]
         if g.empty:
             continue
+        period = f'{_fmt_day(g.target_day.min())}–{_fmt_day(g.target_day.max())}'
         lines.append(
-            f'| {_fmt_day(start)}–{_fmt_day(end)} | {label} | {len(g)} | '
+            f'| {period} | {label} | {len(g)} | '
             f'{g["ape_raw_morning"].mean():.1f}% | {g["ape_raw_midday"].mean():.1f}% |'
         )
     pve = m[day >= '2026-07-19']

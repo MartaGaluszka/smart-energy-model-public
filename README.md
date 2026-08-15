@@ -4,7 +4,7 @@
 
 **Autor:** Marta Gałuszka  
 **Typ:** projekt portfolio / naukowy (instalacja domowa PV + magazyn FoxESS)  
-**Metryki ML / MLOps:** [`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md)
+**Metryki ML / MLOps:** [`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md) · pogoda 15–17.08: [`docs/NOTATKA_POGODA_2026-08-15.md`](docs/NOTATKA_POGODA_2026-08-15.md)
 
 > Kopia publiczna: bez lokalnego `.env`, bez bazy/danych surowych, bez dokładnego GPS/SN instalacji oraz bez prywatnych materiałów na obronę. Notebooki badawcze i prezentacyjne: `01`–`07` w [`notebooks/`](notebooks/).
 
