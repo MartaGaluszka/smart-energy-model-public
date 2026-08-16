@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-08-15  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (weekly 09.08) · `data/processed/hourly_model_tuning_summary_production.csv` · `data/processed/forecasts/forecast_validation.csv` (closeouty do **14.08**)
+**Stan na:** 2026-08-16  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 16.08**) · `data/processed/forecasts/forecast_validation.csv` (closeouty do **14.08**) · [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -21,11 +21,11 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 
 | Metryka | Wartość |
 |---------|---------|
-| Okno | 2025-06-01 → **2026-08-10** |
-| Test MAE | **0.605** kWh/h |
-| Test R² | **0.702** |
-| Gap train–test | **0.029** |
-| Daily MAE | **3.49** kWh/d |
+| Okno | 2025-06-01 → **2026-08-15** |
+| Test MAE | **0.643** kWh/h |
+| Gap train–test | **0.063** |
+| Daily MAE | **3.56** kWh/d |
+| Daily R² | **0.838** |
 | Werdykt | nie przeuczony |
 
 ### Live (closeout vs app)
@@ -67,6 +67,7 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
 | Pogoda 15–17.08 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) |
+| Weekly 16.08 | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
 
 ---
 

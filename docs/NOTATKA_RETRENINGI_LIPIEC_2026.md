@@ -4,7 +4,7 @@ Krótka oś czasu: **kiedy** był retrening `.joblib`, **co** weszło do produkc
 Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 
 **Model produkcyjny teraz:** dual — `pv_hourly_model.joblib` (**16**) + `pv_hourly_model_cs4.joblib` (**CS4**)  
-**Stan na 2026-07-26:** GPS dach · ICON · target **ΔPVEnergyTotal** · Test MAE **0.623** (16) / **0.621** (CS4) · **nieprzeuczone** · UKMO = tylko testy
+**Stan na 2026-08-16:** GPS dach · ICON · target **ΔPVEnergyTotal** · Test MAE **0.643** (16) / **0.637** (CS4) · **nieprzeuczone** · UKMO = tylko testy · weekly: [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md)
 
 ---
 
@@ -21,6 +21,7 @@ Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 | **2026-07-18** | ~16:32 | **Target = ΔPVEnergyTotal** (jak w app) | tak | **0.582** | `…_before_pve_direct.joblib` |
 | **2026-07-26** | ~17:00 | **Dual prod:** 16 primary + CS4 w launchd; train niedziela = oba; UKMO w testach | tak (CS4 + gate vs 16) | **0.623** / **0.621** | `…_before_cs4.joblib` |
 | **2026-08-09** | 04:30 | Weekly odświeżenie wag (+7 dni do 08.08); bez zmiany logiki | tak (16 + CS4 + XGB+TS) | **0.624** / **0.632** / **0.608** | (nadpisanie `.joblib`) |
+| **2026-08-16** | 04:30 | Weekly odświeżenie wag (okno → 15.08); primary bez zmiany | tak (16 + CS4 + XGB+TS) | **0.643** / **0.637** / **0.626** | (nadpisanie `.joblib`) |
 
 \*Test MAE z summary w momencie treningu — **nie porównuj 0.666 z 0.582 wprost** (inna skala targetu: ∫pvPower vs PVE).
 
@@ -145,6 +146,23 @@ Skrót: ocena na **raw** · `FORECAST_OPERATIONAL_ADJUST=0` · ≥7 closeoutów 
 
 ---
 
+## 2026-08-16 — weekly retrain
+
+| | |
+|--|--|
+| **Godz.** | **04:30** niedziela |
+| **Okno** | 2025-06-01 → **2026-08-15** |
+| **Zmiany logiki** | brak — primary **RF16**, shadow **CS4** + **XGB+TS** |
+| **RF16** | Test MAE **0.643** · gap **0.063** · Daily **3.56** · ✅ nie przeuczony |
+| **CS4** | Test MAE **0.637** · gap **0.068** · Daily **3.59** · ✅ |
+| **XGB+TS** | Test MAE **0.626** · gap **0.074** · Daily **3.17** · ✅ |
+| **Gate vs 09.08** | Δ RF16 Test MAE **+0.019** (≤ +0.02) → **ACCEPT** · primary bez zmiany |
+| **Docs** | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
+
+Closeout **17.08** (deszcz Accu/MB) = pierwszy dzień porównania nowych wag RF vs CS4.
+
+---
+
 ## 2026-08-02 — Error Analysis (skala chmur + FI) → TODO
 
 | | |
@@ -160,6 +178,7 @@ Skrót: ocena na **raw** · `FORECAST_OPERATIONAL_ADJUST=0` · ≥7 closeoutów 
 
 | Plik | Treść |
 |------|--------|
+| [NOTATKA_WEEKLY_2026-08-16.md](NOTATKA_WEEKLY_2026-08-16.md) | Weekly 16.08 — gate ACCEPT, metryki |
 | [PLAN_T1_T2_LIPIEC_2026.md](PLAN_T1_T2_LIPIEC_2026.md) | Rozpiska T1–T2, checklista closeoutów · EA TODO |
 | [UPDATE_2026-08-02_error-analysis-cloud-fi.md](UPDATE_2026-08-02_error-analysis-cloud-fi.md) | Error Analysis: skala chmur + feature importance |
 | [CHANGELOG_ML.md](CHANGELOG_ML.md) | Gate ACCEPT/REVIEW/REJECT |
