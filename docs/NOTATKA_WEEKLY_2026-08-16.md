@@ -59,8 +59,9 @@ CS4 wygrywa głównie dni pochmurne (np. 06–08, 10.08); na słonecznych 12–1
 |-------|------------|-----------------|
 | **15.08** | upał, cloud ~3%, jasność 10, 0 mm | szczyt produkcji |
 | **16.08** (dziś-na-dziś) | 34°C, cloud **29%**, jasność 8, **0,5 mm** P=55%, porywy ~43 | wysoka PV; MB MultiModel: ICON≈UKMO (słońce) |
-| **17.08** | 25°C, cloud 76%, jasność 5, **8,5 mm** P=87%, burze 52% | **rozjazd ICON vs UKMO** (okno 11–13 vs deszcz ~12–13) + closeout CS4 vs RF |
-| **18.08** | 20°C, cloud 77%, 1,2 mm, burze lokalne | obie strony mokre; UKMO dłużej deszcz |
+| **17.08** | 26°C, cloud **54%**, jasność **5**, **3,4 mm**, burze P=54%, alert pomarańcz od **14:00** | Accu dziś-na-dziś ≈ ICON (start ~14–15); closeout CS4 vs RF |
+| **18.08** | 20°C, cloud 78%, jasność 4, **2,1 mm**, porywy 44 | słaba PV; Accu łagodniejszy niż MB „ciągły deszcz” |
+| **19.08** | 24°C, cloud 68%, jasność 6, **1,4 mm** wcześnie | umiarkowana / powrót |
 
 Szerszy opis 15–17.08: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md).
 
