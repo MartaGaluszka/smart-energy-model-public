@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-08-16  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 16.08**) · `data/processed/forecasts/forecast_validation.csv` (closeouty do **14.08**) · [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md)
+**Stan na:** 2026-08-18  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 16.08**) · `forecast_validation.csv` (closeouty do **17.08**) · [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) · [`NOTATKA_2026-08-18.md`](NOTATKA_2026-08-18.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -32,12 +32,16 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 
 | Okres | n | MAPE raw 5:00 | MAPE raw 12:00 |
 |-------|--:|-------------:|---------------:|
-| Era dual **27.07–14.08** | 19 | **9,4%** | **9,3%** |
-| Całość **14.07–14.08** | 32 | 15,8% | 14,2% |
+| Era dual **27.07–17.08** | 22 | **8,7%** | **9,1%** |
+| Całość **14.07–17.08** | 35 | 14,8% | 13,6% |
 
 *(Całość wciąga burzowy tydzień przed dual — do narracji używaj ery dual jako „jak działa teraz”.)*
 
-Wykresy: [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png).
+CS4 daily (era dual, n=22): MAPE **~9,6%** — lekko powyżej RF średnio, ale wygrywa dni pochmurne (np. **16.08**, **17.08** best=`daily_cs4`; 17.08 APE **0,7%**).
+
+Ostatnie closeouty: **15.08** 35,9 · **16.08** 33,7 · **17.08** **21,5** (front; CS4 daily +0,14 kWh).
+
+Wykresy (do **17.08**): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) · opis błędów: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
 
 ---
 
@@ -66,8 +70,10 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Decyzje (PVE, ICON, 16 cech) | [`03_ZALOZENIA_I_DECYZJE.md`](03_ZALOZENIA_I_DECYZJE.md) |
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
-| Pogoda 15–17.08 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) |
+| Pogoda 15–20.08 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) |
 | Weekly 16.08 | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
+| Dzień 18.08 | [`NOTATKA_2026-08-18.md`](NOTATKA_2026-08-18.md) |
+| Oneshot shadow | [`NOTATKA_ONESHOT_2026-08-17.md`](NOTATKA_ONESHOT_2026-08-17.md) |
 
 ---
 
