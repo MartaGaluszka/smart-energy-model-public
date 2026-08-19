@@ -1,6 +1,6 @@
 # Raport oneshot — shadow RF16 / CS4 / XGB+TS
 
-**Ostatni run:** 2026-08-18 ~10:57  
+**Ostatni run:** 2026-08-19 ~11:30 → pełny raport dnia: [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md)  
 **Typ:** oneshot (bez zmiany produkcji / launchd)  
 **Pogoda prod:** Open-Meteo **ICON** · GPS tylko w `.env`  
 **Modele:** weekly 16.08 — RF16 primary · CS4 + XGB+TS shadow  
@@ -8,16 +8,18 @@
 | CSV | Okno |
 |-----|------|
 | `oneshot_shadow_*20260817*` | 17–19.08 (run 17.08 ~16:40) |
-| `oneshot_shadow_*20260818*` | **18–20.08 (run 18.08 ~10:57)** |
+| `oneshot_shadow_*20260818*` | 18–20.08 (run 18.08 ~10:57) |
+| `oneshot_shadow_*20260819*` | **19–21.08 (run 19.08 ~11:30)** |
 
-Pogoda Accu/MB: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · weekly: [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) · dzień: [`NOTATKA_2026-08-18.md`](NOTATKA_2026-08-18.md)
+Pogoda Accu/MB: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · weekly: [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) · dzień: [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md)
 
 ---
 
 ## Werdykt (aktualny)
 
-> **17.08 closeout:** actual **21,5** · best **daily CS4** (+0,14) · RF daily −0,7 — CS4 wygrał front.  
-> **18.08 (dziś, szary):** ICON shadow ~**19–21** kWh (zgodne z Accu jasność 3 / MB deszcz rano). **UKMO zawyża** (+3…+6 kWh vs ICON) — **nie podmieniamy**. Primary = RF16+ICON; CS4 dalej shadow do closeoutu.
+> **19.08:** Accu ≈ MB · ICON ≈ UKMO (ikony) · oneshot ICON ~**21 / 25–28 / 10–12** (19/20/21) · **UKMO PV +5…+7** na jasnych → bez podmiany.  
+> **18.08 closeout:** actual **17,8** · RF −2,5 · CS4 −1,5 · best peak.  
+> **17.08 closeout:** actual **21,5** · best **daily CS4**.
 
 ---
 
