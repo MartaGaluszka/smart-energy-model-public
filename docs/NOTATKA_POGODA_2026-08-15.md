@@ -1,4 +1,4 @@
-# Notatka pogoda — 16–21.08.2026
+# Notatka pogoda — 16–22.08.2026
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
 **Produkcja ML:** Open-Meteo **ICON** (`icon_seamless`)  
@@ -12,11 +12,75 @@
 | **2026-08-18 ~10:50** | AccuWeather dziś-na-dziś (18) / jutro (19) / +2 (20) |
 | **2026-08-18 ~10:54** | MB meteogram + MultiModel + ensemble (wt.–czw.+) |
 | **2026-08-19 ~11:20** | AccuWeather dziś-na-dziś (19) / jutro (20) / +2 (21) |
-| **2026-08-19 ~11:23** | **MB MultiModel + meteogram + ensemble** (śr.–pt.) |
+| **2026-08-19 ~11:23** | MB MultiModel + meteogram + ensemble (śr.–pt.) |
+| **2026-08-20 ~16:20** | AccuWeather dziś-na-dziś (20) / jutro (21) / +2 (22) |
+| **2026-08-20 ~16:24** | **MB MultiModel + meteogram + ensemble** (czw.–sob.) |
 
 ---
 
-## AccuWeather — 19.08 ~11:20 (obecny run)
+## AccuWeather — 20.08 ~16:20 (obecny run)
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
+|-------|------:|--------:|------:|------:|------------------|----------------|-----|
+| **20.08** czw. (dziś) | **31°C** (RF 31°) | **7** jasne | **46%** | **0 mm** | 25% / 6% | W 19 / **52** | **wysoka** (do wieczora) |
+| **21.08** pt. | **25°C** (RF 27°) | **2** ciemny | **91%** | **5,5 mm** (~2,5 h) | 63% / **38%** | ESE 9 / 28 | **słaba** |
+| **22.08** sob. | **23°C** (RF 23°) | **9** b. jasne | **29%** | **0 mm** | 25% / 0% | WSW 22 / 41 | **bardzo dobra** |
+
+Opis 20.08: *„Rosnące zachmurzenie”* · UV 6.  
+Opis 21.08: *„Deszcz z przerwami i burza z piorunami”* · UV 4.  
+Opis 22.08: *„Słonecznie z możliwym zachmurzeniem małym”* · UV 5.
+
+### Alarmy Accu (20.08)
+
+| Alarm | Okno |
+|-------|------|
+| **Pomarańczowe** — burze | **17:00 czw. → 03:00 pt.** |
+| **Żółte** — powódź | **17:00 czw. → 10:00 pt.** |
+| **Żółte** — upały | **13:00–18:00 czw.** |
+| Susza | tło |
+
+### Drift vs Accu 19.08 ~11:20
+
+| | Accu 19.08 (outlook) | **Accu 20.08 dziś-na-dziś** |
+|--|----------------------|-----------------------------|
+| **20.08** T / jasność / cloud | 30°C / 7 / 45% | **31°C / 7 / 46%** — zgodne; porywy ↑52; burze **od 17:00** |
+| **21.08** jasność / mm / burze | 3 / 4,0 / 19% | **2 / 5,5 / 38%** — **ciemniej / mokrej** |
+| **22.08** | (brak) | jasność **9**, cloud 29%, 0 mm — **powrót słońca** |
+
+**Wniosek:** dziś peak PV do popołudnia, potem ryzyko burz (alert 17:00+). Jutro słaby. Sobota znów jasna. Primary ICON bez zmian.
+
+### MB 20.08 ~16:24 — Accu vs MB · ICON vs UKMO
+
+| Dzień | Accu | MB (~16:24) | Zgodność |
+|-------|------|-------------|----------|
+| **20** | 31°C, jasność 7, cloud 46%, 0 mm; burze alert **17:00+** | T peak ~30–32°C (teraz ~15:00); cloud ↑ do wieczora ~100%; deszcz dopiero **noc** | **Tak** — Accu alert burz pasuje do MB deszczu nocnego |
+| **21** | 25°C, jasność 2, cloud 91%, **5,5 mm**, burze 38% | T ~24–26°C; deszcz peak ~**03:00** (>5 mm/h) + popołudnie; cloud 80–100%; RH rano ~95% | **Tak** „mokry”; MB/ensemble **więcej mm** (spread duży) |
+| **22** | 23°C, jasność **9**, cloud 29%, 0 mm | T ~23–24°C; rain spike **noc/rano** (00–03, >5 mm/h) potem przejaśnienia; RH↓ ~45–50% w dzień | **Częściowo** — Accu „b. jasne/suche”; MB trzyma deszcz **noc→rano**, dzień jaśniejszy |
+
+#### ICON vs UKMO (MultiModel)
+
+| Dzień | ICON-12 / 7 | UKMO-10 | Różnica |
+|-------|-------------|---------|---------|
+| **20** | słońce/chmury PM → deszcz **noc / rano pt.** | jak ICON; **piorun** wczesnym piątkiem (z NMM) | **≈**; UKMO wyraźniej burza nocna |
+| **21** | deszcz rano + mieszane PM | deszcz / burza rano, potem przelotne | **≈** |
+| **22** | deszcz noc/rano → jaśniej | deszcz z przerwami | drobny timing; Accu optymistyczniejszy na „suche słońce” |
+
+Wiatr: dziś W ~20 km/h, porywy Accu 52 ≈ MB ~45–50; piątek słaby; sobota porywy ↑ (spread do ~45).  
+Ensemble: kumulacja deszczu do soboty ~5–45 mm (hi-res agresywny) — nie do gate’u.
+
+Oneshot 19.08 (~25–28 na 20): przy burzach od 17:00 actual może wyjść **niżej** niż surowy peak.
+
+### Closeout 19.08 (jasna środa — test zaniżenia)
+
+| | Actual | Daily RF16 | Daily CS4 | Best raw |
+|--|-------:|----------:|----------:|----------|
+| **19.08** | **24,7** kWh | 21,0 (**+3,7**) | 19,8 (**+4,9**) | **daily** (RF) |
+
+Modele **zaniżyły** (klasyczny jasny dzień) — hipoteza z 19.08 oneshot potwierdzona. RF bliżej niż CS4.
+
+---
+
+## AccuWeather — 19.08 ~11:20 (archiwum)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
 |-------|------:|--------:|------:|------:|------------------|----------------|-----|
@@ -179,13 +243,14 @@ Alarmy Accu 17.08: **pomarańcz burze** 14:00→00:00 · **żółte powódź** 1
 
 | Kiedy | Co |
 |-------|-----|
-| **19.08** dziś | Accu/MB jasność OK — oneshot ~21 kWh; closeout vs zaniżenie |
-| **20.08** | Peak (~25–28 oneshot); Accu 30°C |
-| **21.08** | Mokry (~10–12 oneshot); CS4 vs RF |
-| **18.08** (done) | Closeout **17,8** · RF daily −2,5 · CS4 −1,5 · best **peak** |
+| **20.08** dziś | Peak PV; MB/Accu burze **noc** (alert 17:00+); oneshot ~25–28 może być za wysoko |
+| **21.08** | Mokry (Accu jasność 2; MB peak ~03:00) — CS4 vs RF |
+| **22.08** | Accu jasność **9**; MB deszcz rano — ryzyko zaniżenia jeśli dzień suchy |
+| **19.08** (done) | Closeout **24,7** · RF daily +3,7 · CS4 +4,9 · best **daily** |
+| **18.08** (done) | Closeout **17,8** · RF −2,5 · CS4 −1,5 · best peak |
 | **17.08** (done) | Closeout 21,5 · best **daily_cs4** |
 
-Weekly: [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) · [`NOTATKA_2026-08-18.md`](NOTATKA_2026-08-18.md) · [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md)
+Weekly: [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) · [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · [`NOTATKA_2026-08-20.md`](NOTATKA_2026-08-20.md)
 
 ---
 
