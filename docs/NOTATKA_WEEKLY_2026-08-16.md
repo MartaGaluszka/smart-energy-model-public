@@ -42,14 +42,14 @@ Bez podmiany primary / bez nowych cech / bez UKMO w prod.
 
 ## Kontekst live (przed tym weekly)
 
-Walidacja closeoutów (stan na **18.08**, do **17.08**):
+Walidacja closeoutów (stan na **20.08**, do **19.08**):
 
 | Okres | n | MAPE raw 5:00 | MAPE raw 12:00 |
 |-------|--:|-------------:|---------------:|
-| Era dual 27.07–17.08 | 22 | **8,7%** | **9,1%** |
-| Całość 14.07–17.08 | 35 | 14,8% | 13,6% |
+| Era dual 27.07–19.08 | 24 | **9,1%** | **9,7%** |
+| Całość 14.07–19.08 | 37 | 14,8% | 13,8% |
 
-CS4: MAPE daily ~**9,6%** (n=22); wygrywa pochmurne (**16–17.08** best `daily_cs4`; 17.08 actual **21,5**, APE CS4 **0,7%**). Na słonecznych 12–15.08 bliżej bywa XGB+TS / RF w `best_snapshot`.
+CS4: MAPE daily ~**10,0%** (n=24). Pochmurne: **16–17.08** best `daily_cs4`. Jasne: **19.08** actual **24,7** — RF daily +3,7 / CS4 +4,9 (zaniżenie). Szare: **18.08** 17,8 — modele zawyżyły.
 
 ---
 
@@ -72,7 +72,7 @@ Szerszy opis 15–17.08: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08
 1. Nic nie zmieniać w launchd / primary.  
 2. Closeout **17.08** (front): RF16 vs CS4 na nowych wagach + notatka timing deszczu (ICON / UKMO / Accu).  
 3. Kolejny weekly: **niedziela 23.08 ~04:30**.  
-4. Po serii closeoutów po 16.08 — odświeżyć wykresy walidacji w notebookach → **zrobione 18.08** (do **17.08**; era dual MAPE **8,7% / 9,1%**, n=22).
+4. Po serii closeoutów po 16.08 — odświeżyć wykresy walidacji → **zrobione 18.08 (do 17.08)** i **20.08 (do 19.08)**; era dual MAPE **9,1% / 9,7%**, n=24.
 
 ---
 
