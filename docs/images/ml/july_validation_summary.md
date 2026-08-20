@@ -8,7 +8,7 @@ Metryka: **|APE| %** = `|actual − prognoza| / actual × 100`. Pogoda: średnie
 |---|---:|---:|---:|---|
 | słoneczny / mało chmur | 11 | 6.2% | 5.8% | 20.07, 26.07, 30.07, 04.08, 05.08, 06.08, 09.08, 12.08, 13.08, 14.08, 15.08 |
 | mieszany | 9 | 11.0% | 14.5% | 16.07, 17.07, 25.07, 28.07, 29.07, 31.07, 03.08, 08.08, 16.08 |
-| pochmurny / deszczowy | 15 | 23.3% | 18.8% | 14.07, 15.07, 18.07, 19.07, 21.07, 22.07, 23.07, 24.07, 27.07, 01.08, 02.08, 07.08, 10.08, 11.08, 17.08 |
+| pochmurny / deszczowy | 17 | 22.2% | 18.6% | 14.07, 15.07, 18.07, 19.07, 21.07, 22.07, 23.07, 24.07, 27.07, 01.08, 02.08, 07.08, 10.08, 11.08, 17.08, 18.08, 19.08 |
 
 - **Najtrafniejszy raw 5:00:** 30.07 (0.6% · słoneczny / mało chmur, cloud~31%, actual 33.5 kWh), 03.08 (0.7% · mieszany, cloud~48%, actual 33.5 kWh), 05.08 (1.2% · słoneczny / mało chmur, cloud~9%, actual 34.9 kWh)
 - **Najgorszy raw 5:00:** 24.07 (100.7% · pochmurny / deszczowy, cloud~86%, actual 10.7 kWh), 15.07 (59.5% · pochmurny / deszczowy, cloud~94%, actual 10.9 kWh), 21.07 (46.5% · pochmurny / deszczowy, cloud~85%, actual 18.8 kWh)
@@ -21,7 +21,7 @@ Porównanie **midday (12:00)**: hybryda = FoxESS na minione godziny + RF na resz
 
 - **Hybryda pomaga (12:00):** 18.07 (↓14.1 pp, pochmurny / deszczowy); 21.07 (↓18.9 pp, pochmurny / deszczowy); 23.07 (↓10.8 pp, pochmurny / deszczowy); 24.07 (↓55.0 pp, pochmurny / deszczowy)
 - **Hybryda szkodzi (12:00):** 20.07 (↑13.2 pp, słoneczny / mało chmur); 22.07 (↑11.2 pp, pochmurny / deszczowy); 25.07 (↑16.7 pp, mieszany); 28.07 (↑11.3 pp, mieszany); 29.07 (↑13.4 pp, mieszany)
-- **Remis / szum (<1 pp):** 14.07, 15.07, 16.07, 17.07, 19.07, 26.07, 27.07, 30.07, 31.07, 01.08, 02.08, 03.08, 04.08, 05.08, 06.08, 07.08, 08.08, 09.08, 10.08, 11.08, 12.08, 13.08, 14.08, 15.08, 16.08, 17.08
+- **Remis / szum (<1 pp):** 14.07, 15.07, 16.07, 17.07, 19.07, 26.07, 27.07, 30.07, 31.07, 01.08, 02.08, 03.08, 04.08, 05.08, 06.08, 07.08, 08.08, 09.08, 10.08, 11.08, 12.08, 13.08, 14.08, 15.08, 16.08, 17.08, 18.08, 19.08
 
 - **O 5:00:** hybryda ≈ raw (pomaga 1 dni / szkodzi 1) — przed wschodem prawie nie ma FoxESS do podmiany.
 
@@ -39,7 +39,7 @@ Podział według **zmian logiki / targetu / cech** (nie każdy niedzielny odświ
 |---|---|---:|---:|---:|
 | 14.07–18.07 | przed targetem PVE (skala mieszana; GPS/ICON 17.07) | 5 | 22.8% | 20.6% |
 | 19.07–26.07 | po PVE 18.07 ~16:32 — przed dual 26.07 | 8 | 26.5% | 21.7% |
-| 27.07–17.08 | era produkcyjna dual (po 26.07; weekly = odświeżenie wag; do ostatniego closeoutu) | 22 | 8.7% | 9.1% |
-| 19.07–17.08 | **era PVE łącznie** (bez 14–18) | 30 | **13.4%** | **12.4%** |
+| 27.07–19.08 | era produkcyjna dual (po 26.07; weekly = odświeżenie wag; do ostatniego closeoutu) | 24 | 9.1% | 9.7% |
+| 19.07–19.08 | **era PVE łącznie** (bez 14–18) | 32 | **13.5%** | **12.7%** |
 
-_Zakres całość: 14.07–17.08 (35 closeoutów) · MAPE raw 5:00 = **14.8%** · MAPE raw 12:00 = **13.6%**._
+_Zakres całość: 14.07–19.08 (37 closeoutów) · MAPE raw 5:00 = **14.8%** · MAPE raw 12:00 = **13.8%**._
