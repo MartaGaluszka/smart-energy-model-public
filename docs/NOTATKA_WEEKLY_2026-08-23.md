@@ -42,16 +42,16 @@ Bez podmiany primary / bez nowych cech / bez UKMO w prod / bez routingu RF↔CS4
 
 ## Kontekst live (przed / wokół tego weekly)
 
-Walidacja closeoutów z pełnymi predicte (do **21.08**; wykresy odświeżone **22.08**):
+Walidacja closeoutów z pełnymi predicte (do **22.08**; wykresy odświeżone **23.08**):
 
 | Okres | n | MAPE raw 5:00 | MAPE raw 12:00 |
 |-------|--:|-------------:|---------------:|
-| Era dual 27.07–21.08 | 26 | **10,2%** | **9,6%** |
-| Całość 14.07–21.08 | 39 | 15,2% | 13,5% |
+| Era dual 27.07–22.08 | 27 | **10,2%** | **9,4%** |
+| Całość 14.07–22.08 | 40 | 15,1% | 13,3% |
 
-CS4 daily ~**10,4%** (n=26), lepszy **9/26**.
+CS4 daily ~**10,5%** (n=27), lepszy **9/27**.
 
-**22.08:** evening closeout zapisał **actual 25,1 kWh**, ale **brak** oficjalnych runów 05/12/16 (`pv_forecast_20260822*` — luka FoxESS / cron). Oneshot ~18:15: RF/CS4/XGB **~24,3 / 24,3 / 24,8** vs 25,1 (~**−3%**) — nie w MAPE live.
+**22.08:** formalny closeout po backfillu same-day (runy 05/12/16 z D+1 z 21.08) — actual **25,1** · daily RF **−9,6%** · midday **+4,9%** · best peak / `midday_xgb_ts` ≈25,2.
 
 **21.08:** actual **13,4** · poranny RF **+32,9%** (mokry) · best `peak`.
 
@@ -68,7 +68,7 @@ CS4 daily ~**10,4%** (n=26), lepszy **9/26**.
 | **22.08** | Accu jasność **6** / wiatr (nie 9) | actual **25,1** · oneshot ~24 |
 | **23.08** | Accu outlook jasność **9** | daily ~28–29 — ryzyko zaniżenia przy bardzo jasnym dniu |
 
-Szerszy opis: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · notatka dnia 22.08 (ops prywatne).
+Szerszy opis: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md).
 
 ---
 
