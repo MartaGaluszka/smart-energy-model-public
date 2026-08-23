@@ -71,8 +71,8 @@ Szerszy opis 15–17.08: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08
 
 1. Nic nie zmieniać w launchd / primary.  
 2. Closeout **17.08** (front): RF16 vs CS4 na nowych wagach + notatka timing deszczu (ICON / UKMO / Accu).  
-3. Kolejny weekly: **niedziela 23.08 ~04:30**.  
-4. Po serii closeoutów po 16.08 — odświeżyć wykresy walidacji → **zrobione 18.08 (do 17.08)** i **20.08 (do 19.08)**; era dual MAPE **9,1% / 9,7%**, n=24.
+3. Kolejny weekly: **niedziela 23.08 ~04:30** → **zrobione** ([`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md), ACCEPT Δ +0.015).  
+4. Po serii closeoutów po 16.08 — odświeżyć wykresy walidacji → **zrobione 18.08 (do 17.08)**, **20.08 (do 19.08)** i **22.08 (do 21.08)**; era dual MAPE **10,2% / 9,6%**, n=26.
 
 ---
 
