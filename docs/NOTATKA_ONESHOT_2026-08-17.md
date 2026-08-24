@@ -1,6 +1,6 @@
 # Raport oneshot — shadow RF16 / CS4 / XGB+TS
 
-**Ostatni run:** 2026-08-23 ~10:35 → [`NOTATKA_2026-08-23.md`](NOTATKA_2026-08-23.md)  
+**Ostatni run:** 2026-08-24 ~15:25 → [`NOTATKA_2026-08-24.md`](NOTATKA_2026-08-24.md)  
 **Typ:** oneshot (bez zmiany produkcji / launchd)  
 **Pogoda prod:** Open-Meteo **ICON** · GPS tylko w `.env`  
 **Modele:** weekly **23.08** — RF16 primary · CS4 + XGB+TS shadow  
@@ -11,16 +11,19 @@
 | `oneshot_shadow_*20260818*` | 18–20.08 (run 18.08 ~10:57) |
 | `oneshot_shadow_*20260819*` | 19–21.08 (run 19.08 ~11:30) |
 | `oneshot_shadow_icon_20260822_24.csv` | 22–23.08 (run 22.08 ~18:15) |
-| `oneshot_shadow_icon_20260823_25.csv` | **23–25.08 (run 23.08 ~10:35)** |
+| `oneshot_shadow_icon_20260823_25.csv` | 23–25.08 (run 23.08 ~10:35) |
+| `oneshot_shadow_icon_20260824_26.csv` | **24–26.08 (run 24.08 ~15:25)** |
+| `oneshot_rf_icon_vs_ukmo_daily_20260824_26.csv` | RF ICON vs UKMO 24–26 |
+| `oneshot_icon_vs_ukmo_precip_20260824_26.csv` | pogoda ICON vs UKMO 24–26 |
 
 ---
 
 ## Werdykt (aktualny)
 
-> **23.08 oneshot ICON hybrid OFF:** RF/CS4/XGB ≈ **28,6 / 28,4 / 28,8** · **24** ≈ **31,5 / 30,9 / 32,9** · **25** ≈ **32,9 / 33,0 / 34,8**.  
-> Accu/MB **23–24** jasność 9 — ryzyko zaniżenia. **25** Accu burze vs NWP suche — oneshot może zawyżyć.  
-> UKMO cloud jaśniejszy niż ICON (23–24) → bez podmiany primary.  
-> Closeout **22.08:** actual **25,1** · peak −2,7%.
+> **24.08 oneshot ICON hybrid OFF:** RF/CS4/XGB ≈ **26,1 / 25,6 / 26,5** · **25** ≈ **20,0 / 20,2 / 18,6** · **26** ≈ **29,4 / 30,6 / 31,1**.  
+> Accu/MB **24** jasność 9 — dach już **~28 @15:10** vs daily ~26,6 (undershoot). **25** Accu≈MB≈ICON **mokry** — CS4.  
+> RF ICON vs UKMO: **24** UKMO +5,4 kWh (bliżej dachu); **25** ICON niżej/mokrej (bliżej Accu); **26** UKMO GHI NaN → odrzucić.  
+> Closeout **23.08:** actual **35,2** · daily −6,7 (−19%). Primary ICON bez podmiany.
 
 ---
 
