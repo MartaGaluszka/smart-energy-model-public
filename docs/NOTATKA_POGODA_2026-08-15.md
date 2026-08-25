@@ -1,4 +1,4 @@
-# Notatka pogoda — 16–26.08.2026
+# Notatka pogoda — 16–27.08.2026
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
 **Produkcja ML:** Open-Meteo **ICON** (`icon_seamless`)  
@@ -6,6 +6,9 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-08-25 ~10:30** | AccuWeather dziś-na-dziś (25) / jutro (26) / +2 (27) |
+| **2026-08-25 ~10:35** | **MB** meteogram + MultiModel + ensemble (wt.–sob.) · NEMS≈okno |
+| **2026-08-25 ~09:00→** | **Obserwacja lokalna:** tylko zachmurzenie, **0 mm** deszczu (ciągła) |
 | **2026-08-24 ~15:20** | AccuWeather dziś-na-dziś (24) / jutro (25) / +2 (26) |
 | **2026-08-24 ~15:23** | **MB MultiModel + ensemble** (pon.–pt.) |
 | **2026-08-24 ~15:25** | Open-Meteo ICON vs UKMO + oneshot shadow 24–26 |
@@ -20,7 +23,7 @@
 | **2026-08-20 ~16:24** | **MB MultiModel + meteogram + ensemble** (czw.–sob.) |
 | **2026-08-17** | **Alert RCB** — burze / silny wiatr / intensywne opady **17.08**; możliwe przerwy w prądzie |
 | **2026-08-20 ~16:45** | **Alert RCB** — burze / silny wiatr / intensywne opady **20–21.08**; możliwe przerwy w prądzie |
-| **2026-08-20 ~17:00** | Archiwum RCB uzupełnione: **19.07**, **01.08**, **06/07.08** → [`alerty RCB (archiwum lokalne)`](alerty RCB (archiwum lokalne)) |
+| **2026-08-20 ~17:00** | Archiwum RCB uzupełnione: **19.07**, **01.08**, **06/07.08** → [`NOTATKA_RCB_ALERTS.md`](NOTATKA_RCB_ALERTS.md) |
 | **2026-08-21 ~09:05** | AccuWeather dziś-na-dziś (21) / jutro (22) / +2 (23) |
 | **2026-08-21 ~09:12** | **MB MultiModel + meteogram + ensemble** (pt.–nd.+) |
 | **2026-08-22 ~18:04** | AccuWeather dziś-na-dziś (22) / jutro (23) / +2 (24) |
@@ -28,7 +31,7 @@
 
 ---
 
-## Alerty RCB (skrót; pełne SMS → [`alerty RCB (archiwum lokalne)`](alerty RCB (archiwum lokalne)))
+## Alerty RCB (skrót; pełne SMS → [`NOTATKA_RCB_ALERTS.md`](NOTATKA_RCB_ALERTS.md))
 
 | Data | Okno | Skrót | Kontekst lokalny |
 |------|------|-------|------------------|
@@ -41,12 +44,65 @@
 | **17.08** | 17.08 | Burze + wiatr + intensywne opady; blackout | DB `#130` · closeout **21,5** · best CS4 |
 | **20–21.08** | 20/21.08 | Burze + wiatr + intensywne opady; blackout | DB `#131` `#132` · Accu pomarańcz 17:00→03:00 · lokalnie 20.08 front ~17:09 |
 
-Pełne SMS + id wierszy: [`alerty RCB (archiwum lokalne)`](alerty RCB (archiwum lokalne)).  
+Pełne SMS + id wierszy: [`NOTATKA_RCB_ALERTS.md`](NOTATKA_RCB_ALERTS.md).  
 Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletność serii.
 
 ---
 
-## AccuWeather — 24.08 ~15:20 (obecny run)
+## AccuWeather — 25.08 ~10:30 (obecny run)
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
+|-------|------:|--------:|------:|------:|------------------|----------------|-----|
+| **25.08** wt. (dziś) | **17°C** (RF 17° / Shade 17°) | **2** ciemny | **87%** | **11,7 mm** (~4 h) | **80%** / **48%** | ENE 15 / **30** | **bardzo słaba / burze** |
+| **26.08** śr. | **22°C** (RF 23° / Shade 20°) | **5** średnie | **65%** | **0 mm** | 10% / 0% | ENE 13 / **32** | **umiarkowana / mix** |
+| **27.08** czw. | **25°C** (RF 26° / Shade 24°) | **10** b. jasne | **0%** | **0 mm** | 0% / 0% | E 15 / **33** | **peak clear** |
+
+Opis 25: *„Deszcz z przerwami i burza z piorunami”* · UV 3.  
+Opis 26: *„Cieplej”* · UV 5.  
+Opis 27: *„Jaskrawe słońce”* · UV 5.
+
+### Alarmy Accu (25.08)
+
+| Alarm | Okno |
+|-------|------|
+| Susza | tło (×3 w UI) |
+
+### Drift vs Accu 24.08 ~15:20
+
+| | Accu 24.08 (outlook) | **Accu 25.08 dziś-na-dziś** |
+|--|----------------------|-----------------------------|
+| **25.08** jasność / cloud / mm / burze | **3** / 85% / **1,2** / 42% | **2 / 87% / 11,7 / 48%** — **znacznie mokrej** |
+| **26.08** jasność / cloud | **8** / 27% | **5 / 65%** — **przygaszony** |
+| **27.08** | (brak) | jasność **10**, cloud **0%**, 0 mm |
+
+**Wniosek:** **25** Accu≈ICON na **cloud** (słaby PV) — paper-trade **CS4**. Deszcz: Accu/ICON/UKMO za wcześnie vs okno; **NEMS** bliżej (chmury, 0 mm rano). **26** Accu mix vs ICON bardzo chmurny — midday. **27** Accu jasność 10 → undershoot risk. Primary bez zmian.  
+Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade (tylko repo prywatne).
+
+### MB 25.08 ~10:35 — Accu vs MB · NEMS vs ICON/UKMO
+
+**Okno:** od **~09:00** ciągła obserwacja — zachmurzenie bardzo duże, **brak deszczu** → **NEMS** · ICON/UKMO w MultiModel = deszcz już rano (źle).
+
+| Dzień | Accu | MB | Zgodność |
+|-------|------|-----|----------|
+| **25** | jasność 2 / 87% / **11,7 mm** | cloud ~100%; deszcz raczej PM; NEMS bez mm rano | cloud TAK; mm Accu/ICON/UKMO vs okno **NIE** |
+| **26** | jasność 5 / 65% / 0 mm | zmienne chmury; deszcz raczej noc→rano | mix |
+| **27** | jasność **10** / 0% | pełne słońce ~26° | **Tak** |
+| **28** | — | słońce ~31° | peak PV |
+| **29** | — | burze / duży rozjazd ensemble | — |
+
+| MultiModel ~teraz | Deszcz rano 25? |
+|-------------------|-----------------|
+| **NEMS\*** (12/2/4/30) | **nie** (tylko chmura) — **≈ okno** |
+| **ICON-12 / ICON-7** | **tak** — za wcześnie |
+| **UKMO-10** | **tak** — za wcześnie |
+| GFS | tak |
+| IFS / ARPEGE | chmura; deszcz później |
+
+**Wniosek operacyjny:** PV dziś i tak słabe (cloud) → CS4 paper; nie podmieniać primary na UKMO. NEMS tylko obserwacja MB.
+
+---
+
+## AccuWeather — 24.08 ~15:20 (archiwum)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
 |-------|------:|--------:|------:|------:|------------------|----------------|-----|
