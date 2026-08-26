@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-08-23  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 23.08**) · `forecast_validation.csv` (closeouty predicte do **22.08**) · [`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md)
+**Stan na:** 2026-08-25  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 23.08**) · `forecast_validation.csv` (closeouty predicte do **24.08**) · [`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -34,16 +34,16 @@ Gate vs weekly **16.08** (0.643): Δ **+0.015** ≤ +0.02 → **ACCEPT**.
 
 | Okres | n | MAPE raw 5:00 | MAPE raw 12:00 |
 |-------|--:|-------------:|---------------:|
-| Era dual **27.07–22.08** | 27 | **10,2%** | **9,4%** |
-| Całość **14.07–22.08** | 40 | 15,1% | 13,3% |
+| Era dual **27.07–24.08** | 29 | **11,0%** | **10,0%** |
+| Całość **14.07–24.08** | 42 | 15,4% | 13,5% |
 
-*(Całość wciąga burzowy tydzień przed dual — do narracji używaj ery dual. **21.08** overshoot raw 5:00 +32,9% podbił MAPE; **22.08** raw −9,6% / midday +4,9% lekko obniżył MAPE 12:00.)*
+*(Całość wciąga burzowy tydzień przed dual — do narracji używaj ery dual. **23–24.08** jasne undershoot (actual ~35 vs daily ~28,6 / ~26,6) podbiły MAPE dual z **10,2/9,4** → **11,0/10,0**.)*
 
-CS4 daily (era dual, n=27): MAPE **~10,5%** — lekko powyżej RF; lepszy **9/27** (m.in. **16–18**, **20–21.08**); na jasnych bywa gorzej (**19.08**); **22.08** RF bliżej daily niż CS4.
+CS4 daily (era dual, n=29): MAPE **~11,4%** — lekko powyżej RF; lepszy **9/29** (m.in. **16–18**, **20–21.08**); na jasnych gorzej (**19**, **23–24.08**); **22.08** RF bliżej daily niż CS4.
 
-Ostatnie closeouty: **20.08** **27,4** (best `peak_cs4`) · **21.08** **13,4** (RF +32,9% @5:00; best `peak`) · **22.08** **25,1** (best `midday_xgb_ts` / peak ≈25,2; daily RF backfill −9,6%).
+Ostatnie closeouty: **22.08** **25,1** (best `midday_xgb_ts`) · **23.08** **35,2** (daily RF −6,7 / −19%; best peak) · **24.08** **35,1** (daily RF −8,5 / −24%; best `peak_xgb_ts` ~28).
 
-Wykresy (do **22.08**): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) · opis: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
+Wykresy (do **24.08**, odświeżone **25.08**): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) · opis: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
 
 ---
 
@@ -75,8 +75,10 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Pogoda 15–27.08 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) |
 | Weekly **23.08** | [`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md) |
 | Weekly 16.08 | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
-| Dzień 19–25.08 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · [`NOTATKA_2026-08-20.md`](NOTATKA_2026-08-20.md) · [`NOTATKA_2026-08-21.md`](NOTATKA_2026-08-21.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md) · [`NOTATKA_2026-08-23.md`](NOTATKA_2026-08-23.md) · [`NOTATKA_2026-08-24.md`](NOTATKA_2026-08-24.md) · [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) |
+| Dzień 19–26.08 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · [`NOTATKA_2026-08-20.md`](NOTATKA_2026-08-20.md) · [`NOTATKA_2026-08-21.md`](NOTATKA_2026-08-21.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md) · [`NOTATKA_2026-08-23.md`](NOTATKA_2026-08-23.md) · [`NOTATKA_2026-08-24.md`](NOTATKA_2026-08-24.md) · [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md) |
 | Oneshot shadow | [`NOTATKA_ONESHOT_2026-08-17.md`](NOTATKA_ONESHOT_2026-08-17.md) |
+| Reguła apki: SoC↓ + pochmurno → ładuj 22:00 | [`NOTATKA_REGULA_BATERIA_POCHMURNO_22.md`](NOTATKA_REGULA_BATERIA_POCHMURNO_22.md) |
+| Log SoC / ForceCharge / AGD | [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) |
 
 ---
 

@@ -1,4 +1,4 @@
-# Notatka pogoda — 16–27.08.2026
+# Notatka pogoda — 16–28.08.2026
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
 **Produkcja ML:** Open-Meteo **ICON** (`icon_seamless`)  
@@ -6,9 +6,14 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-08-26 ~11:05** | AccuWeather dziś-na-dziś (26) / jutro (27) / +2 (28) |
+| **2026-08-26 ~11:08** | **MB** MultiModel + meteogram + ensemble (śr.–pt.) · 26 clearing PM |
+| **2026-08-26 ~przed 7:30** | **Obserwacja:** deszcz (mokra nawierzchnia); **@7:30** już bez opadu |
+| **2026-08-26 ~11:02** | **Obserwacja:** prześwit · chwilowo **1,52 kW** (ciemne niebo) |
 | **2026-08-25 ~10:30** | AccuWeather dziś-na-dziś (25) / jutro (26) / +2 (27) |
 | **2026-08-25 ~10:35** | **MB** meteogram + MultiModel + ensemble (wt.–sob.) · NEMS≈okno |
-| **2026-08-25 ~09:00→** | **Obserwacja lokalna:** tylko zachmurzenie, **0 mm** deszczu (ciągła) |
+| **2026-08-25 ~09:00→11:25** | **Obserwacja lokalna:** tylko zachmurzenie, **0 mm** |
+| **2026-08-25 ~11:25→** | **Obserwacja lokalna:** **deszcz** (start) |
 | **2026-08-24 ~15:20** | AccuWeather dziś-na-dziś (24) / jutro (25) / +2 (26) |
 | **2026-08-24 ~15:23** | **MB MultiModel + ensemble** (pon.–pt.) |
 | **2026-08-24 ~15:25** | Open-Meteo ICON vs UKMO + oneshot shadow 24–26 |
@@ -49,7 +54,48 @@ Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletnoś�
 
 ---
 
-## AccuWeather — 25.08 ~10:30 (obecny run)
+## AccuWeather — 26.08 ~11:05 (obecny run)
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
+|-------|------:|--------:|------:|------:|------------------|----------------|-----|
+| **26.08** śr. (dziś) | **22°C** (RF 22° / Shade 20°) | **9** b. jasne | **31%** | **0 mm** | 8% / 0% | E 15 / **30** | Accu dobra · **okno słaby/mix** |
+| **27.08** czw. | **25°C** (RF 25° / Shade 23°) | **10** b. jasne | **0%** | **0 mm** | 0% / 0% | E 17 / **33** | **peak clear** |
+| **28.08** pt. | **29°C** (RF 29° / Shade 27°) | **9** b. jasne | **18%** | **0 mm** | 1% / 0% | ESE 19 / **28** | **bardzo dobra** |
+
+Opis 26: *„Cieplej”* · UV 5.  
+Opis 27: *„Dużo słońca”* · UV 5.  
+Opis 28: *„Przeważnie słonecznie”* · UV 5.
+
+### Alarmy Accu (26.08)
+
+| Alarm | Okno |
+|-------|------|
+| Susza | tło (×3 w UI) |
+
+### Drift vs Accu 25.08 ~10:30 + okno
+
+| | Accu 25.08 (outlook) | **Accu 26.08 dziś-na-dziś** | Okno ~11 |
+|--|----------------------|-----------------------------|----------|
+| **26** jasność / cloud | **5** / **65%** | **9 / 31%** | chmury + prześwit 1,52 kW; PV ~3 kWh @11 — **Accu za jasny** |
+| **27** | **10** / 0% | **10 / 0%** | — |
+| **28** | (MB upał) | **9** / 18% | — |
+
+**Wniosek:** Accu podniósł 26 do jasności 9 od rana — lokalnie rano jak 25. **MB ~11:08:** rano gęste chmury → **clearing PM**; 27–28 pełne słońce (konsensus MultiModel). Nie pełnić baterii wieczór 26.  
+Dzień: [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md).
+
+### MB 26.08 ~11:08 — Accu vs MB
+
+| Dzień | Accu | MB | Zgodność |
+|-------|------|-----|----------|
+| **26** | jasność 9 / 31% | rano ~100% cloud → clearing po ~11; rain do południa w ensemble | rano MB≈okno; Accu za jasny; PM Accu≈MB |
+| **27** | jasność **10** / 0% | pełne słońce, T~25° | **Tak** |
+| **28** | jasność **9** / 18% | słońce, T~**29–31°** | **Tak** |
+
+**Wniosek operacyjny:** 26 śledzić clearing PM (EOD może > wczoraj 4,4). 27–28 peak PV / undershoot RF.
+
+---
+
+## AccuWeather — 25.08 ~10:30 (archiwum)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
 |-------|------:|--------:|------:|------:|------------------|----------------|-----|
@@ -75,30 +121,30 @@ Opis 27: *„Jaskrawe słońce”* · UV 5.
 | **26.08** jasność / cloud | **8** / 27% | **5 / 65%** — **przygaszony** |
 | **27.08** | (brak) | jasność **10**, cloud **0%**, 0 mm |
 
-**Wniosek:** **25** Accu≈ICON na **cloud** (słaby PV) — paper-trade **CS4**. Deszcz: Accu/ICON/UKMO za wcześnie vs okno; **NEMS** bliżej (chmury, 0 mm rano). **26** Accu mix vs ICON bardzo chmurny — midday. **27** Accu jasność 10 → undershoot risk. Primary bez zmian.  
+**Wniosek:** **25** Accu≈ICON na **cloud** — paper-trade **CS4**. Deszcz: **od 11:25** ≈ ilościowy **ICON** (1. wet godz. 11); **UKMO** za późny/suchy; ikony MultiModel rano za wcześnie; **NEMS** OK do 11:25. **26** Accu mix vs ICON bardzo chmurny — midday. **27** Accu jasność 10 → undershoot risk. Primary bez zmian.  
 Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade (tylko repo prywatne).
 
 ### MB 25.08 ~10:35 — Accu vs MB · NEMS vs ICON/UKMO
 
-**Okno:** od **~09:00** ciągła obserwacja — zachmurzenie bardzo duże, **brak deszczu** → **NEMS** · ICON/UKMO w MultiModel = deszcz już rano (źle).
+**Okno:** **~09:00–11:25** tylko zachmurzenie, **0 mm** → **NEMS** bliżej rano. **Od ~11:25 deszcz** ≈ **ICON** OM (1. wet godz. **11**, Σ~4 mm z oneshotu 24.08); **UKMO** za późny/suchy (wet **17**, 0,5 mm). Ikony MultiModel rano za wcześnie.
 
 | Dzień | Accu | MB | Zgodność |
 |-------|------|-----|----------|
-| **25** | jasność 2 / 87% / **11,7 mm** | cloud ~100%; deszcz raczej PM; NEMS bez mm rano | cloud TAK; mm Accu/ICON/UKMO vs okno **NIE** |
+| **25** | jasność 2 / 87% / **11,7 mm** | cloud ~100%; deszcz raczej PM; NEMS bez mm rano | cloud TAK; start deszczu ≈ **ICON** godz. 11 |
 | **26** | jasność 5 / 65% / 0 mm | zmienne chmury; deszcz raczej noc→rano | mix |
 | **27** | jasność **10** / 0% | pełne słońce ~26° | **Tak** |
 | **28** | — | słońce ~31° | peak PV |
 | **29** | — | burze / duży rozjazd ensemble | — |
 
-| MultiModel ~teraz | Deszcz rano 25? |
+| MultiModel ~10:35 | Deszcz rano 25? |
 |-------------------|-----------------|
-| **NEMS\*** (12/2/4/30) | **nie** (tylko chmura) — **≈ okno** |
-| **ICON-12 / ICON-7** | **tak** — za wcześnie |
-| **UKMO-10** | **tak** — za wcześnie |
-| GFS | tak |
+| **NEMS\*** (12/2/4/30) | **nie** (tylko chmura) — **≈ okno do 11:25** |
+| **ICON-12 / ICON-7** | ikony tak za wcześnie; ilościowo OM 1. wet ≈ **11** — **≈ fakt** |
+| **UKMO-10** | ikony tak; ilościowo wet **17** / 0,5 mm — **za późny/suchy** |
+| GFS | tak (ikony) |
 | IFS / ARPEGE | chmura; deszcz później |
 
-**Wniosek operacyjny:** PV dziś i tak słabe (cloud) → CS4 paper; nie podmieniać primary na UKMO. NEMS tylko obserwacja MB.
+**Wniosek operacyjny:** PV dziś słabe (cloud + deszcz od 11:25) → CS4 paper; primary ICON bez podmiany na UKMO. NEMS tylko obserwacja MB.
 
 ---
 

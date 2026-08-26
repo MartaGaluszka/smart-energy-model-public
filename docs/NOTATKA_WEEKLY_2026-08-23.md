@@ -42,7 +42,7 @@ Bez podmiany primary / bez nowych cech / bez UKMO w prod / bez routingu RF↔CS4
 
 ## Kontekst live (przed / wokół tego weekly)
 
-Walidacja closeoutów z pełnymi predicte (do **22.08**; wykresy odświeżone **23.08**):
+Walidacja closeoutów z pełnymi predicte **w dniu weekly** (do **22.08**; wykresy wtedy **23.08**):
 
 | Okres | n | MAPE raw 5:00 | MAPE raw 12:00 |
 |-------|--:|-------------:|---------------:|
@@ -50,6 +50,8 @@ Walidacja closeoutów z pełnymi predicte (do **22.08**; wykresy odświeżone **
 | Całość 14.07–22.08 | 40 | 15,1% | 13,3% |
 
 CS4 daily ~**10,5%** (n=27), lepszy **9/27**.
+
+**Aktualizacja 25.08** (po closeoutach **23–24.08**): wykresy + [`july_validation_summary.md`](images/ml/july_validation_summary.md) do **24.08** — era dual **27.07–24.08** n=29 · MAPE **11,0% / 10,0%**; całość n=42 · **15,4% / 13,5%**; CS4 ~**11,4%** (9/29). Jasne undershoot **23–24** podbiły MAPE. → [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md).
 
 **22.08:** formalny closeout po backfillu same-day (runy 05/12/16 z D+1 z 21.08) — actual **25,1** · daily RF **−9,6%** · midday **+4,9%** · best peak / `midday_xgb_ts` ≈25,2.
 
@@ -78,7 +80,7 @@ Szerszy opis: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · 
 2. Closeout **23.08** na nowych wagach (jasny dzień — sprawdzić undershoot).  
 3. Kolejny weekly: **niedziela 30.08 ~04:30**.  
 4. Paper-trade reguły RF/CS4 (pochmurne) — po limicie / prywatny tor; nie w tym weekly.  
-5. Wykresy walidacji: dogonić gdy 22.08 dostanie backfill predicte albo po serii 23–29.08.
+5. Wykresy walidacji: **zrobione 25.08** do closeoutów **24.08** (era dual MAPE **11,0% / 10,0%**, n=29).
 
 ---
 

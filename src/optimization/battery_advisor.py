@@ -17,7 +17,7 @@ from typing import Literal
 import pandas as pd
 import sqlite3
 
-from src.optimization.g12w_tariff import classify_zone, is_weekend
+from src.optimization.g12w_tariff import classify_zone, is_public_holiday, is_weekend
 
 Context = Literal['morning', 'pre_cheap', 'peak']
 
@@ -44,6 +44,20 @@ class PvOutlook:
     window_forecast_kwh: float
     remaining_forecast_kwh: float
     actual_so_far_kwh: float
+
+
+@dataclass
+class ChargeTonightCloudyRule:
+    """Reguła: niski SoC + jutro słabe PV → sugestia ładowania od 22:00 (G12w)."""
+
+    triggered: bool
+    soc_percent: float | None
+    tomorrow_pv_kwh: float | None
+    soc_below: float
+    weak_pv_below: float
+    recommendation: str
+    title: str
+    body: str
 
 
 @dataclass
@@ -205,6 +219,102 @@ def _soc_min_evening() -> float:
 
 def _morning_pv_enough_kwh() -> float:
     return float(os.getenv('BATTERY_MORNING_PV_ENOUGH_KWH', '3.0'))
+
+
+def _soc_charge_tonight_below() -> float:
+    """Poniżej tego SoC (wieczór) rozważamy ładowanie nocne przy słabym jutrze."""
+    return float(os.getenv('BATTERY_SOC_CHARGE_TONIGHT_BELOW', os.getenv('BATTERY_SOC_MIN_EVENING', '50')))
+
+
+def _cloudy_day_pv_kwh() -> float:
+    """Suma dzienna PV poniżej tego progu = dzień „pochmurny / słaby” (jak 25–26.08 ~11–14)."""
+    return float(os.getenv('BATTERY_CLOUDY_DAY_PV_KWH', '18'))
+
+
+def evaluate_charge_tonight_cloudy(
+    *,
+    soc_percent: float | None,
+    tomorrow_pv_kwh: float | None,
+    as_of: datetime | None = None,
+    soc_below: float | None = None,
+    weak_pv_below: float | None = None,
+) -> ChargeTonightCloudyRule:
+    """Czysta reguła produktowa (bez I/O) — advise-only.
+
+    IF pn–pt AND SoC < próg AND jutro PV < próg AND przed 22:00
+    → komunikat: zalecane ładowanie baterii od 22:00 (G12w tanio).
+    """
+    as_of = as_of or datetime.now()
+    soc_below = _soc_charge_tonight_below() if soc_below is None else soc_below
+    weak_pv_below = _cloudy_day_pv_kwh() if weak_pv_below is None else weak_pv_below
+
+    empty = ChargeTonightCloudyRule(
+        triggered=False,
+        soc_percent=soc_percent,
+        tomorrow_pv_kwh=tomorrow_pv_kwh,
+        soc_below=soc_below,
+        weak_pv_below=weak_pv_below,
+        recommendation='',
+        title='',
+        body='',
+    )
+    if is_weekend(as_of.date()) or is_public_holiday(as_of.date()):
+        return empty
+    if as_of.hour >= 22:
+        return empty
+    if soc_percent is None or tomorrow_pv_kwh is None:
+        return empty
+    if soc_percent >= soc_below or tomorrow_pv_kwh >= weak_pv_below:
+        return empty
+
+    rec = 'ŁADUJ OD 22:00 (POCHMURNO + NISKI SOC)'
+    title = 'Sugestia: naładuj baterię od 22:00'
+    body = (
+        f'SoC {soc_percent:.0f}% (próg {soc_below:.0f}%) i jutro słabe PV '
+        f'(~{tomorrow_pv_kwh:.0f} kWh, próg {weak_pv_below:.0f}). '
+        f'Zalecane ładowanie magazynu od 22:00 w taniej strefie G12w — '
+        f'jutro rano dach raczej nie odbuduje baterii. Sugestia doradcza, bez automatyki.'
+    )
+    return ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=soc_percent,
+        tomorrow_pv_kwh=tomorrow_pv_kwh,
+        soc_below=soc_below,
+        weak_pv_below=weak_pv_below,
+        recommendation=rec,
+        title=title,
+        body=body,
+    )
+
+
+def get_day_pv_forecast_sum(
+    target_day: str,
+    *,
+    as_of: datetime | None = None,
+    db_path: str | None = None,
+) -> float | None:
+    """Suma prognozy RF (raw) na cały dzień — pod regułę pochmurno."""
+    as_of = as_of or datetime.now()
+    db_path = db_path or _db_path()
+    try:
+        from src.models.pv_hourly_predictor import PVHourlyPredictor
+
+        predictor = PVHourlyPredictor()
+        predictor.load()
+        pred = predictor.predict_days(
+            days_ahead=1,
+            db_path=db_path,
+            from_date=date.fromisoformat(target_day),
+            hybrid_today=False,
+            use_actual_pv=False,
+            as_of=as_of,
+        )
+        day_df = pred[pred['day'] == target_day] if not pred.empty else pred
+        if day_df.empty:
+            return None
+        return round(float(day_df['predicted_kwh'].sum()), 2)
+    except Exception:
+        return None
 
 
 def _battery_capacity_kwh(db_path: str | None = None) -> float:
@@ -610,7 +720,24 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
         details.append(f'Prognoza PV do końca dnia: {pv.remaining_forecast_kwh:.1f} kWh')
         details.append('Strefa droga do 22:00 (pn–pt)')
 
-        if soc is not None and soc >= min_eve:
+        tomorrow = (date.fromisoformat(target_day) + timedelta(days=1)).isoformat()
+        tomorrow_pv = get_day_pv_forecast_sum(tomorrow, as_of=as_of)
+        cloudy_rule = evaluate_charge_tonight_cloudy(
+            soc_percent=soc,
+            tomorrow_pv_kwh=tomorrow_pv,
+            as_of=as_of,
+        )
+        if tomorrow_pv is not None:
+            details.append(f'Prognoza PV jutro (suma): {tomorrow_pv:.1f} kWh')
+
+        if cloudy_rule.triggered:
+            rec = cloudy_rule.recommendation
+            action = cloudy_rule.body
+            details.append(
+                f'Reguła pochmurno+niski SoC: SoC < {cloudy_rule.soc_below:.0f}% '
+                f'i jutro < {cloudy_rule.weak_pv_below:.0f} kWh → ładuj od 22:00'
+            )
+        elif soc is not None and soc >= min_eve:
             rec = 'BATERIA NA WIECZÓR OK'
             action = (
                 f'SoC {soc:.0f}% wystarczy na start szczytu 16–22. '
