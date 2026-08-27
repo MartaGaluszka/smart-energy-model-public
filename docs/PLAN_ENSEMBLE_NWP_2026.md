@@ -273,22 +273,22 @@ LSTM z `GHI[6–12h]` sekwencją mógłby przewidzieć „GHI rośnie 3h z rzęd
 
 ---
 
-## Harmonogram — start Faza 1 (teraz)
+## Harmonogram Faza 1 — status 27.08.2026
 
-| Task | ID | Czas | Zależności | Status |
-|------|-----|------|------------|--------|
-| Weryfikacja UKMO API | E1.1 | 15–30 min | — | `[ ]` **START** |
-| Kod `get_ukmo_forecast()` | E1.2 | 1–2 h | E1.1 PASS | `[ ]` |
-| Ensemble averaging | E1.3 | 2–3 h | E1.2 | `[ ]` |
-| Backtest 3 dni | E1.4 | 1–2 h | E1.3 | `[ ]` |
-| Retrain ensemble | E1.5 | 30 min + overnight | E1.4 OK | `[ ]` |
-| Live closeouty | E1.6 | 5–7 dni pasywne | E1.5 | `[ ]` |
-| Gate decyzja | E1.7 | 1 h | E1.6 | `[ ]` |
-| Wdrożenie (jeśli ACCEPT) | E1.8 | 30 min | E1.7 ACCEPT | `[ ]` |
+| Task | ID | Czas | Status | Data | Commit |
+|------|-----|------|--------|------|--------|
+| Weryfikacja UKMO API | E1.1 | 15 min | `[x]` DONE | 27.08 | — |
+| Kod `get_ukmo_forecast()` | E1.2 | 1 h | `[x]` DONE | 27.08 | fc15009b |
+| Ensemble averaging | E1.3 | 30 min | `[x]` DONE | 27.08 | 3d6daa05 |
+| Backtest 3 dni | E1.4 | 1 h | `[x]` DONE | 27.08 | 5243886f |
+| Retrain ensemble | E1.5 | — | `[x]` DOC | 27.08 | 290b8238 |
+| Live closeouty | E1.6 | 5–7 dni | `[ ]` DEFER | IX 2026 | — |
+| Gate decyzja | E1.7 | 1 h | `[ ]` DEFER | IX 2026 | — |
+| Wdrożenie (jeśli ACCEPT) | E1.8 | 30 min | `[ ]` DEFER | IX 2026 | — |
 
-**Czas total:** ~7–10 dni (1–2 dni aktywnej roboty + 5–7 dni czekania na closeouty)
+**Status 27.08:** 5/8 tasków DONE · Faza 1 kod gotowy · backtest +3.9pp poprawa
 
-**Next step:** Task E1.1 — sprawdź UKMO API (15 min)
+**Decyzja:** E1.6–E1.8 defer do IX 2026 (≥30 dni danych) · focus operacyjny (paper-trade routing)
 
 ---
 
@@ -339,24 +339,200 @@ LSTM z `GHI[6–12h]` sekwencją mógłby przewidzieć „GHI rośnie 3h z rzęd
 
 ---
 
-## Quick start — pierwsze kroki
+## Następne kroki — Quick test 28–31.08 ⭐
 
-**Dzisiaj (27.08):**
-1. Task E1.1 (15 min) — test UKMO API
-2. Task E1.2 (1–2 h) — kod `get_ukmo_forecast()`
+**Decyzja:** Nie czekać do IX (warunki jesień ≠ lato) — test routing **TERAZ** (koniec sierpnia).
 
-**Jutro (28.08):**
-3. Task E1.3 (2–3 h) — ensemble averaging
-4. Task E1.4 (1–2 h) — backtest 3 dni
+### **Setup dzisiaj (27.08, 10 min)**
 
-**Pojutrze (29.08):**
-5. Task E1.5 (30 min) — retrain ensemble
-6. Task E1.6 start — czekać 5–7 dni na closeouty
+Dodaj do launchd daily (05:00 + 12:00):
 
-**~3–5.09:**
-7. Task E1.7 (1 h) — gate decyzja
-8. Task E1.8 (30 min) — wdrożenie (jeśli ACCEPT)
+```bash
+# mlops/launchd_daily_forecast.sh
+
+# 1) PRIMARY ICON (baseline)
+python mlops/forecast_pv.py --sync --out data/processed/pv_forecast.csv
+
+# 2) SHADOW CS4 (już jest)
+python mlops/forecast_pv.py --model-path models/pv_hourly_model_cs4.joblib \
+  --out data/processed/pv_forecast_cs4.csv
+
+# 3) SHADOW ENSEMBLE (nowy)
+WEATHER_ENSEMBLE_UKMO=1 python mlops/forecast_pv.py --sync \
+  --out data/processed/pv_forecast_ensemble.csv
+
+# 4) ROUTING DECISION (nowy)
+python scripts/analysis/routing_decision.py --date tomorrow
+```
+
+**Skrypt routing:** `scripts/analysis/routing_decision.py` — decyzja jasny/pochmurny ✅
 
 ---
 
-*Plan wdrożenia ensemble NWP — 27.08.2026 — Faza 1 start, Faza 2 backlog (≥1 miesiąc).*
+### **Test 28–31.08 (4 dni, pasywne zbieranie)**
+
+| Dzień | Forecast cloud | Regime | Pick | Zbierz closeout |
+|-------|----------------|--------|------|-----------------|
+| **28.08** | **54.4%** | pochmurny | **CS4** | actual, ICON, ensemble, CS4 |
+| **29.08** | ? | ? | ? | j.w. |
+| **30.08** | ? | ? | ? | j.w. |
+| **31.08** | ? | ? | ? | j.w. |
+
+**Routing:** jasny (cloud <30%) → ensemble; pochmurny → CS4
+
+**Dokumentacja:** [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
+
+---
+
+### **Gate 01.09 (pon, 1h)**
+
+Analiza 4 dni:
+- MAPE routing vs MAPE ICON baseline
+- Błędy >20% (routing vs baseline 3/29)
+- Średni błąd routing < ICON?
+
+**Decyzja:**
+- **ACCEPT:** routing ≤ ICON + błędy spadły → wdrożenie 02.09
+- **REVIEW:** routing ≈ ICON → zbierać więcej (IX)
+- **REJECT:** routing > ICON → zostać przy ICON
+
+---
+
+### **Wdrożenie 02.09 (wt, 30 min) — jeśli ACCEPT**
+
+1. Flag `.env`: `ROUTING_ENABLE=1`
+2. Launchd: użyj routing_pick.csv do wyboru ensemble vs CS4
+3. Monitor 3–7 dni closeoutów
+
+---
+
+## Backup plan — IX 2026 (jeśli 01.09 REVIEW)
+
+### **Setup zbieranie ensemble (28.08 → IX)**
+
+**Launchd:** codzienne zbieranie ensemble forecast (shadow, nie prod):
+
+```bash
+# mlops/launchd_daily_forecast.sh
+# Po primary ICON:
+WEATHER_ENSEMBLE_UKMO=1 python mlops/forecast_pv.py --sync \
+  --out data/processed/pv_forecast_ensemble.csv \
+  --run-label daily-ensemble-shadow
+```
+
+**Czas:** 5 min setup · zbiera od 28.08 → IX 2026 (≥30 dni)
+
+---
+
+### **Wdrożenie IX 2026 (gdy ≥30 dni danych)**
+
+| Krok | Co | Kiedy |
+|------|-----|-------|
+| **IX.1** | Retrain RF na ensemble (≥30 dni) | ~28.09–01.10 |
+| **IX.2** | Gate: MAPE ensemble ≤9%? | ~05.10 |
+| **IX.3** | Jeśli ACCEPT: wdrożenie ensemble primary | ~06.10 |
+| **IX.4** | Jeśli REVIEW: routing conditional (jasny/pochmurny) | +1 tydzień |
+
+---
+
+### **Routing conditional (po IX.3 lub IX.4)**
+
+**Task R1: Jasny → ensemble, pochmurny → CS4**
+
+```python
+# mlops/forecast_pv.py
+cloud_avg = weather['cloud_cover_pct'].mean()
+
+if cloud_avg < 30:  # jasny
+    model = "ensemble"  # ICON+UKMO
+else:  # pochmurny
+    model = "CS4"       # więcej warstw chmur
+```
+
+**Implementacja:**
+1. Reguła decyzyjna (próg cloud/jasność) — 1h
+2. Pipeline routing — 2h
+3. Closeouty walidacja (5–7 dni) — pasywne
+4. Gate: routing vs baseline — 1h
+
+**Czas:** 3h kod + 5–7 dni closeoutów
+
+**Warunki start:**
+- Ensemble wdrożony (IX.3) **lub**
+- Ensemble REVIEW (IX.4) — routing jako plan B
+
+---
+
+## Taski routing — szczegółowo
+
+### **R1.1: Reguła decyzyjna**
+
+Dodaj progi w `.env`:
+```bash
+ROUTING_CLEAR_CLOUD_MAX=30      # <30% = jasny
+ROUTING_CLEAR_JASNOSC_MIN=7     # ≥7 Accu = jasny
+ROUTING_ENABLE=0                # default OFF
+```
+
+### **R1.2: Pipeline routing**
+
+`mlops/forecast_pv.py`:
+```python
+if os.getenv('ROUTING_ENABLE') == '1':
+    cloud_avg = forecast['cloud_cover_pct'].mean()
+    if cloud_avg < float(os.getenv('ROUTING_CLEAR_CLOUD_MAX', '30')):
+        # Jasny → ensemble
+        model_path = 'models/pv_hourly_model_ensemble.joblib'
+        weather_ensemble = True
+    else:
+        # Pochmurny → CS4
+        model_path = 'models/pv_hourly_model_cs4.joblib'
+        weather_ensemble = False
+```
+
+### **R1.3: Closeouty walidacja**
+
+Zbieraj:
+| Dzień | Cloud | Reżim | Model | Actual | Pred | Błąd |
+|-------|-------|-------|-------|--------|------|------|
+| ... | 25% | jasny | ensemble | 35.2 | 30.0 | −14.8% |
+| ... | 85% | pochmurny | CS4 | 11.8 | 11.4 | −3.4% |
+
+### **R1.4: Gate routing**
+
+Porównaj:
+- **Baseline:** ensemble all days (lub ICON)
+- **Routing:** conditional ensemble/CS4
+
+**Target:** MAPE routing ≤ baseline −1pp
+
+---
+
+## Timeline visual (updated 27.08 ~13:50)
+
+```
+27.08 ─── 28–31.08 ── 01.09 ── 02.09 ────────── IX 2026 ─── X 2026
+  │           │          │       │                  │          │
+E1.1–E1.5   TEST     GATE    DEPLOY          Backup      R1 extend
+  DONE    (4 dni)    (1h)    (30min)         (jeśli      (jeśli
+  │           │          │       │            REVIEW)     potrzeba)
+  │           │          │       │              │           │
+  └─> setup  └─> close  └─> OK? └─> prod      │           │
+      routing    outs        │                 │           │
+                             │                 │           │
+                        ACCEPT ───────────────┘           │
+                             │                             │
+                        REVIEW ─────> zbieraj IX ─────────┘
+                                      (≥30 dni)
+```
+
+**Kluczowe daty:**
+- **27.08:** Setup routing + ensemble ✅
+- **28–31.08:** Test 4 dni (zbieranie)
+- **01.09:** Gate decision (ACCEPT/REVIEW/REJECT)
+- **02.09:** Wdrożenie jeśli ACCEPT
+- **IX 2026:** Backup jeśli 01.09 REVIEW
+
+---
+
+*Plan aktualizacja — 27.08.2026 — E1.1–E1.5 DONE · Quick test 28–31.08 · IX backup*
