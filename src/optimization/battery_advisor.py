@@ -21,7 +21,12 @@ from src.optimization.g12w_tariff import classify_zone, is_public_holiday, is_we
 
 Context = Literal['morning', 'pre_cheap', 'peak']
 
-WINTER_MONTHS = {10, 11, 12, 1, 2, 3}
+WINTER_MONTHS = {11, 12, 1, 2}  # XI–II; III–V = wiosna (§E); X = jesień (B1)
+SPRING_MONTHS = {3, 4, 5}
+# Jesień: 15.09–31.10 (PLAN_BATERIA §A / §D)
+AUTUMN_MONTH_START = 9
+AUTUMN_DAY_START = 15
+
 LOG_FILE = 'data/processed/battery_advisor_log.csv'
 OUTAGE_LOG_FILE = 'data/processed/battery_outage_log.csv'
 # Pojemność magazynu (fakt instalacji) — 1% SoC ≈ 0,104 kWh.
@@ -127,7 +132,7 @@ class BatteryAdvice:
     context: Context
     as_of: datetime
     target_day: str
-    season: Literal['winter', 'summer']
+    season: Literal['winter', 'summer', 'autumn', 'spring']
     tariff_zone: int
     tariff_label: str
     snapshot: BatterySnapshot
@@ -139,16 +144,28 @@ class BatteryAdvice:
 
 
 def is_winter_season(d: date | None = None) -> bool:
+    """Zima kalendarzowa: XI–II (§E — marzec = wiosna)."""
     d = d or date.today()
     return d.month in WINTER_MONTHS
 
 
-def is_b2_night_season(d: date | None = None) -> bool:
-    """B2: zima X–III albo jesień od 15.09 (PV/T → FC; bez osobnego season=autumn w settings)."""
+def is_autumn_season(d: date | None = None) -> bool:
+    """Jesień B1/§D: 15.09–31.10."""
     d = d or date.today()
-    if is_winter_season(d):
+    if d.month == AUTUMN_MONTH_START and d.day >= AUTUMN_DAY_START:
         return True
-    return d.month == 9 and d.day >= 15
+    return d.month == 10
+
+
+def is_spring_season(d: date | None = None) -> bool:
+    """Wiosna §E: III–V (FC jak lato, próg PV ~8)."""
+    d = d or date.today()
+    return d.month in SPRING_MONTHS
+
+
+def is_b2_night_season(d: date | None = None) -> bool:
+    """B2 T×PV: tylko zima XI–II. Jesień ma osobną ścieżkę PV (§D)."""
+    return is_winter_season(d)
 
 
 def _db_path() -> str:
@@ -299,13 +316,32 @@ def _summer_tomorrow_max_kwh() -> float:
 
 
 def _b2_pv_skip_kwh() -> float:
-    """B2: przy T ≥ 0°C dach ≥ tyle kWh zwykle pokrywa szczyt — nie pełnić."""
+    """Zima B2: przy T ≥ 0°C dach ≥ tyle kWh zwykle pokrywa szczyt — nie pełnić."""
     return float(os.getenv('BATTERY_B2_PV_SKIP_KWH', '12'))
 
 
 def _b2_mild_weak_pv_kwh() -> float:
-    """B2: T ≥ 5°C i PV poniżej tego → ładuj do ~80%."""
+    """Zima B2: T ≥ 5°C i PV poniżej tego → ładuj do ~80%."""
     return float(os.getenv('BATTERY_B2_MILD_WEAK_PV_KWH', '8'))
+
+
+def _autumn_pv_charge_kwh() -> float:
+    """Jesień §D: ładuj nocą gdy PV jutro poniżej tego (fakt: PV<8 → luka ~7 kWh)."""
+    return float(os.getenv('BATTERY_AUTUMN_PV_CHARGE_KWH', '8'))
+
+
+def _autumn_target_soc() -> float:
+    return float(os.getenv('BATTERY_AUTUMN_TARGET_SOC', '85'))
+
+
+def _spring_tomorrow_max_kwh() -> float:
+    """Wiosna §E: FC tylko przy bardzo słabym PV (jak lato, próg 8 nie 10)."""
+    return float(os.getenv('BATTERY_SPRING_TOMORROW_MAX_KWH', '8'))
+
+
+def _spring_soc_charge_below() -> float:
+    """Wiosna: ładuj tylko gdy SoC poniżej tego (plan: ~40%)."""
+    return float(os.getenv('BATTERY_SPRING_SOC_CHARGE_BELOW', '40'))
 
 
 def _fc_minutes_per_50_soc() -> float:
@@ -340,7 +376,7 @@ def winter_night_target_soc(
     t_mean_c: float | None,
     tomorrow_pv_kwh: float,
 ) -> float | None:
-    """Docelowy SoC po FC 22–6. None = nie pełnić (zostaw rezerwę / dach)."""
+    """Docelowy SoC po FC 22–6 zimą (§C). None = nie pełnić (zostaw rezerwę / dach)."""
     skip_pv = _b2_pv_skip_kwh()
     mild_weak = _b2_mild_weak_pv_kwh()
     if t_mean_c is None:
@@ -354,6 +390,20 @@ def winter_night_target_soc(
     if tomorrow_pv_kwh >= skip_pv:
         return None
     return 80.0
+
+
+def autumn_night_target_soc(tomorrow_pv_kwh: float) -> float | None:
+    """Jesień §D: steruje PV (nie T). PV < ~8 → cel ~85%; inaczej dach / pomiń."""
+    if tomorrow_pv_kwh < _autumn_pv_charge_kwh():
+        return _autumn_target_soc()
+    return None
+
+
+def estimate_autumn_peak_gap_kwh(tomorrow_pv_kwh: float) -> float:
+    """Przybliżenie luki szczytu jesienią: load_exp ~9,5; ~70% PV w drogiej (§D)."""
+    load = float(os.getenv('BATTERY_AUTUMN_LOAD_EXP_KWH', '9.5'))
+    frac = float(os.getenv('BATTERY_AUTUMN_PV_IN_PEAK_FRACTION', '0.70'))
+    return load - frac * max(0.0, tomorrow_pv_kwh)
 
 
 def _b2_capacity_kwh(capacity_kwh: float | None) -> float:
@@ -402,16 +452,35 @@ def evaluate_charge_tonight_cloudy(
 ) -> ChargeTonightCloudyRule:
     """Czysta reguła produktowa (bez I/O) — advise-only.
 
-    B2 zima/jesień (X–III oraz od 15.09): Tśr jutro + PV jutro → cel SoC i minuty
-    (30 min ≈ +50 pp). Drobny brak (< ~2 kWh / < 15 pp) pomijamy — cykl vs spread G12w.
-    Lato: podłoga 20% + cap 15 min / +25 pp; krótki FC gdy SoC < 20% i jutro ≤ 10 kWh.
+    - Zima XI–II (§C): Tśr jutro + PV → cel SoC i minuty (30 min ≈ +50 pp).
+    - Jesień 15.09–31.10 (§D): PV jutro < ~8 kWh → cel ~85%; T nie filtruje.
+    - Wiosna III–V (§E) / lato: krótki FC gdy SoC niski i jutro słabe PV.
+    Drobny brak (< ~2 kWh / < 15 pp) pomijamy — cykl vs spread G12w.
     """
     as_of = as_of or datetime.now()
-    b2 = is_b2_night_season(as_of.date())
+    cal = resolve_calendar_season(as_of.date())
+    winter_b2 = cal == 'winter'
+    autumn = cal == 'autumn'
+    spring = cal == 'spring'
+
     if soc_below is None:
-        soc_below = _soc_reserve_winter() if b2 else _soc_reserve_summer()
+        if winter_b2:
+            soc_below = _soc_reserve_winter()
+        elif autumn:
+            soc_below = _soc_reserve_autumn()
+        elif spring:
+            soc_below = _spring_soc_charge_below()
+        else:
+            soc_below = _soc_reserve_summer()
     if weak_pv_below is None:
-        weak_pv_below = _b2_pv_skip_kwh() if b2 else _summer_tomorrow_max_kwh()
+        if winter_b2:
+            weak_pv_below = _b2_pv_skip_kwh()
+        elif autumn:
+            weak_pv_below = _autumn_pv_charge_kwh()
+        elif spring:
+            weak_pv_below = _spring_tomorrow_max_kwh()
+        else:
+            weak_pv_below = _summer_tomorrow_max_kwh()
 
     def _empty(*, skip_reason: str = '', **extra) -> ChargeTonightCloudyRule:
         return ChargeTonightCloudyRule(
@@ -435,7 +504,8 @@ def evaluate_charge_tonight_cloudy(
     if soc_percent is None:
         return _empty()
 
-    if not b2:
+    # --- Lato / wiosna: krótki FC ---
+    if not winter_b2 and not autumn:
         if soc_percent >= soc_below:
             return _empty()
         if tomorrow_pv_kwh is None:
@@ -444,24 +514,83 @@ def evaluate_charge_tonight_cloudy(
             return _empty()
         minutes = _summer_fc_max_minutes()
         delta = _summer_fc_delta_soc()
+        label = 'WIOSNA' if spring else 'LATO'
         return ChargeTonightCloudyRule(
             triggered=True,
             soc_percent=soc_percent,
             tomorrow_pv_kwh=tomorrow_pv_kwh,
             soc_below=soc_below,
             weak_pv_below=weak_pv_below,
-            recommendation='LATO: KRÓTKI FC 15 MIN (+25%)',
+            recommendation=f'{label}: KRÓTKI FC 15 MIN (+25%)',
             title='Sugestia: krótko doładuj od 22:00 (max 15 min)',
             body=(
-                f'SoC {soc_percent:.0f}% < nocna podłoga {soc_below:.0f}% i jutro ~{tomorrow_pv_kwh:.0f} kWh '
-                f'(próg {weak_pv_below:.0f}). Latem: włącz ForceCharge 22:00, wyłącz po max {minutes:.0f} min '
-                f'(+{delta:.0f} pp; 30 min ≈ +50 pp) — nie ładuj do 75–100%. Sugestia doradcza, bez automatyki.'
+                f'SoC {soc_percent:.0f}% < próg {soc_below:.0f}% i jutro ~{tomorrow_pv_kwh:.0f} kWh '
+                f'(próg PV {weak_pv_below:.0f}). {label.capitalize()}: włącz ForceCharge 22:00, '
+                f'wyłącz po max {minutes:.0f} min (+{delta:.0f} pp; 30 min ≈ +50 pp) — nie ładuj do 75–100%. '
+                f'Sugestia doradcza, bez automatyki.'
             ),
             target_soc_percent=min(100.0, soc_percent + delta),
             fc_minutes=minutes,
             tomorrow_temp_c=tomorrow_temp_c,
         )
 
+    # --- Jesień §D: PV-driven ---
+    if autumn:
+        if tomorrow_pv_kwh is None:
+            return _empty()
+        target = autumn_night_target_soc(tomorrow_pv_kwh)
+        gap = estimate_autumn_peak_gap_kwh(tomorrow_pv_kwh)
+        reserve = soc_below
+        if target is None:
+            if soc_percent < reserve:
+                target = reserve
+            else:
+                return _empty(skip_reason='covered', estimated_gap_kwh=gap)
+        if soc_percent >= target:
+            return _empty(skip_reason='full', target_soc_percent=target, estimated_gap_kwh=gap)
+        delta_soc = target - soc_percent
+        cap = _b2_capacity_kwh(capacity_kwh)
+        energy_kwh = delta_soc / 100.0 * cap
+        minutes = fc_minutes_for_delta_soc(delta_soc)
+        below_reserve = soc_percent < reserve
+        if not _charge_worth_vs_wear(
+            energy_kwh=energy_kwh,
+            delta_soc=delta_soc,
+            gap_kwh=gap,
+            frost=False,
+            below_reserve=below_reserve,
+        ):
+            return _empty(
+                skip_reason='wear',
+                target_soc_percent=target,
+                fc_minutes=minutes,
+                estimated_gap_kwh=gap,
+            )
+        end_min = int(round(minutes))
+        end_h, end_m = divmod((22 * 60 + end_min) % (24 * 60), 60)
+        return ChargeTonightCloudyRule(
+            triggered=True,
+            soc_percent=soc_percent,
+            tomorrow_pv_kwh=tomorrow_pv_kwh,
+            soc_below=soc_below,
+            weak_pv_below=weak_pv_below,
+            recommendation='ŁADUJ OD 22:00 (JESIEŃ PV)',
+            title='Sugestia: naładuj baterię od 22:00',
+            body=(
+                f'SoC {soc_percent:.0f}% → cel {target:.0f}% (+{delta_soc:.0f} pp). '
+                f'Włącz ForceCharge o 22:00, wyłącz o {end_h:02d}:{end_m:02d} '
+                f'(~{minutes:.0f} min; 30 min ≈ +50 pp). '
+                f'Jutro PV ~{tomorrow_pv_kwh:.0f} kWh < {weak_pv_below:.0f} '
+                f'(luka szczytu ~{gap:.0f} kWh). Nie zostawiaj FC do rana. '
+                f'Sugestia doradcza, bez automatyki.'
+            ),
+            target_soc_percent=target,
+            fc_minutes=minutes,
+            tomorrow_temp_c=tomorrow_temp_c,
+            estimated_gap_kwh=round(gap, 1),
+        )
+
+    # --- Zima §C: T×PV ---
     frost = tomorrow_temp_c is not None and tomorrow_temp_c < 0
     if tomorrow_pv_kwh is None and not frost:
         return _empty()
@@ -508,31 +637,29 @@ def evaluate_charge_tonight_cloudy(
     pv_txt = f'~{tomorrow_pv_kwh:.0f} kWh' if tomorrow_pv_kwh is not None else 'brak prognozy PV'
     t_txt = f'{tomorrow_temp_c:.0f}°C' if tomorrow_temp_c is not None else 'T nieznana'
     gap_txt = f', luka szczytu ~{gap:.0f} kWh' if gap is not None else ''
-    rec = 'ŁADUJ OD 22:00 (B2 T+PV)'
-    title = 'Sugestia: naładuj baterię od 22:00'
     end_min = int(round(minutes))
     end_h, end_m = divmod((22 * 60 + end_min) % (24 * 60), 60)
-    body = (
-        f'SoC {soc_percent:.0f}% → cel {target:.0f}% (+{delta_soc:.0f} pp). '
-        f'Włącz ForceCharge o 22:00, wyłącz o {end_h:02d}:{end_m:02d} '
-        f'(~{minutes:.0f} min; kalibracja: 30 min ≈ +50 pp, jak 25–26.08). '
-        f'Jutro {t_txt}, PV {pv_txt}{gap_txt}. Nie zostawiaj FC do rana — tylko okno. '
-        f'Sugestia doradcza, bez automatyki.'
-    )
     return ChargeTonightCloudyRule(
         triggered=True,
         soc_percent=soc_percent,
         tomorrow_pv_kwh=tomorrow_pv_kwh,
         soc_below=soc_below,
         weak_pv_below=weak_pv_below,
-        recommendation=rec,
-        title=title,
-        body=body,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='Sugestia: naładuj baterię od 22:00',
+        body=(
+            f'SoC {soc_percent:.0f}% → cel {target:.0f}% (+{delta_soc:.0f} pp). '
+            f'Włącz ForceCharge o 22:00, wyłącz o {end_h:02d}:{end_m:02d} '
+            f'(~{minutes:.0f} min; kalibracja: 30 min ≈ +50 pp, jak 25–26.08). '
+            f'Jutro {t_txt}, PV {pv_txt}{gap_txt}. Nie zostawiaj FC do rana — tylko okno. '
+            f'Sugestia doradcza, bez automatyki.'
+        ),
         target_soc_percent=target,
         fc_minutes=minutes,
         tomorrow_temp_c=tomorrow_temp_c,
         estimated_gap_kwh=None if gap is None else round(gap, 1),
     )
+
 
 
 def get_day_pv_forecast_sum(
@@ -646,9 +773,31 @@ def _soc_reserve_summer() -> float:
     return float(os.getenv('BATTERY_SOC_RESERVE_SUMMER', '20'))
 
 
-def resolve_calendar_season(d: date | None = None) -> Literal['winter', 'summer']:
-    """Kalendarz MVP: zima X–III, lato reszta. Pas jesień = B1 (jeszcze nie)."""
-    return 'winter' if is_winter_season(d) else 'summer'
+def _soc_reserve_autumn() -> float:
+    """Mostek lato→zima (PLAN §A: 20–25%)."""
+    return float(os.getenv('BATTERY_SOC_RESERVE_AUTUMN', '22'))
+
+
+def _soc_min_evening_for_season(season: str) -> float:
+    if season == 'autumn':
+        return float(os.getenv('BATTERY_SOC_MIN_EVENING_AUTUMN', '45'))
+    if season == 'winter':
+        return float(os.getenv('BATTERY_SOC_MIN_EVENING_WINTER', os.getenv('BATTERY_SOC_MIN_EVENING', '50')))
+    if season == 'spring':
+        return float(os.getenv('BATTERY_SOC_MIN_EVENING_SPRING', os.getenv('BATTERY_SOC_MIN_EVENING_SUMMER', '50')))
+    return float(os.getenv('BATTERY_SOC_MIN_EVENING_SUMMER', os.getenv('BATTERY_SOC_MIN_EVENING', '50')))
+
+
+def resolve_calendar_season(d: date | None = None) -> Literal['winter', 'summer', 'autumn', 'spring']:
+    """Kalendarz: zima XI–II, wiosna III–V, jesień 15.09–31.10, lato reszta."""
+    d = d or date.today()
+    if is_winter_season(d):
+        return 'winter'
+    if is_autumn_season(d):
+        return 'autumn'
+    if is_spring_season(d):
+        return 'spring'
+    return 'summer'
 
 
 def seasonal_soc_reserve(
@@ -656,13 +805,28 @@ def seasonal_soc_reserve(
     *,
     season: str | None = None,
 ) -> float:
-    """Rezerwa min. SoC wg sezonu (BAT.5). `season=auto`/None → kalendarz."""
+    """Rezerwa min. SoC (BAT.5 / B1 / §E). `season=auto`/None → kalendarz."""
     resolved = season
     if resolved in (None, '', 'auto'):
         resolved = resolve_calendar_season(d)
     if resolved == 'winter':
         return _soc_reserve_winter()
+    if resolved == 'autumn':
+        return _soc_reserve_autumn()
+    # lato + wiosna: 20%
     return _soc_reserve_summer()
+
+
+def seasonal_min_evening_percent(
+    d: date | None = None,
+    *,
+    season: str | None = None,
+) -> float:
+    """Próg SoC@16 / wieczór (B1: jesień 45%, zima 50%)."""
+    resolved = season
+    if resolved in (None, '', 'auto'):
+        resolved = resolve_calendar_season(d)
+    return _soc_min_evening_for_season(resolved)
 
 
 def get_soc_at_hour(
@@ -1096,8 +1260,8 @@ def _apply_resilience_to_advice(
 def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
     as_of = as_of or datetime.now()
     target_day = as_of.date().isoformat()
-    winter = is_winter_season(as_of.date())
-    season: Literal['winter', 'summer'] = 'winter' if winter else 'summer'
+    season = resolve_calendar_season(as_of.date())
+    winter = season == 'winter'
     zone = classify_zone(as_of)
     tariff_label = 'tanio (pozaszczyt)' if zone == 2 else 'drogo (szczyt)'
 

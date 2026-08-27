@@ -66,13 +66,13 @@ def get_battery_policy() -> dict:
 
 
 def resolve_season_name(season_mode: str | None, d: date | None = None) -> str:
-    """`auto` → zima X–III / lato (B1 jesień jeszcze nie)."""
-    from src.optimization.battery_advisor import is_winter_season
+    """`auto` → zima XI–II / wiosna III–V / jesień 15.09–31.10 / lato."""
+    from src.optimization.battery_advisor import resolve_calendar_season
 
     mode = (season_mode or 'auto').strip().lower()
-    if mode in ('winter', 'summer'):
+    if mode in ('winter', 'summer', 'autumn', 'spring'):
         return mode
-    return 'winter' if is_winter_season(d or date.today()) else 'summer'
+    return resolve_calendar_season(d or date.today())
 
 
 def seasonal_reserve_for(season: str, d: date | None = None) -> float:
@@ -250,19 +250,31 @@ def settings_payload(settings_row, d: date | None = None) -> dict:
 
 
 def fallback_home_suggestion(settings_row=None, as_of: datetime | None = None) -> dict:
-    """Karta Home gdy SQLite/Fox blokuje odczyt — i tak pokaż reżim (lato/zima)."""
+    """Karta Home gdy SQLite/Fox blokuje odczyt — i tak pokaż reżim (lato/jesień/zima)."""
     as_of = as_of or datetime.now()
     d = as_of.date()
     season_mode = getattr(settings_row, 'season', None) if settings_row else 'auto'
     season = resolve_season_name(season_mode, d)
     reserve = seasonal_reserve_for(season, d)
     target = float(settings_row.soc_target_percent) if settings_row and settings_row.soc_target_percent else 80.0
-    winter = season == 'winter'
-    if winter:
+    if season == 'winter':
         rec, night, aft = 'REŻIM ZIMA', 'wg T+PV (22–6)', 'włącz (13–15)'
         action = (
             f'Rezerwa SoC {reserve:.0f}% — nie ładuj w drogiej G12w. '
             f'ForceCharge 22–6 wg T jutro + PV. System tylko doradza — bez automatyki.'
+        )
+    elif season == 'autumn':
+        rec, night, aft = 'REŻIM JESIEŃ', 'gdy PV jutro < ~8 kWh', 'gdy SoC poniżej celu'
+        action = (
+            f'Rezerwa SoC {reserve:.0f}% (mostek do zimy). '
+            f'Ładuj nocą tylko gdy jutro PV < ~8 kWh — włącz 22:00 i wyłącz po czasie (30 min ≈ +50 pp). '
+            f'System tylko doradza — bez automatyki.'
+        )
+    elif season == 'spring':
+        rec, night, aft = 'REŻIM WIOSNA', 'rzadko (dach zwykle wystarczy)', 'rzadko potrzebne'
+        action = (
+            f'Rezerwa SoC {reserve:.0f}% jak lato. '
+            f'Krótki FC tylko gdy SoC < 40% i jutro PV < ~8 kWh. System tylko doradza — bez automatyki.'
         )
     else:
         rec, night, aft = 'REŻIM LATO', 'pomiń — wystarczy PV', 'rzadko potrzebne'
@@ -270,6 +282,8 @@ def fallback_home_suggestion(settings_row=None, as_of: datetime | None = None) -
             f'Trzymaj min {reserve:.0f}% na noc (rezerwa). Ładowanie z sieci tylko gdy bateria spada poniżej 20% i jutro słabe PV. '
             f'System tylko doradza — bez automatyki.'
         )
+    from src.optimization.battery_advisor import seasonal_min_evening_percent
+
     return {
         'as_of': as_of.isoformat(timespec='seconds'),
         'season': season,
@@ -278,10 +292,10 @@ def fallback_home_suggestion(settings_row=None, as_of: datetime | None = None) -
         'soc_min_percent': reserve,
         'soc_reserve_percent': reserve,
         'soc_target_percent': target,
-        'soc_min_evening_percent': 50.0,
+        'soc_min_evening_percent': seasonal_min_evening_percent(d, season=season),
         'force_charge_night_recommended': False,
         'force_charge_night_label': night,
-        'force_charge_afternoon_recommended': winter,
+        'force_charge_afternoon_recommended': season in ('winter', 'autumn'),
         'force_charge_afternoon_label': aft,
         'soc16_alert': False,
         'soc16_hour_passed': as_of.hour >= 16,
@@ -306,7 +320,7 @@ def get_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
 
 
 def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
-    """Karta Home (BAT.3 + BAT.5): reżim / ForceCharge / rezerwa — bez ML, bez auto-apply."""
+    """Karta Home (BAT.3 + BAT.5 + B1 jesień): reżim / ForceCharge / rezerwa — bez ML."""
     from src.optimization.battery_advisor import (
         evaluate_below_reserve_wait_cheap,
         evaluate_charge_tonight_cloudy,
@@ -315,6 +329,7 @@ def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
         get_battery_snapshot,
         get_day_mean_temp_c,
         get_soc_at_hour,
+        seasonal_min_evening_percent,
         seasonal_soc_reserve,
     )
     from src.optimization.g12w_tariff import is_public_holiday, is_weekend
@@ -325,6 +340,7 @@ def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
     reserve = seasonal_soc_reserve(d, season=season)
     soc_min = effective_soc_min(settings_row, d)
     target = float(settings_row.soc_target_percent) if settings_row else 80.0
+    min_evening = seasonal_min_evening_percent(d, season=season)
     snap = get_battery_snapshot(target_day=d.isoformat())
     soc_now = snap.soc_percent
 
@@ -337,6 +353,7 @@ def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
         soc_percent=soc_for_alert,
         as_of=as_of,
         reserve_percent=reserve,
+        min_evening=min_evening,
     )
     wait_cheap = evaluate_below_reserve_wait_cheap(
         soc_percent=soc_now,
@@ -357,44 +374,43 @@ def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
 
     weekend = is_weekend(d) or is_public_holiday(d)
     winter = season == 'winter'
+    autumn = season == 'autumn'
+    spring = season == 'spring'
+
+    def _aft_for_peak_season() -> tuple[bool, str]:
+        if soc_now is not None and soc_now >= target:
+            return False, 'pomiń (SoC ≥ cel)'
+        return True, 'włącz (13–15)'
+
     if weekend:
         night_rec, night_label = False, 'weekend — cała doba tanio'
         aft_rec, aft_label = False, 'niekrytyczne (weekend)'
     elif night_rule.triggered:
-        mins = night_rule.fc_minutes
-        tgt = night_rule.target_soc_percent
         night_rec = True
         night_label = _fc_on_off_label(
-            minutes=mins,
-            target_soc=tgt,
+            minutes=night_rule.fc_minutes,
+            target_soc=night_rule.target_soc_percent,
             soc_now=soc_now,
         )
-        if soc_now is not None and soc_now >= target:
-            aft_rec, aft_label = False, 'pomiń (SoC ≥ cel)'
-        elif winter:
-            aft_rec, aft_label = True, 'włącz (13–15)'
-        else:
-            aft_rec, aft_label = False, 'rzadko potrzebne'
+        aft_rec, aft_label = _aft_for_peak_season() if (winter or autumn) else (False, 'rzadko potrzebne')
     elif night_rule.skip_reason == 'wear':
         night_rec, night_label = False, 'pomiń (niewiele brakuje vs zużycie baterii)'
-        aft_rec, aft_label = (False, 'rzadko potrzebne') if not winter else (
-            soc_now is None or soc_now < target,
-            'włącz (13–15)' if (soc_now is None or soc_now < target) else 'pomiń (SoC ≥ cel)',
-        )
+        aft_rec, aft_label = _aft_for_peak_season() if (winter or autumn) else (False, 'rzadko potrzebne')
     elif night_rule.skip_reason in ('covered', 'full'):
-        night_rec, night_label = False, 'nie (dach pokryje szczyt)' if night_rule.skip_reason == 'covered' else 'nie (SoC ≥ cel)'
-        if soc_now is not None and soc_now >= target:
-            aft_rec, aft_label = False, 'pomiń (SoC ≥ cel)'
-        elif winter:
-            aft_rec, aft_label = True, 'włącz (13–15)'
-        else:
-            aft_rec, aft_label = False, 'rzadko potrzebne'
+        night_rec, night_label = (
+            False,
+            'nie (dach pokryje szczyt)' if night_rule.skip_reason == 'covered' else 'nie (SoC ≥ cel)',
+        )
+        aft_rec, aft_label = _aft_for_peak_season() if (winter or autumn) else (False, 'rzadko potrzebne')
     elif winter:
         night_rec, night_label = False, 'sprawdź T+PV (brak prognozy)'
-        if soc_now is not None and soc_now >= target:
-            aft_rec, aft_label = False, 'pomiń (SoC ≥ cel)'
-        else:
-            aft_rec, aft_label = True, 'włącz (13–15)'
+        aft_rec, aft_label = _aft_for_peak_season()
+    elif autumn:
+        night_rec, night_label = False, 'gdy PV jutro < ~8 kWh'
+        aft_rec, aft_label = _aft_for_peak_season()
+    elif spring:
+        night_rec, night_label = False, 'rzadko (dach zwykle wystarczy)'
+        aft_rec, aft_label = False, 'rzadko potrzebne'
     else:
         night_rec, night_label = False, 'pomiń — wystarczy PV'
         aft_rec, aft_label = False, 'rzadko potrzebne'
@@ -419,12 +435,25 @@ def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
             f'ForceCharge 22–6 wg T jutro + PV jutro (B2), nie zawsze do 100%. '
             f'System tylko doradza — bez automatyki.'
         )
+    elif autumn:
+        rec = 'REŻIM JESIEŃ'
+        action = (
+            f'Rezerwa SoC {reserve:.0f}% (mostek lato→zima). '
+            f'Ładuj nocą gdy jutro PV < ~8 kWh — włącz 22:00, wyłącz po czasie (30 min ≈ +50 pp). '
+            f'Cel ~85%. System tylko doradza — bez automatyki.'
+        )
+    elif spring:
+        rec = 'REŻIM WIOSNA'
+        action = (
+            f'Rezerwa SoC {reserve:.0f}%. Krótki FC tylko gdy SoC < 40% i jutro PV < ~8 kWh. '
+            f'System tylko doradza — bez automatyki.'
+        )
     else:
         rec = 'REŻIM LATO'
         action = (
-            f'Rezerwa SoC {reserve:.0f}% wystarcza na noc — także gdy jutro PV do 10 kWh. '
-            f'Nie pełnić do 75%. Krótki FC (max 15 min / +25 pp; 30 min ≈ +50 pp) tylko gdy SoC < 20% i jutro ≤ 10 kWh. '
-            f'System tylko doradza — bez automatyki.'
+            f'Trzymaj min {reserve:.0f}% na noc (rezerwa). '
+            f'Ładowanie z sieci tylko gdy bateria spada poniżej 20% i jutro słabe PV. '
+            f'System tylko doradza — decyzja należy do Ciebie.'
         )
 
     return {
