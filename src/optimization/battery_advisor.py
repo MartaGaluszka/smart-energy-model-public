@@ -24,7 +24,10 @@ Context = Literal['morning', 'pre_cheap', 'peak']
 WINTER_MONTHS = {10, 11, 12, 1, 2, 3}
 LOG_FILE = 'data/processed/battery_advisor_log.csv'
 OUTAGE_LOG_FILE = 'data/processed/battery_outage_log.csv'
-# 25–26.08: ForceCharge 22:00–22:30, 24% → 75% ≈ +50 pp / 30 min (~10 kW).
+# Pojemność magazynu (fakt instalacji) — 1% SoC ≈ 0,104 kWh.
+NOMINAL_CAPACITY_KWH = 10.36
+# 25–26.08: ForceCharge 22:00–22:30, 24% → 75% ≈ +50 pp / 30 min.
+# 50% × 10,36 kWh = 5,18 kWh / 0,5 h ≈ 10,4 kW.
 FC_MINUTES_PER_50_SOC = 30.0
 FC_SOC_PER_30_MIN = 50.0
 # load_exp ≈ 18 − 1.0×Tśr (dni robocze zima X.2025–III.2026); ~70% PV w drogiej G12w.
@@ -359,7 +362,7 @@ def _b2_capacity_kwh(capacity_kwh: float | None) -> float:
     env = os.getenv('BATTERY_CAPACITY_KWH', '').strip()
     if env:
         return float(env)
-    return float(os.getenv('BATTERY_CAPACITY_KWH_DEFAULT', '10.36'))
+    return float(os.getenv('BATTERY_CAPACITY_KWH_DEFAULT', str(NOMINAL_CAPACITY_KWH)))
 
 
 def _charge_worth_vs_wear(
@@ -628,7 +631,7 @@ def _battery_capacity_kwh(db_path: str | None = None) -> float:
         conn.close()
         if row and row[0] and float(row[0]) > 1:
             return float(row[0])
-    return float(os.getenv('BATTERY_CAPACITY_KWH_DEFAULT', '11.0'))
+    return float(os.getenv('BATTERY_CAPACITY_KWH_DEFAULT', str(NOMINAL_CAPACITY_KWH)))
 
 
 def _soc_reserve_winter() -> float:
