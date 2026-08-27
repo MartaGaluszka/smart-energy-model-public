@@ -241,9 +241,9 @@ def fallback_home_suggestion() -> dict:
         'soc_target_percent': 90.0 if is_winter else 80.0,
         'soc_min_evening_percent': 60.0 if is_winter else 50.0,
         'force_charge_night_recommended': False,
-        'force_charge_night_label': 'nie (lato)' if not is_winter else 'sprawdź prognozę',
+        'force_charge_night_label': 'pomiń — wystarczy PV' if not is_winter else 'sprawdź prognozę',
         'force_charge_afternoon_recommended': False,
-        'force_charge_afternoon_label': 'opcjonalnie',
+        'force_charge_afternoon_label': 'rzadko potrzebne',
         'soc16_alert': False,
         'soc16_hour_passed': False,
         'soc16_percent': None,
@@ -253,11 +253,11 @@ def fallback_home_suggestion() -> dict:
         'next_cheap_window': None,
         'recommendation': f'REŻIM {"ZIMA" if is_winter else "LATO"}',
         'action': (
-            f'Rezerwa SoC {reserve:.0f}% na noc. '
+            f'Trzymaj min {reserve:.0f}% na noc (rezerwa). '
             + (
-                'Ładuj gdy SoC < 40% przed nocą. System tylko doradza — bez automatyki.'
+                'Ładuj gdy bateria spada poniżej 40% przed nocą. System tylko doradza — decyzja należy do Ciebie.'
                 if is_winter
-                else 'Krótki FC tylko gdy SoC < 20% i jutro ≤ 10 kWh. System tylko doradza — bez automatyki.'
+                else 'Ładowanie z sieci tylko gdy bateria spada poniżej 20% i jutro słabe PV. System tylko doradza — decyzja należy do Ciebie.'
             )
         ),
         'automation_enabled': False,
@@ -344,10 +344,10 @@ def _compose_home_suggestion(settings_row, as_of: datetime | None = None) -> dic
         elif winter:
             aft_rec, aft_label = True, 'włącz (13–15)'
         else:
-            aft_rec, aft_label = False, 'opcjonalnie'
+            aft_rec, aft_label = False, 'rzadko potrzebne'
     elif night_rule.skip_reason == 'wear':
-        night_rec, night_label = False, 'pomiń (niewiele brakuje vs cykl)'
-        aft_rec, aft_label = (False, 'opcjonalnie') if not winter else (
+        night_rec, night_label = False, 'pomiń (niewiele brakuje vs zużycie baterii)'
+        aft_rec, aft_label = (False, 'rzadko potrzebne') if not winter else (
             soc_now is None or soc_now < target,
             'włącz (13–15)' if (soc_now is None or soc_now < target) else 'pomiń (SoC ≥ cel)',
         )
@@ -358,7 +358,7 @@ def _compose_home_suggestion(settings_row, as_of: datetime | None = None) -> dic
         elif winter:
             aft_rec, aft_label = True, 'włącz (13–15)'
         else:
-            aft_rec, aft_label = False, 'opcjonalnie'
+            aft_rec, aft_label = False, 'rzadko potrzebne'
     elif winter:
         night_rec, night_label = False, 'sprawdź T+PV (brak prognozy)'
         if soc_now is not None and soc_now >= target:
@@ -366,8 +366,8 @@ def _compose_home_suggestion(settings_row, as_of: datetime | None = None) -> dic
         else:
             aft_rec, aft_label = True, 'włącz (13–15)'
     else:
-        night_rec, night_label = False, 'nie (lato)'
-        aft_rec, aft_label = False, 'opcjonalnie'
+        night_rec, night_label = False, 'pomiń — wystarczy PV'
+        aft_rec, aft_label = False, 'rzadko potrzebne'
 
     if wait_cheap.triggered:
         rec, action = wait_cheap.recommendation, wait_cheap.body
