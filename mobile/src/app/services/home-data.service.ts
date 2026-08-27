@@ -63,9 +63,9 @@ const FALLBACK_BATTERY: BatterySuggestionResponse = {
   soc_target_percent: 80,
   soc_min_evening_percent: 50,
   force_charge_night_recommended: false,
-  force_charge_night_label: 'nie (lato)',
+  force_charge_night_label: 'pomiń — wystarczy PV',
   force_charge_afternoon_recommended: false,
-  force_charge_afternoon_label: 'opcjonalnie',
+  force_charge_afternoon_label: 'rzadko potrzebne',
   soc16_alert: false,
   soc16_hour_passed: false,
   soc16_percent: null,
@@ -75,7 +75,7 @@ const FALLBACK_BATTERY: BatterySuggestionResponse = {
   next_cheap_window: null,
   recommendation: 'REŻIM LATO',
   action:
-    'Rezerwa SoC 20% na noc. Krótki FC tylko gdy SoC < 20% i jutro ≤ 10 kWh. System tylko doradza — bez automatyki.',
+    'Trzymaj min 20% na noc (rezerwa). Ładowanie z sieci tylko gdy bateria spada poniżej 20% i jutro słabe PV. System tylko doradza — decyzja należy do Ciebie.',
   automation_enabled: false,
   note: 'Sugestia — nie wykonano automatycznie (advise-only).',
 };

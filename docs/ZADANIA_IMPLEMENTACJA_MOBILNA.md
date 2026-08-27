@@ -188,7 +188,7 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 |----|-----|---------|-----|
 | T4.18 | P0 | `[x]` Tabela `notifications` + `push_subscriptions` | Migracja / modele |
 | T4.19 | P0 | `[x]` `GET /api/v1/notifications` — feed sugestii na dashboard (in-app) | Typy: `cheap_window`, `charge_tonight_cloudy`, **`soc_reserve` (BAT.3)** |
-| T4.20 | P0 | `[~]` Generator sugestii baterii/magazynu: okno G12w, plan na dziś/jutro | Seed + reguła pochmurno + SoC@16 przy GET; pełny cron = Faza 4 |
+| T4.20 | P0 | `[~]` Generator sugestii baterii/magazynu: okno G12w, plan na dziś/jutro | Seed + reguła pochmurno + SoC@16 przy GET; pełny cron = Faza 4. **T4.20a** (backlog): banner/modal „ładuj — jutro słabe PV” gdy `force_charge_night_recommended` |
 | T4.21 | P0 | `[x]` UI Home/Bateria: lista ostatnich sugestii (bez FCM wystarczy na pierwszy cut) | Home: feed + karta reżim/FC/rezerwa |
 | T4.22 | P1 | `POST /api/v1/notifications/push-token` + wysyłka FCM (Android) dla tych samych sugestii | Opt-in zgoda systemowa |
 | T4.23 | P1 | UI zgód na powiadomienia push | Domyślnie pytamy przy pierwszym planie baterii |
