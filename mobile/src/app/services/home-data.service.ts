@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, timeout } from 'rxjs';
-import { ApiService, FoxOverviewResponse, NotificationDto } from './api.service';
+import { ApiService, BatterySuggestionResponse, FoxOverviewResponse, NotificationDto } from './api.service';
 import { toLocalIsoDate } from '../utils/date-utils';
 
 export interface HomeKpi {
@@ -55,6 +55,7 @@ const LOOKBACK_DAYS = 5;
 @Injectable({ providedIn: 'root' })
 export class HomeDataService {
   private readonly kpi$ = new BehaviorSubject<HomeKpi>(FALLBACK_KPI);
+  private readonly battery$ = new BehaviorSubject<BatterySuggestionResponse | null>(null);
   private readonly sync$ = new BehaviorSubject<SyncStatus>({
     lastSyncedAt: null,
     syncing: false,
@@ -66,6 +67,7 @@ export class HomeDataService {
 
   constructor(private readonly api: ApiService) {
     this.refreshOverview();
+    this.refreshBatterySuggestion();
   }
 
   getKpi(): Observable<HomeKpi> {
@@ -81,6 +83,17 @@ export class HomeDataService {
       map((rows) => rows.map(this.toSuggestion)),
       catchError(() => of([] as Suggestion[])),
     );
+  }
+
+  getBatterySuggestion(): Observable<BatterySuggestionResponse | null> {
+    return this.battery$.asObservable();
+  }
+
+  refreshBatterySuggestion(): void {
+    this.api.getBatterySuggestion().pipe(timeout(OVERVIEW_TIMEOUT_MS)).subscribe({
+      next: (row) => this.battery$.next(row),
+      error: () => this.battery$.next(null),
+    });
   }
 
   /**
@@ -134,6 +147,7 @@ export class HomeDataService {
           message,
           messageKind,
         });
+        this.refreshBatterySuggestion();
       },
       error: (err) => {
         console.warn('[HomeDataService] api/foxess/overview niedostępne — dane demo.', err);

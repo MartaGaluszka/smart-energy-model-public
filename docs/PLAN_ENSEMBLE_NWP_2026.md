@@ -313,7 +313,7 @@ LSTM z `GHI[6–12h]` sekwencją mógłby przewidzieć „GHI rośnie 3h z rzęd
 |----|-----|-------|-------|
 | **OP.1** | Zwiększ `BATTERY_CLOUDY_DAY_PV_KWH` 18→20 na jesień | `.env` / battery_advisor | IX 2026 |
 | **OP.2** | Error analysis po miesiącach (MAPE VII vs VIII vs IX) | diagnostyka | po E1.7 |
-| **OP.3** | Alert SoC@16:00 <50% → sugestia FC 13–15 | mobile / notifications | jesień (BAT.3) |
+| **OP.3** | Alert SoC@16:00 <50% → sugestia FC 13–15 | mobile / notifications | `[x]` 2026-08-27 (BAT.3) |
 
 ---
 

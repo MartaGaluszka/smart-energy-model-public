@@ -40,6 +40,30 @@ export interface BatteryPolicyResponse {
   reasons: string[];
 }
 
+export interface BatterySuggestionResponse {
+  as_of: string;
+  season: string;
+  season_mode: string;
+  soc_now_percent: number | null;
+  soc_min_percent: number;
+  soc_reserve_percent: number;
+  soc_target_percent: number;
+  soc_min_evening_percent: number;
+  force_charge_night_recommended: boolean;
+  force_charge_night_label: string;
+  force_charge_afternoon_recommended: boolean;
+  force_charge_afternoon_label: string;
+  soc16_alert: boolean;
+  soc16_hour_passed: boolean;
+  soc16_percent: number | null;
+  soc16_title: string | null;
+  soc16_body: string | null;
+  recommendation: string;
+  action: string;
+  automation_enabled: boolean;
+  note: string;
+}
+
 export interface HourlyForecastResponse {
   day: string;
   hours: {
@@ -207,6 +231,14 @@ export class ApiService {
   getBatteryPolicy(): Observable<BatteryPolicyResponse> {
     return this.authed((token) =>
       this.http.get<BatteryPolicyResponse>(`${this.baseUrl}/api/v1/battery/policy`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  getBatterySuggestion(): Observable<BatterySuggestionResponse> {
+    return this.authed((token) =>
+      this.http.get<BatterySuggestionResponse>(`${this.baseUrl}/api/v1/battery/suggestion`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
     );

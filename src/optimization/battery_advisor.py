@@ -61,6 +61,21 @@ class ChargeTonightCloudyRule:
 
 
 @dataclass
+class Soc16HoldReserveRule:
+    """BAT.3: SoC@16 < min wieczór → trzymaj rezerwę / ForceCharge 13–15 albo 22–6."""
+
+    triggered: bool
+    hour_passed: bool
+    soc_percent: float | None
+    min_evening_percent: float
+    reserve_percent: float
+    in_afternoon_window: bool
+    recommendation: str
+    title: str
+    body: str
+
+
+@dataclass
 class ResilienceOutlook:
     """Szacunek autonomii baterii (zima / przerwy w zasilaniu)."""
     capacity_kwh: float
@@ -341,6 +356,121 @@ def _battery_capacity_kwh(db_path: str | None = None) -> float:
 
 def _soc_reserve_winter() -> float:
     return float(os.getenv('BATTERY_SOC_RESERVE_WINTER', '40'))
+
+
+def _soc_reserve_summer() -> float:
+    return float(os.getenv('BATTERY_SOC_RESERVE_SUMMER', '15'))
+
+
+def resolve_calendar_season(d: date | None = None) -> Literal['winter', 'summer']:
+    """Kalendarz MVP: zima X–III, lato reszta. Pas jesień = B1 (jeszcze nie)."""
+    return 'winter' if is_winter_season(d) else 'summer'
+
+
+def seasonal_soc_reserve(
+    d: date | None = None,
+    *,
+    season: str | None = None,
+) -> float:
+    """Rezerwa min. SoC wg sezonu (BAT.5). `season=auto`/None → kalendarz."""
+    resolved = season
+    if resolved in (None, '', 'auto'):
+        resolved = resolve_calendar_season(d)
+    if resolved == 'winter':
+        return _soc_reserve_winter()
+    return _soc_reserve_summer()
+
+
+def get_soc_at_hour(
+    target_day: str,
+    hour: int,
+    db_path: str | None = None,
+) -> float | None:
+    """Pierwszy odczyt SoC w danej godzinie (BAT.3 — checkpoint 16:00)."""
+    db_path = db_path or _db_path()
+    if not os.path.exists(db_path):
+        return None
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        '''
+        SELECT battery_soc_percent
+        FROM foxess_data
+        WHERE date(timestamp) = ?
+          AND battery_soc_percent IS NOT NULL
+          AND CAST(strftime('%H', timestamp) AS INTEGER) = ?
+        ORDER BY timestamp
+        LIMIT 1
+        ''',
+        (target_day, hour),
+    ).fetchone()
+    conn.close()
+    if not row or row[0] is None:
+        return None
+    return float(row[0])
+
+
+def evaluate_soc16_hold_reserve(
+    *,
+    soc_percent: float | None,
+    as_of: datetime | None = None,
+    min_evening: float | None = None,
+    reserve_percent: float | None = None,
+) -> Soc16HoldReserveRule:
+    """Czysta reguła produktowa (bez I/O) — advise-only.
+
+    Od 13:00: jeśli SoC < próg wieczorny → sugestia FC 13–15.
+    Od 16:00: jeśli SoC@16 < próg → trzymaj rezerwę do 22:00, ładuj 22–6.
+    """
+    as_of = as_of or datetime.now()
+    min_evening = _soc_min_evening() if min_evening is None else min_evening
+    reserve_percent = (
+        seasonal_soc_reserve(as_of.date()) if reserve_percent is None else reserve_percent
+    )
+    hour_passed = as_of.hour >= 16
+    in_afternoon = 13 <= as_of.hour < 16
+    empty = Soc16HoldReserveRule(
+        triggered=False,
+        hour_passed=hour_passed,
+        soc_percent=soc_percent,
+        min_evening_percent=min_evening,
+        reserve_percent=reserve_percent,
+        in_afternoon_window=in_afternoon,
+        recommendation='',
+        title='',
+        body='',
+    )
+    if soc_percent is None or as_of.hour < 13:
+        return empty
+    if soc_percent >= min_evening:
+        return empty
+
+    if in_afternoon:
+        rec = 'NISKI SOC — WŁĄCZ FORCECHARGE 13–15'
+        title = 'Sugestia: niski SoC — okno 13–15'
+        body = (
+            f'SoC {soc_percent:.0f}% < {min_evening:.0f}% przed szczytem wieczornym. '
+            f'Nie rozładowuj poniżej rezerwy {reserve_percent:.0f}%. '
+            f'Rozważ ForceCharge 13:00–15:00 (G12w tanio). Sugestia doradcza, bez automatyki.'
+        )
+    else:
+        rec = 'NISKI SOC@16 — TRZYMAJ REZERWĘ'
+        title = 'Sugestia: niski SoC na wieczór'
+        body = (
+            f'SoC o 16:00 wynosi {soc_percent:.0f}% (próg {min_evening:.0f}%). '
+            f'Nie rozładowuj poniżej rezerwy {reserve_percent:.0f}% do 22:00. '
+            f'Zalecane ładowanie 22–6; jutro okno 13–15. Sugestia doradcza, bez automatyki.'
+        )
+    return Soc16HoldReserveRule(
+        triggered=True,
+        hour_passed=hour_passed,
+        soc_percent=soc_percent,
+        min_evening_percent=min_evening,
+        reserve_percent=reserve_percent,
+        in_afternoon_window=in_afternoon,
+        recommendation=rec,
+        title=title,
+        body=body,
+    )
 
 
 def _high_load_kw_threshold() -> float:

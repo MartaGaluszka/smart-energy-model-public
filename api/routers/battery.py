@@ -14,6 +14,7 @@ from api.schemas.battery import (
     BatteryPolicyResponse,
     BatterySettingsResponse,
     BatterySettingsUpdate,
+    BatterySuggestionResponse,
     NightChargeAdviceResponse,
     ShadowSavingsResponse,
 )
@@ -25,7 +26,10 @@ router = APIRouter(prefix='/api/v1/battery', tags=['battery'], dependencies=[Dep
 def _get_or_create_settings(db: Session, user_id: int) -> BatteryStrategySettings:
     row = db.query(BatteryStrategySettings).filter(BatteryStrategySettings.user_id == user_id).first()
     if row is None:
-        row = BatteryStrategySettings(user_id=user_id)
+        row = BatteryStrategySettings(
+            user_id=user_id,
+            soc_min_percent=battery_planner.default_soc_min_for_today(),
+        )
         db.add(row)
         db.commit()
         db.refresh(row)
@@ -35,16 +39,7 @@ def _get_or_create_settings(db: Session, user_id: int) -> BatteryStrategySetting
 @router.get('/settings', response_model=BatterySettingsResponse, summary='SoC min, sprawność, sezon, ceny z1/z2')
 def get_settings_(current_user: AppUser = Depends(get_current_user), db: Session = Depends(get_db)) -> BatterySettingsResponse:
     row = _get_or_create_settings(db, current_user.id)
-    return BatterySettingsResponse(
-        soc_min_percent=row.soc_min_percent,
-        soc_target_percent=row.soc_target_percent,
-        efficiency_pct=row.efficiency_pct,
-        price_zone1=row.price_zone1,
-        price_zone2=row.price_zone2,
-        season=row.season,
-        battery_capacity_kwh=row.battery_capacity_kwh,
-        ac_power_kw=row.ac_power_kw,
-    )
+    return BatterySettingsResponse(**battery_planner.settings_payload(row))
 
 
 @router.put('/settings', response_model=BatterySettingsResponse, summary='Zapis ustawień strategii baterii')
@@ -58,16 +53,7 @@ def update_settings(
         setattr(row, field, value)
     db.commit()
     db.refresh(row)
-    return BatterySettingsResponse(
-        soc_min_percent=row.soc_min_percent,
-        soc_target_percent=row.soc_target_percent,
-        efficiency_pct=row.efficiency_pct,
-        price_zone1=row.price_zone1,
-        price_zone2=row.price_zone2,
-        season=row.season,
-        battery_capacity_kwh=row.battery_capacity_kwh,
-        ac_power_kw=row.ac_power_kw,
-    )
+    return BatterySettingsResponse(**battery_planner.settings_payload(row))
 
 
 @router.get('/plan', response_model=BatteryPlanResponse, summary='Okna G12w + plan SoC 24h (reguły, bez komend do falownika)')
@@ -96,6 +82,19 @@ def shadow_savings(
 @router.get('/policy', response_model=BatteryPolicyResponse, summary='Treść polityki advise-only (§9.6) — automation_enabled=false')
 def policy() -> BatteryPolicyResponse:
     return BatteryPolicyResponse(**battery_planner.get_battery_policy())
+
+
+@router.get(
+    '/suggestion',
+    response_model=BatterySuggestionResponse,
+    summary='Sugestia Home: reżim / ForceCharge / rezerwa SoC (advise-only, BAT.3+BAT.5)',
+)
+def suggestion(
+    current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> BatterySuggestionResponse:
+    settings_row = _get_or_create_settings(db, current_user.id)
+    return BatterySuggestionResponse(**battery_planner.get_home_suggestion(settings_row))
 
 
 @router.post('/ac-runtime', response_model=AcRuntimeResponse, summary='Formuła czasu bezpiecznej pracy klimatyzacji (§10.4)')

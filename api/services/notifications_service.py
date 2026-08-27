@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from api.models import Notification
 
 NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY = 'charge_tonight_cloudy'
+NOTIF_TYPE_SOC16_RESERVE = 'soc_reserve'
 
 
 def ensure_seed_notification(db: Session, user_id: int) -> None:
@@ -117,9 +118,84 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
     return notif
 
 
+def maybe_upsert_soc16_reserve(db: Session, user_id: int) -> Notification | None:
+    """BAT.3: SoC@16 < próg wieczorny → jedna sugestia na dzień (upsert)."""
+    try:
+        from src.optimization.battery_advisor import (
+            evaluate_soc16_hold_reserve,
+            get_battery_snapshot,
+            get_soc_at_hour,
+            seasonal_soc_reserve,
+        )
+    except Exception:
+        return None
+
+    as_of = datetime.now()
+    snap = get_battery_snapshot()
+    soc16 = get_soc_at_hour(as_of.date().isoformat(), 16)
+    if as_of.hour >= 16:
+        soc = soc16 if soc16 is not None else snap.soc_percent
+    else:
+        soc = snap.soc_percent
+    reserve = seasonal_soc_reserve(as_of.date())
+    rule = evaluate_soc16_hold_reserve(
+        soc_percent=soc,
+        as_of=as_of,
+        reserve_percent=reserve,
+    )
+    if not rule.triggered:
+        return None
+
+    day_key = as_of.date().isoformat()
+    payload = json.dumps(
+        {
+            'rule': NOTIF_TYPE_SOC16_RESERVE,
+            'day': day_key,
+            'soc_percent': rule.soc_percent,
+            'soc16_percent': soc16,
+            'min_evening_percent': rule.min_evening_percent,
+            'reserve_percent': rule.reserve_percent,
+            'recommendation': rule.recommendation,
+        },
+        ensure_ascii=False,
+    )
+
+    existing = (
+        db.query(Notification)
+        .filter(
+            Notification.user_id == user_id,
+            Notification.notif_type == NOTIF_TYPE_SOC16_RESERVE,
+        )
+        .order_by(Notification.created_at.desc())
+        .all()
+    )
+    for row in existing:
+        if _payload_day(row.payload_json) == day_key:
+            row.title = rule.title
+            row.body = rule.body
+            row.payload_json = payload
+            db.commit()
+            db.refresh(row)
+            return row
+
+    notif = Notification(
+        user_id=user_id,
+        notif_type=NOTIF_TYPE_SOC16_RESERVE,
+        title=rule.title,
+        body=rule.body,
+        payload_json=payload,
+        created_at=datetime.utcnow(),
+    )
+    db.add(notif)
+    db.commit()
+    db.refresh(notif)
+    return notif
+
+
 def list_notifications(db: Session, user_id: int) -> list[Notification]:
     ensure_seed_notification(db, user_id)
     maybe_upsert_charge_tonight_cloudy(db, user_id)
+    maybe_upsert_soc16_reserve(db, user_id)
     return (
         db.query(Notification)
         .filter(Notification.user_id == user_id)

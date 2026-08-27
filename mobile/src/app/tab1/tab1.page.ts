@@ -1,5 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ViewWillEnter } from '@ionic/angular';
+import { Observable, Subscription } from 'rxjs';
+import { BatterySuggestionResponse } from '../services/api.service';
 import { HomeDataService, HomeKpi, SyncStatus, Suggestion } from '../services/home-data.service';
 import { todayIsoLocal } from '../utils/date-utils';
 
@@ -9,10 +11,14 @@ import { todayIsoLocal } from '../utils/date-utils';
   styleUrls: ['tab1.page.scss'],
   standalone: false,
 })
-export class Tab1Page implements OnInit {
+export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
   kpi$!: Observable<HomeKpi>;
   sync$!: Observable<SyncStatus>;
   suggestions$!: Observable<Suggestion[]>;
+  battery$!: Observable<BatterySuggestionResponse | null>;
+  /** BAT.5: próg koloru SoC = rezerwa sezonowa (lato 15 / zima 40), nie sztywne 20. */
+  socReserve = 20;
+  private batterySub?: Subscription;
 
   constructor(private readonly homeData: HomeDataService) {}
 
@@ -20,22 +26,40 @@ export class Tab1Page implements OnInit {
     this.kpi$ = this.homeData.getKpi();
     this.sync$ = this.homeData.getSyncStatus();
     this.suggestions$ = this.homeData.getSuggestions();
+    this.battery$ = this.homeData.getBatterySuggestion();
+    this.batterySub = this.battery$.subscribe((row) => {
+      this.socReserve = row?.soc_reserve_percent ?? 20;
+    });
+  }
+
+  ngOnDestroy() {
+    this.batterySub?.unsubscribe();
+  }
+
+  ionViewWillEnter() {
+    this.homeData.refreshBatterySuggestion();
   }
 
   onSync() {
     this.homeData.triggerSync().subscribe();
   }
 
-  socColor(soc: number): string {
+  socColor(soc: number, reserve: number = 20): string {
     if (soc >= 50) return 'moss';
-    if (soc >= 20) return 'warning';
+    if (soc >= reserve) return 'warning';
     return 'cost';
   }
 
-  socIcon(soc: number): string {
+  socIcon(soc: number, reserve: number = 20): string {
     if (soc >= 70) return 'battery-full-outline';
-    if (soc >= 20) return 'battery-half-outline';
+    if (soc >= reserve) return 'battery-half-outline';
     return 'battery-dead-outline';
+  }
+
+  seasonLabel(season: string): string {
+    if (season === 'winter') return 'zima';
+    if (season === 'summer') return 'lato';
+    return season;
   }
 
   minutesAgo(date: Date | null): string {
