@@ -967,3 +967,138 @@ def winter_reference_yield(
         return float((winter['pv_kwh_daytime'] / rad).median())
     rad = ref['radiation_daytime_kwh_m2'].clip(lower=0.05)
     return float((ref['pv_kwh_daytime'] / rad).median())
+
+
+def get_icon_forecast(
+    latitude: float | None = None,
+    longitude: float | None = None,
+    forecast_days: int = 3,
+) -> pd.DataFrame:
+    """Pobiera prognozę ICON z Open-Meteo (wrapper dla ensemble).
+    
+    Args:
+        latitude: szerokość geograficzna (domyślnie z .env)
+        longitude: długość geograficzna (domyślnie z .env)
+        forecast_days: liczba dni prognozy (domyślnie 3)
+    
+    Returns:
+        DataFrame z kolumnami: timestamp, cloud_cover_percent, solar_radiation_wm2, 
+        temperature_celsius, humidity_percent, itd.
+    """
+    if latitude is None or longitude is None:
+        client = OpenMeteoClient.from_env()
+        if latitude is not None:
+            client.latitude = latitude
+        if longitude is not None:
+            client.longitude = longitude
+        client.model = 'icon_seamless'
+    else:
+        client = OpenMeteoClient(latitude, longitude, model='icon_seamless')
+    
+    return client.fetch_forecast(forecast_days=forecast_days)
+
+
+def get_ukmo_forecast(
+    latitude: float | None = None,
+    longitude: float | None = None,
+    forecast_days: int = 3,
+) -> pd.DataFrame:
+    """Pobiera prognozę UKMO z Open-Meteo (wrapper dla ensemble).
+    
+    Args:
+        latitude: szerokość geograficzna (domyślnie z .env)
+        longitude: długość geograficzna (domyślnie z .env)
+        forecast_days: liczba dni prognozy (domyślnie 3)
+    
+    Returns:
+        DataFrame z kolumnami: timestamp, cloud_cover_percent, solar_radiation_wm2, 
+        temperature_celsius, humidity_percent, itd.
+    """
+    if latitude is None or longitude is None:
+        client = OpenMeteoClient.from_env()
+        if latitude is not None:
+            client.latitude = latitude
+        if longitude is not None:
+            client.longitude = longitude
+        client.model = 'ukmo_seamless'
+    else:
+        client = OpenMeteoClient(latitude, longitude, model='ukmo_seamless')
+    
+    return client.fetch_forecast(forecast_days=forecast_days)
+
+
+def get_ensemble_forecast(
+    latitude: float | None = None,
+    longitude: float | None = None,
+    forecast_days: int = 3,
+    models: list[str] | None = None,
+) -> pd.DataFrame:
+    """Pobiera ensemble prognozę (ICON+UKMO) — uśrednia modele.
+    
+    Args:
+        latitude: szerokość geograficzna (domyślnie z .env)
+        longitude: długość geograficzna (domyślnie z .env)
+        forecast_days: liczba dni prognozy (domyślnie 3)
+        models: lista modeli do ensemble (domyślnie ['icon_seamless', 'ukmo_seamless'])
+    
+    Returns:
+        DataFrame z uśrednionymi wartościami cloud_cover_percent, solar_radiation_wm2, itd.
+    """
+    if models is None:
+        models = ['icon_seamless', 'ukmo_seamless']
+    
+    if not models:
+        raise ValueError('models musi zawierać co najmniej jeden model')
+    
+    # Pobierz prognozy z wszystkich modeli
+    forecasts = []
+    for model in models:
+        if latitude is None or longitude is None:
+            client = OpenMeteoClient.from_env()
+            if latitude is not None:
+                client.latitude = latitude
+            if longitude is not None:
+                client.longitude = longitude
+            client.model = model
+        else:
+            client = OpenMeteoClient(latitude, longitude, model=model)
+        
+        df = client.fetch_forecast(forecast_days=forecast_days)
+        forecasts.append(df)
+    
+    # Uśrednij wartości numeryczne (timestamp + location + data_source = metadata)
+    ensemble = forecasts[0].copy()
+    numeric_cols = [
+        'temperature_celsius',
+        'humidity_percent',
+        'cloud_cover_percent',
+        'cloud_cover_low_percent',
+        'cloud_cover_mid_percent',
+        'cloud_cover_high_percent',
+        'visibility_m',
+        'precipitation_mm',
+        'snowfall_cm',
+        'snow_depth_m',
+        'solar_radiation_wm2',
+        'wind_speed_ms',
+        'wind_direction_deg',
+    ]
+    
+    for col in numeric_cols:
+        if col in ensemble.columns:
+            # Uśrednij wartości z wszystkich modeli (ignoruj NaN/None)
+            arrays = []
+            for df in forecasts:
+                if col in df.columns:
+                    # Zamień None na NaN
+                    arr = pd.to_numeric(df[col], errors='coerce').values
+                    arrays.append(arr)
+            
+            if arrays:
+                values = np.stack(arrays)
+                ensemble[col] = np.nanmean(values, axis=0)
+    
+    # Oznacz jako ensemble
+    ensemble['data_source'] = f'OpenMeteo-forecast-ensemble-{"+".join(models)}'
+    
+    return ensemble

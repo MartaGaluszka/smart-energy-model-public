@@ -27,6 +27,7 @@ from src.data.weather_api import (
     DEFAULT_OPENMETEO_MODEL,
     OpenMeteoClient,
     filter_forecast_preserve_archive,
+    get_ensemble_forecast,
     save_weather_to_db,
 )
 
@@ -41,7 +42,14 @@ def main():
     start = os.getenv('WEATHER_START_DATE', WEATHER_DATA_START.isoformat())
     end = os.getenv('WEATHER_END_DATE', date.today().isoformat())
     forecast_days = int(os.getenv('WEATHER_FORECAST_DAYS', '3'))
-    model_label = client.model or DEFAULT_OPENMETEO_MODEL
+    
+    # ENSEMBLE: ICON+UKMO (E1.3)
+    use_ensemble = os.getenv('WEATHER_ENSEMBLE_UKMO', '0') == '1'
+    
+    if use_ensemble:
+        model_label = 'ENSEMBLE (icon+ukmo)'
+    else:
+        model_label = client.model or DEFAULT_OPENMETEO_MODEL
 
     print('=' * 70)
     print('Open-Meteo → weather_data')
@@ -54,7 +62,16 @@ def main():
     n_hist = save_weather_to_db(hist, DB_PATH)
     print(f'✅ Archiwum: {len(hist)} godzin → zapisano {n_hist} rekordów')
 
-    fc = client.fetch_forecast(forecast_days)
+    # Prognoza: ensemble lub single model
+    if use_ensemble:
+        fc = get_ensemble_forecast(
+            latitude=client.latitude,
+            longitude=client.longitude,
+            forecast_days=forecast_days,
+        )
+    else:
+        fc = client.fetch_forecast(forecast_days)
+    
     fc = filter_forecast_preserve_archive(fc)
     n_fc = save_weather_to_db(fc, DB_PATH)
     print(f'✅ Prognoza ({forecast_days} dni): {len(fc)} godzin → zapisano {n_fc} rekordów')

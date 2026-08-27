@@ -56,7 +56,7 @@ ensemble = (44 + 7) / 2 = 25.5%  # vs Accu 26% ✅ bliżej!
 1. Przeczytaj docs Open-Meteo: https://open-meteo.com/en/docs
 2. Test request na dzisiaj (27.08):
    ```bash
-   curl "https://api.open-meteo.com/v1/forecast?latitude=50.06&longitude=19.94&hourly=cloud_cover,temperature_2m,shortwave_radiation&models=ukmo_seamless"
+   curl "https://api.open-meteo.com/v1/forecast?latitude=49.98&longitude=19.9&hourly=cloud_cover,temperature_2m,shortwave_radiation&models=ukmo_seamless"
    ```
 3. Sprawdź czy zwraca JSON z danymi (nie 403/404)
 4. Porównaj UKMO vs ICON cloud dla dziś — czy są różnice?
@@ -80,7 +80,7 @@ ensemble = (44 + 7) / 2 = 25.5%  # vs Accu 26% ✅ bliżej!
 4. Test ręczny:
    ```python
    from src.weather.openmeteo_client import get_ukmo_forecast
-   ukmo = get_ukmo_forecast(lat=50.06, lon=19.94, date='2026-08-27')
+   ukmo = get_ukmo_forecast(lat=49.98, lon=19.9, date='2026-08-27')
    print(ukmo['cloud_cover'])  # sprawdź czy nie NaN
    ```
 
