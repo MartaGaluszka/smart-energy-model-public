@@ -32,8 +32,8 @@ class RoiCalculatePoint(BaseModel):
 class RoiCalculateResponse(BaseModel):
     period_start: str
     period_end: str
-    savings_pln_period: float
-    savings_pln_year_annualized: float
+    savings_pln_period: float  # brutto (z VAT 23%)
+    savings_pln_year_annualized: float  # brutto (z VAT 23%)
     roi_percent: float | None = None
     payback_years: float | None = None
     cumulative_savings_series: list[RoiCalculatePoint]

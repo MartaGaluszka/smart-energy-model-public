@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from api.deps import get_current_user, get_db
@@ -57,12 +57,13 @@ def update_settings(
 
 @router.get('/plan', response_model=BatteryPlanResponse, summary='Okna G12w + plan SoC 24h (reguły, bez komend do falownika)')
 def get_plan(
+    request: Request,
     date: str = Query(..., description='YYYY-MM-DD'),
     current_user: AppUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> BatteryPlanResponse:
     settings_row = _get_or_create_settings(db, current_user.id)
-    return BatteryPlanResponse(**battery_planner.build_daily_plan(date, settings_row))
+    return BatteryPlanResponse(**battery_planner.build_daily_plan(date, settings_row, request=request))
 
 
 @router.get('/night-charge-advice', response_model=NightChargeAdviceResponse, summary='Sugestia ładowania nocnego + uzasadnienie PL')

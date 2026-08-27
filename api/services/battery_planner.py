@@ -12,6 +12,7 @@ import json
 from datetime import date, datetime, time, timedelta
 
 from api.config import get_settings
+from api.deps import get_db
 
 # Stary fabryczny default UI (20%) — BAT.5: przy season=auto i tak bierzemy rezerwę sezonową.
 _FACTORY_SOC_MIN = 20.0
@@ -338,13 +339,21 @@ def _zone_label(zone: int) -> str:
     return cheap_zone_label(zone)  # type: ignore[arg-type]
 
 
-def build_daily_plan(target_date: str, settings_row) -> dict:
-    """Plan 24h: strefy G12w + prosta symulacja SoC (reguły, bez ML/komend do falownika).
+def build_daily_plan(target_date: str, settings_row, use_realistic_sim: bool = True, request=None) -> dict:
+    """Plan 24h: strefy G12w + symulacja SoC (reguły, bez ML/komend do falownika).
 
-    Symulacja jest celowo prosta (liniowy ramp w oknach taniej strefy, spadek w
-    szczycie) — wystarcza do wizualizacji "kiedy warto ładować", zgodnie z DoD
-    T4.1 ("bez wywołań foxess_control"). Dokładniejszy model (PV forecast +
-    rzeczywiste zużycie godzinowe) to rozszerzenie v2 (§9.3 dokumentu produktowego).
+    Symulacja może być prosta (liniowy ramp, L342-373 poniżej) lub realistyczna
+    (z historycznym profilem zużycia + PV forecast). Realistyczna symulacja jest
+    domyślnie włączona (use_realistic_sim=True).
+
+    Args:
+        target_date: Data w formacie YYYY-MM-DD
+        settings_row: Wiersz z tabeli battery_settings (soc_min, soc_target, season)
+        use_realistic_sim: Jeśli True, użyj consumption_profile + PV forecast (default)
+        request: FastAPI Request object (optional, for accessing app.state.pv_predictor)
+
+    Returns:
+        Dict z kluczami: date, season, hours (lista dict: hour, zone, soc, mode, note)
     """
     from src.optimization.g12w_tariff import classify_zone, is_public_holiday, is_weekend
 
@@ -356,6 +365,130 @@ def build_daily_plan(target_date: str, settings_row) -> dict:
     soc_target = settings_row.soc_target_percent if settings_row else 80.0
 
     all_day_cheap = is_weekend(d) or is_public_holiday(d)
+
+    # ═══════════════════════════════════════════════════════════════════
+    # REALISTIC SIMULATION (use_realistic_sim=True)
+    # ═══════════════════════════════════════════════════════════════════
+    if use_realistic_sim:
+        from src.optimization.battery_simulation import simulate_realistic_soc, BatterySimulationParams, annotate_soc_with_notes
+        from src.optimization.consumption_profile import get_hourly_consumption_profile
+        
+        settings = get_settings()
+        
+        # 1. Pobierz profil zużycia historycznego
+        load_profile = get_hourly_consumption_profile(
+            db_path=settings.DATABASE_PATH,
+            target_date=d,
+            lookback_days=30,
+        )
+        
+        # 2. Pobierz prognozę PV z modelu ML
+        pv_forecast = [0.0] * 24
+        try:
+            from api.services.forecast_ml import get_hourly_forecast
+            
+            # Pobierz predictor z request.app.state (załadowany przy starcie)
+            if request and hasattr(request.app.state, 'pv_predictor') and request.app.state.pv_predictor:
+                forecast_data = get_hourly_forecast(request.app.state.pv_predictor, target_date)
+                for hour_data in forecast_data.get('hours', []):
+                    h = hour_data['hour']
+                    if 0 <= h < 24:
+                        pv_forecast[h] = hour_data['predicted_kwh']
+        except Exception as e:
+            # Brak prognozy — użyj zer (conservative estimate)
+            import logging
+            logging.warning(f"Nie udało się pobrać prognozy PV z modelu: {e}")
+        
+        # 3. Wyznacz godziny ForceCharge (tania strefa + rzeczywista potrzeba)
+        force_charge_hours = []
+        
+        # Sprawdź czy ForceCharge jest potrzebny:
+        # - Zima/jesień: zawsze ładuj (PV słabe)
+        # - Lato/wiosna: tylko jeśli prognoza PV słaba (<15 kWh) lub brak prognozy
+        should_force_charge = False
+        
+        if season in ('winter', 'autumn'):
+            should_force_charge = True  # Zawsze ładuj w zimie/jesieni
+        else:
+            # Lato/wiosna: sprawdź prognozę PV
+            total_pv_forecast = sum(pv_forecast)
+            if total_pv_forecast < 15.0:  # Słaba prognoza (<15 kWh)
+                should_force_charge = True
+        
+        if should_force_charge:
+            for h in range(24):
+                dt = datetime.combine(d, time(h, 0))
+                zone = classify_zone(dt)
+                cheap = all_day_cheap or zone == 2
+                if cheap:
+                    force_charge_hours.append(h)
+        
+        # 4. Wyznacz starting SoC — steady-state dla tego typu dnia
+        # Wykres pokazuje "typowy dzień o tym reżimie pogodowym", nie "jutro po dzisiejszym dniu"
+        # Używamy DZISIEJSZEJ prognozy do oszacowania starting SoC (steady-state założenie)
+        
+        total_pv_forecast = sum(pv_forecast)
+        
+        # Estymacja starting SoC na podstawie dzisiejszej prognozy (steady-state)
+        if total_pv_forecast > 25.0:
+            # Słoneczny dzień → steady-state: start z zapasem (typowo kończy ~60%, więc i zaczyna)
+            soc_start = 60.0
+        elif total_pv_forecast > 15.0:
+            # Przyzwoity dzień → średni start
+            soc_start = 45.0
+        elif total_pv_forecast > 5.0:
+            # Pochmurny dzień → niski start
+            soc_start = max(soc_min + 5.0, 30.0)
+        else:
+            # Bardzo pochmurno/zima → start z FC nocnego
+            soc_start = soc_min if season in ('summer', 'spring') else min(soc_target, 70.0)
+        
+        # Override dla zimy/jesieni z FC: zakładamy że FC nocny naładował
+        if season in ('winter', 'autumn') and should_force_charge:
+            soc_start = min(soc_target, 70.0)
+        
+        params = BatterySimulationParams()
+        soc_trajectory = simulate_realistic_soc(
+            pv_forecast_kwh=pv_forecast,
+            load_profile_kwh=load_profile,
+            soc_start_percent=soc_start,
+            soc_min_percent=soc_min,
+            soc_target_percent=soc_target,
+            force_charge_hours=force_charge_hours,
+            params=params,
+        )
+        
+        # 5. Zbuduj wynik
+        zones = []
+        for h in range(24):
+            dt = datetime.combine(d, time(h, 0))
+            zones.append(classify_zone(dt))
+        
+        notes = annotate_soc_with_notes(
+            soc_trajectory=soc_trajectory,
+            pv_forecast_kwh=pv_forecast,
+            load_profile_kwh=load_profile,
+            soc_min_percent=soc_min,
+            zones=zones,
+        )
+        
+        hours = []
+        for h in range(24):
+            hours.append({
+                'hour': h,
+                'zone': zones[h],
+                'zone_label': _zone_label(zones[h]),
+                'force_charge_recommended': h in force_charge_hours,
+                'planned_soc_percent': round(soc_trajectory[h], 1),
+                'mode': 'ForceCharge' if h in force_charge_hours else 'Auto',
+                'note': notes[h],
+            })
+        
+        return {'date': target_date, 'season': season, 'hours': hours, 'note': 'Symulacja z historycznym profilem zużycia + PV forecast'}
+    
+    # ═══════════════════════════════════════════════════════════════════
+    # SIMPLE SIMULATION (fallback, use_realistic_sim=False)
+    # ═══════════════════════════════════════════════════════════════════
     hours = []
     soc = soc_min
     charge_step = max(1.0, (soc_target - soc_min) / 8.0)
@@ -379,10 +512,12 @@ def build_daily_plan(target_date: str, settings_row) -> dict:
                 'zone_label': _zone_label(zone),
                 'force_charge_recommended': bool(force_charge),
                 'planned_soc_percent': round(soc, 1),
+                'mode': 'ForceCharge' if force_charge else 'Auto',
+                'note': 'Uproszczona symulacja (liniowy ramp)',
             }
         )
 
-    return {'date': target_date, 'season': season, 'hours': hours}
+    return {'date': target_date, 'season': season, 'hours': hours, 'note': 'Uproszczona symulacja — liniowy ramp (stara metoda)'}
 
 
 def _pick_context(as_of: datetime) -> str:
@@ -425,12 +560,18 @@ def get_shadow_savings(period_from: str, period_to: str) -> dict:
     finally:
         analyzer.close()
 
+    # VAT 23% na energię elektryczną (zgodnie z symulator/bill)
+    vat_rate = 1.23
+    savings_netto = roi_data['savings_pln']
+    baseline_netto = roi_data['baseline_cost_pln']
+    actual_netto = roi_data['actual_cost_pln']
+
     return {
         'period_from': period_from,
         'period_to': period_to,
-        'shadow_savings_pln': roi_data['savings_pln'],
-        'baseline_cost_pln': roi_data['baseline_cost_pln'],
-        'actual_cost_pln': roi_data['actual_cost_pln'],
+        'shadow_savings_pln': round(savings_netto * vat_rate, 2),
+        'baseline_cost_pln': round(baseline_netto * vat_rate, 2),
+        'actual_cost_pln': round(actual_netto * vat_rate, 2),
     }
 
 

@@ -417,7 +417,8 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
           map.set(h.hour, h.predicted_kwh);
         }
         this.pvByHour = Array.from({ length: 24 }, (_, hour) => map.get(hour) ?? null);
-        setTimeout(() => this.renderChart());
+        // Canvas jest w *ngIf="!loading" — poczekaj aż ViewChild się podłączy
+        this.scheduleRenderChart();
       },
       error: () => {
         this.planHours = [];
@@ -425,6 +426,17 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
         this.error = this.error ?? 'Nie udało się pobrać planu 24h.';
       },
     });
+  }
+
+  /** Retry: po przełączeniu loading→false canvas pojawia się dopiero w następnym cyklu CD. */
+  private scheduleRenderChart(attempt = 0): void {
+    const canvas = this.canvasRef?.nativeElement;
+    if (canvas && this.planHours.length) {
+      this.renderChart();
+      return;
+    }
+    if (attempt >= 20) return;
+    setTimeout(() => this.scheduleRenderChart(attempt + 1), 50);
   }
 
   private renderChart(): void {

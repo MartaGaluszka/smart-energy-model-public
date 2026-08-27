@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, map, of, shareReplay, switchMap, tap } from 'rxjs';
+import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 interface TokenResponse {
@@ -27,7 +27,8 @@ const DEMO_PASSWORD = 'demo12345678';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly baseUrl = environment.apiBaseUrl;
-  private session$: Observable<string | null> | null = null;
+  /** In-flight login/register — NIE cache'ujemy porażki (API chwilowo down → demo forever). */
+  private sessionInFlight$: Observable<string | null> | null = null;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -41,17 +42,20 @@ export class AuthService {
     if (existing) {
       return of(existing);
     }
-    if (!this.session$) {
-      this.session$ = this.login(DEMO_EMAIL, DEMO_PASSWORD).pipe(
+    if (!this.sessionInFlight$) {
+      this.sessionInFlight$ = this.login(DEMO_EMAIL, DEMO_PASSWORD).pipe(
         catchError(() => this.register(DEMO_EMAIL, DEMO_PASSWORD)),
         catchError((err) => {
           console.warn('[AuthService] Nie udało się utworzyć sesji demo — API offline?', err);
           return of(null);
         }),
+        finalize(() => {
+          this.sessionInFlight$ = null;
+        }),
         shareReplay(1),
       );
     }
-    return this.session$;
+    return this.sessionInFlight$;
   }
 
   private login(email: string, password: string): Observable<string> {
@@ -79,7 +83,7 @@ export class AuthService {
    * gdy backend działa. Wołane z `ApiService.authed()` po pierwszym 401.
    */
   renewSession(): Observable<string | null> {
-    this.session$ = null;
+    this.sessionInFlight$ = null;
     return this.refreshAccessToken().pipe(
       switchMap((token) => {
         if (token) {
@@ -113,6 +117,6 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
-    this.session$ = null;
+    this.sessionInFlight$ = null;
   }
 }
