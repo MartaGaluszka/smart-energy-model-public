@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ViewWillEnter } from '@ionic/angular';
 import { Observable, Subscription } from 'rxjs';
-import { BatterySuggestionResponse } from '../services/api.service';
+import { ApiService, BatterySuggestionResponse } from '../services/api.service';
 import { HomeDataService, HomeKpi, SyncStatus, Suggestion } from '../services/home-data.service';
 import { todayIsoLocal } from '../utils/date-utils';
 
@@ -18,9 +18,16 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
   battery$!: Observable<BatterySuggestionResponse | null>;
   /** BAT.5: próg koloru SoC = rezerwa sezonowa (lato 20 / zima 40). */
   socReserve = 20;
+  /** T4.16: skrót shadow miesiąc (pełna karta na /tabs/battery). */
+  shadowMonthPln: number | null = null;
+  shadowLoading = false;
   private batterySub?: Subscription;
+  private shadowSub?: Subscription;
 
-  constructor(private readonly homeData: HomeDataService) {}
+  constructor(
+    private readonly homeData: HomeDataService,
+    private readonly api: ApiService,
+  ) {}
 
   ngOnInit() {
     this.kpi$ = this.homeData.getKpi();
@@ -34,10 +41,35 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
 
   ngOnDestroy() {
     this.batterySub?.unsubscribe();
+    this.shadowSub?.unsubscribe();
   }
 
   ionViewWillEnter() {
     this.homeData.refreshBatterySuggestion();
+    this.reloadShadowMonth();
+  }
+
+  formatPln(value: number | null): string {
+    if (value === null || Number.isNaN(value)) return '—';
+    return `${value.toFixed(2).replace('.', ',')} zł`;
+  }
+
+  private reloadShadowMonth(): void {
+    const to = todayIsoLocal();
+    const [y, m] = to.split('-');
+    const from = `${y}-${m}-01`;
+    this.shadowLoading = true;
+    this.shadowSub?.unsubscribe();
+    this.shadowSub = this.api.getShadowSavings(from, to).subscribe({
+      next: (row) => {
+        this.shadowMonthPln = row.shadow_savings_pln;
+        this.shadowLoading = false;
+      },
+      error: () => {
+        this.shadowMonthPln = null;
+        this.shadowLoading = false;
+      },
+    });
   }
 
   onSync() {

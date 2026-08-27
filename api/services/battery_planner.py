@@ -210,7 +210,7 @@ def calculate_ac_runtime(ac_power_kw: float, settings_row) -> dict:
 
     soc_min_morning = effective_soc_min(settings_row)
     capacity_kwh = (settings_row.battery_capacity_kwh if settings_row and settings_row.battery_capacity_kwh else None) or 10.36
-    efficiency = (settings_row.efficiency_pct if settings_row else 90.0) / 100.0
+    efficiency = (settings_row.efficiency_pct if settings_row else 93.0) / 100.0
 
     if soc_now is None:
         hours_safe = 0.0

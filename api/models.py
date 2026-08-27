@@ -111,7 +111,7 @@ class BatteryStrategySettings(Base):
     )
     soc_min_percent: Mapped[float] = mapped_column(Float, default=20.0, nullable=False)
     soc_target_percent: Mapped[float] = mapped_column(Float, default=80.0, nullable=False)
-    efficiency_pct: Mapped[float] = mapped_column(Float, default=90.0, nullable=False)
+    efficiency_pct: Mapped[float] = mapped_column(Float, default=93.0, nullable=False)
     price_zone1: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     price_zone2: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     season: Mapped[str] = mapped_column(String(10), default='auto', nullable=False)

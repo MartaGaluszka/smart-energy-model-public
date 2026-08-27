@@ -107,6 +107,17 @@ export interface BatteryPlanResponse {
   note: string;
 }
 
+/** GET /battery/shadow-savings?from=&to= — kontrfakt (T4.15 / T4.16). */
+export interface ShadowSavingsResponse {
+  period_from: string;
+  period_to: string;
+  shadow_savings_pln: number;
+  baseline_cost_pln: number;
+  actual_cost_pln: number;
+  method_note: string;
+  is_hypothetical: boolean;
+}
+
 export interface HourlyForecastResponse {
   day: string;
   hours: {
@@ -309,6 +320,15 @@ export class ApiService {
         `${this.baseUrl}/api/v1/battery/plan?date=${encodeURIComponent(date)}`,
         { headers: { Authorization: `Bearer ${token}` } },
       ),
+    );
+  }
+
+  getShadowSavings(from: string, to: string): Observable<ShadowSavingsResponse> {
+    const q = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    return this.authed((token) =>
+      this.http.get<ShadowSavingsResponse>(`${this.baseUrl}/api/v1/battery/shadow-savings?${q}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     );
   }
 
