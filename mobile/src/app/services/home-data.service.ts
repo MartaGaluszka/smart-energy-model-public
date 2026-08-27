@@ -52,10 +52,38 @@ const LOOKBACK_DAYS = 5;
  * pokazujemy najnowszy dzień z realnymi danymi (`dataDay`) — nigdy fałszywych liczb
  * pod etykietą "dziś".
  */
+/** Zawsze pokaż kartę — *ngIf ukrywa ją przy null (timeout Fox / 500). */
+const FALLBACK_BATTERY: BatterySuggestionResponse = {
+  as_of: new Date().toISOString(),
+  season: 'summer',
+  season_mode: 'auto',
+  soc_now_percent: null,
+  soc_min_percent: 20,
+  soc_reserve_percent: 20,
+  soc_target_percent: 80,
+  soc_min_evening_percent: 50,
+  force_charge_night_recommended: false,
+  force_charge_night_label: 'nie (lato)',
+  force_charge_afternoon_recommended: false,
+  force_charge_afternoon_label: 'opcjonalnie',
+  soc16_alert: false,
+  soc16_hour_passed: false,
+  soc16_percent: null,
+  soc16_title: null,
+  soc16_body: null,
+  wait_for_cheap: false,
+  next_cheap_window: null,
+  recommendation: 'REŻIM LATO',
+  action:
+    'Rezerwa SoC 20% na noc. Krótki FC tylko gdy SoC < 20% i jutro ≤ 10 kWh. System tylko doradza — bez automatyki.',
+  automation_enabled: false,
+  note: 'Sugestia — nie wykonano automatycznie (advise-only).',
+};
+
 @Injectable({ providedIn: 'root' })
 export class HomeDataService {
   private readonly kpi$ = new BehaviorSubject<HomeKpi>(FALLBACK_KPI);
-  private readonly battery$ = new BehaviorSubject<BatterySuggestionResponse | null>(null);
+  private readonly battery$ = new BehaviorSubject<BatterySuggestionResponse | null>(FALLBACK_BATTERY);
   private readonly sync$ = new BehaviorSubject<SyncStatus>({
     lastSyncedAt: null,
     syncing: false,
@@ -80,7 +108,7 @@ export class HomeDataService {
 
   getSuggestions(): Observable<Suggestion[]> {
     return this.api.getNotifications().pipe(
-      map((rows) => rows.map(this.toSuggestion)),
+      map((rows) => rows.filter((r) => r.read_at === null).map(this.toSuggestion)),
       catchError(() => of([] as Suggestion[])),
     );
   }
@@ -92,7 +120,11 @@ export class HomeDataService {
   refreshBatterySuggestion(): void {
     this.api.getBatterySuggestion().pipe(timeout(OVERVIEW_TIMEOUT_MS)).subscribe({
       next: (row) => this.battery$.next(row),
-      error: () => this.battery$.next(null),
+      error: () => {
+        if (this.battery$.value === null) {
+          this.battery$.next(FALLBACK_BATTERY);
+        }
+      },
     });
   }
 

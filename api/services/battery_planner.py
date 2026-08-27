@@ -225,8 +225,57 @@ def settings_payload(settings_row, d: date | None = None) -> dict:
     }
 
 
+def fallback_home_suggestion() -> dict:
+    """Zawsze zwróć minimalną sugestię, gdy nie da się odczytać live data (Fox timeout/500)."""
+    d = date.today()
+    season = resolve_season_name('auto', d)
+    reserve = seasonal_reserve_for(season, d)
+    is_winter = season == 'winter'
+    return {
+        'as_of': datetime.now().isoformat(timespec='seconds'),
+        'season': season,
+        'season_mode': 'auto',
+        'soc_now_percent': None,
+        'soc_min_percent': reserve,
+        'soc_reserve_percent': reserve,
+        'soc_target_percent': 90.0 if is_winter else 80.0,
+        'soc_min_evening_percent': 60.0 if is_winter else 50.0,
+        'force_charge_night_recommended': False,
+        'force_charge_night_label': 'nie (lato)' if not is_winter else 'sprawdź prognozę',
+        'force_charge_afternoon_recommended': False,
+        'force_charge_afternoon_label': 'opcjonalnie',
+        'soc16_alert': False,
+        'soc16_hour_passed': False,
+        'soc16_percent': None,
+        'soc16_title': None,
+        'soc16_body': None,
+        'wait_for_cheap': False,
+        'next_cheap_window': None,
+        'recommendation': f'REŻIM {"ZIMA" if is_winter else "LATO"}',
+        'action': (
+            f'Rezerwa SoC {reserve:.0f}% na noc. '
+            + (
+                'Ładuj gdy SoC < 40% przed nocą. System tylko doradza — bez automatyki.'
+                if is_winter
+                else 'Krótki FC tylko gdy SoC < 20% i jutro ≤ 10 kWh. System tylko doradza — bez automatyki.'
+            )
+        ),
+        'automation_enabled': False,
+        'note': 'Sugestia — nie wykonano automatycznie (advise-only).',
+    }
+
+
 def get_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
     """Karta Home (BAT.3 + BAT.5): reżim / ForceCharge / rezerwa — bez ML, bez auto-apply."""
+    try:
+        return _compose_home_suggestion(settings_row, as_of)
+    except Exception as e:
+        print(f'[battery_planner] get_home_suggestion failed: {e}')
+        return fallback_home_suggestion()
+
+
+def _compose_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
+    """Compose home suggestion with live data (extracted for fallback wrapping)."""
     from src.optimization.battery_advisor import (
         evaluate_below_reserve_wait_cheap,
         evaluate_charge_tonight_cloudy,
