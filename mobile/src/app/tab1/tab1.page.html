@@ -59,9 +59,18 @@
           <ion-col size="6">
             <ion-card class="se-card se-kpi">
               <ion-card-content>
-                <ion-icon [name]="socIcon(kpi.socPercent)" class="se-kpi__icon" [ngClass]="'se-kpi__icon--' + socColor(kpi.socPercent)"></ion-icon>
+                <ion-icon
+                  [name]="socIcon(kpi.socPercent, socReserve)"
+                  class="se-kpi__icon"
+                  [ngClass]="'se-kpi__icon--' + socColor(kpi.socPercent, socReserve)"
+                ></ion-icon>
                 <span class="se-kpi__value">{{ kpi.socPercent }} <small>%</small></span>
-                <span class="se-kpi__label">SoC baterii</span>
+                <span class="se-kpi__label">
+                  SoC baterii
+                  <ng-container *ngIf="battery$ | async as bat">
+                    · rezerwa {{ bat.soc_reserve_percent | number:'1.0-0' }}%
+                  </ng-container>
+                </span>
               </ion-card-content>
             </ion-card>
           </ion-col>
@@ -88,6 +97,31 @@
         </ion-row>
       </ion-grid>
     </ng-container>
+
+    <!-- BAT.3 + BAT.5: reżim / ForceCharge / rezerwa — advise-only -->
+    <ion-card class="se-card se-battery" *ngIf="battery$ | async as bat" [class.se-battery--alert]="bat.soc16_alert">
+      <ion-card-content>
+        <div class="se-battery__head">
+          <ion-icon name="battery-charging-outline" class="se-battery__icon"></ion-icon>
+          <div>
+            <span class="se-battery__kicker">Bateria — sugestia</span>
+            <span class="se-battery__rec">{{ bat.recommendation }}</span>
+          </div>
+        </div>
+        <p class="se-battery__action">{{ bat.action }}</p>
+        <ul class="se-battery__meta">
+          <li>Reżim: <strong>{{ seasonLabel(bat.season) }}</strong></li>
+          <li>Rezerwa SoC: <strong>{{ bat.soc_reserve_percent | number:'1.0-0' }}%</strong>
+            <ng-container *ngIf="bat.soc_now_percent !== null">
+              (teraz {{ bat.soc_now_percent | number:'1.0-0' }}%)
+            </ng-container>
+          </li>
+          <li>ForceCharge 22–6: <strong>{{ bat.force_charge_night_label }}</strong></li>
+          <li>ForceCharge 13–15: <strong>{{ bat.force_charge_afternoon_label }}</strong></li>
+        </ul>
+        <p class="se-battery__note">{{ bat.note }}</p>
+      </ion-card-content>
+    </ion-card>
 
     <!-- Advise-only banner (§9.6) -->
     <ion-card class="se-card se-banner">

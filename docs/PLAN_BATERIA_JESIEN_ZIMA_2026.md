@@ -73,7 +73,7 @@ Powiązane: [`PROJEKT_APLIKACJA_MOBILNA.md`](PROJEKT_APLIKACJA_MOBILNA.md) §9 �
 | **B0** | Zostawić doradcę advise-only (bez auto `foxess_control` na obronę) | API §9.6 | `[x]` MVP |
 | **B1** | Dodać sezon **autumn** + progi z tabeli A/B w `.env` / `battery_strategy_settings` | `battery_advisor.py` | `[ ]` |
 | **B2** | Reguła: FC nocny jeśli `forecast_pv_tomorrow < threshold` (jesień) | advisor + prognoza RF 16 | `[ ]` |
-| **B3** | Alert / sugestia: „SoC@16 &lt; 50% → nie rozładowuj poniżej rezerwy / włącz 13–15” | mobile Home + notifications | `[ ]` |
+| **B3** | Alert / sugestia: „SoC@16 &lt; 50% → nie rozładowuj poniżej rezerwy / włącz 13–15” | mobile Home + notifications | `[x]` BAT.3 (2026-08-27, advise-only) |
 | **B4** | Shadow counterfactual: koszt z polityką A/B vs fakt IX–II | `bill_simulator` / savings | `[ ]` |
 | **B5** | Opcjonalnie: dry-run planu sterowania → log; auto-apply dopiero po B4 | `battery_control` | `[ ]` park |
 
@@ -103,9 +103,9 @@ Luki: brak pasa **jesień**; UI `soc_min=20` ≠ rezerwa zima 40%; brak powiąza
 |----|--------|---------|
 | BAT.1 | `[ ]` | Sezon `autumn` + parametry w env/DB |
 | BAT.2 | `[ ]` | FC warunkowy od prognozy PV (jesień) |
-| BAT.3 | `[ ]` | Alert SoC@16 + sugestia 13–15 / hold reserve |
+| BAT.3 | `[x]` | Alert SoC@16 + sugestia 13–15 / hold reserve — `GET /battery/suggestion` + feed `soc_reserve` + karta Home |
 | BAT.4 | `[ ]` | Backtest kosztów IX–II (polityka vs fakt) |
-| BAT.5 | `[ ]` | Zsynchronizować UI `soc_min` z rezerwą sezonową |
+| BAT.5 | `[x]` | Zsynchronizować UI `soc_min` z rezerwą sezonową — auto: lato 15% / zima 40%; KPI SoC na Home |
 | BAT.6 | `[ ]` | Po BAT.4: decyzja o auto-apply (park do świadomej zgody) |
 
 ---

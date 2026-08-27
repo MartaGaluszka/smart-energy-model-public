@@ -7,11 +7,13 @@ from pydantic import BaseModel
 
 class BatterySettingsResponse(BaseModel):
     soc_min_percent: float
+    soc_reserve_percent: float
     soc_target_percent: float
     efficiency_pct: float
     price_zone1: float | None = None
     price_zone2: float | None = None
     season: str
+    season_resolved: str
     battery_capacity_kwh: float | None = None
     ac_power_kw: float | None = None
 
@@ -69,6 +71,32 @@ class BatteryPolicyResponse(BaseModel):
     body: str
     automation_enabled: bool = False
     reasons: list[str]
+
+
+class BatterySuggestionResponse(BaseModel):
+    """Karta Home: reżim / ForceCharge / rezerwa SoC — advise-only (BAT.3 + BAT.5)."""
+
+    as_of: str
+    season: str
+    season_mode: str
+    soc_now_percent: float | None
+    soc_min_percent: float
+    soc_reserve_percent: float
+    soc_target_percent: float
+    soc_min_evening_percent: float
+    force_charge_night_recommended: bool
+    force_charge_night_label: str
+    force_charge_afternoon_recommended: bool
+    force_charge_afternoon_label: str
+    soc16_alert: bool
+    soc16_hour_passed: bool
+    soc16_percent: float | None = None
+    soc16_title: str | None = None
+    soc16_body: str | None = None
+    recommendation: str
+    action: str
+    automation_enabled: bool = False
+    note: str = 'Sugestia — nie wykonano automatycznie (advise-only).'
 
 
 class AcRuntimeRequest(BaseModel):

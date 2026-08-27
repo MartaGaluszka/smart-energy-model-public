@@ -12,6 +12,9 @@ from datetime import date, datetime, time
 
 from api.config import get_settings
 
+# Stary fabryczny default UI (20%) — BAT.5: przy season=auto i tak bierzemy rezerwę sezonową.
+_FACTORY_SOC_MIN = 20.0
+
 BATTERY_POLICY_TITLE = 'System tylko doradza — automatyka wyłączona (MVP)'
 
 BATTERY_POLICY_BODY = (
@@ -38,6 +41,40 @@ def get_battery_policy() -> dict:
     }
 
 
+def resolve_season_name(season_mode: str | None, d: date | None = None) -> str:
+    """`auto` → zima X–III / lato (B1 jesień jeszcze nie)."""
+    from src.optimization.battery_advisor import is_winter_season
+
+    mode = (season_mode or 'auto').strip().lower()
+    if mode in ('winter', 'summer'):
+        return mode
+    return 'winter' if is_winter_season(d or date.today()) else 'summer'
+
+
+def seasonal_reserve_for(season: str, d: date | None = None) -> float:
+    from src.optimization.battery_advisor import seasonal_soc_reserve
+
+    return seasonal_soc_reserve(d or date.today(), season=season)
+
+
+def effective_soc_min(settings_row, d: date | None = None) -> float:
+    """BAT.5: przy season=auto (lub braku wiersza) soc_min = rezerwa sezonowa, nie 20%."""
+    d = d or date.today()
+    mode = (getattr(settings_row, 'season', None) or 'auto') if settings_row else 'auto'
+    resolved = resolve_season_name(mode, d)
+    reserve = seasonal_reserve_for(resolved, d)
+    if settings_row is None or mode == 'auto':
+        return reserve
+    stored = float(settings_row.soc_min_percent)
+    if abs(stored - _FACTORY_SOC_MIN) < 0.01:
+        return reserve
+    return stored
+
+
+def default_soc_min_for_today() -> float:
+    return effective_soc_min(None, date.today())
+
+
 def _zone_label(zone: int) -> str:
     from src.optimization.g12w_tariff import cheap_zone_label
 
@@ -55,11 +92,10 @@ def build_daily_plan(target_date: str, settings_row) -> dict:
     from src.optimization.g12w_tariff import classify_zone, is_public_holiday, is_weekend
 
     d = date.fromisoformat(target_date)
-    from src.optimization.battery_advisor import is_winter_season
+    season_mode = getattr(settings_row, 'season', None) if settings_row else 'auto'
+    season = resolve_season_name(season_mode, d)
 
-    season = 'winter' if is_winter_season(d) else 'summer'
-
-    soc_min = settings_row.soc_min_percent if settings_row else 20.0
+    soc_min = effective_soc_min(settings_row, d)
     soc_target = settings_row.soc_target_percent if settings_row else 80.0
 
     all_day_cheap = is_weekend(d) or is_public_holiday(d)
@@ -148,7 +184,7 @@ def calculate_ac_runtime(ac_power_kw: float, settings_row) -> dict:
     snap = get_battery_snapshot()
     soc_now = snap.soc_percent
 
-    soc_min_morning = settings_row.soc_min_percent if settings_row else 20.0
+    soc_min_morning = effective_soc_min(settings_row)
     capacity_kwh = (settings_row.battery_capacity_kwh if settings_row and settings_row.battery_capacity_kwh else None) or 10.36
     efficiency = (settings_row.efficiency_pct if settings_row else 90.0) / 100.0
 
@@ -167,4 +203,109 @@ def calculate_ac_runtime(ac_power_kw: float, settings_row) -> dict:
         'battery_capacity_kwh': capacity_kwh,
         'efficiency_pct': efficiency * 100,
         'note': note,
+    }
+
+
+def settings_payload(settings_row, d: date | None = None) -> dict:
+    """GET/PUT /settings — soc_min_percent to wartość efektywna (BAT.5)."""
+    d = d or date.today()
+    season_mode = settings_row.season if settings_row else 'auto'
+    resolved = resolve_season_name(season_mode, d)
+    return {
+        'soc_min_percent': effective_soc_min(settings_row, d),
+        'soc_reserve_percent': seasonal_reserve_for(resolved, d),
+        'soc_target_percent': settings_row.soc_target_percent,
+        'efficiency_pct': settings_row.efficiency_pct,
+        'price_zone1': settings_row.price_zone1,
+        'price_zone2': settings_row.price_zone2,
+        'season': season_mode,
+        'season_resolved': resolved,
+        'battery_capacity_kwh': settings_row.battery_capacity_kwh,
+        'ac_power_kw': settings_row.ac_power_kw,
+    }
+
+
+def get_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
+    """Karta Home (BAT.3 + BAT.5): reżim / ForceCharge / rezerwa — bez ML, bez auto-apply."""
+    from src.optimization.battery_advisor import (
+        evaluate_soc16_hold_reserve,
+        get_battery_snapshot,
+        get_soc_at_hour,
+        seasonal_soc_reserve,
+    )
+    from src.optimization.g12w_tariff import is_public_holiday, is_weekend
+
+    as_of = as_of or datetime.now()
+    d = as_of.date()
+    season_mode = getattr(settings_row, 'season', None) if settings_row else 'auto'
+    season = resolve_season_name(season_mode, d)
+    reserve = seasonal_soc_reserve(d, season=season)
+    soc_min = effective_soc_min(settings_row, d)
+    target = float(settings_row.soc_target_percent) if settings_row else 80.0
+    snap = get_battery_snapshot(target_day=d.isoformat())
+    soc_now = snap.soc_percent
+
+    soc16_sample = get_soc_at_hour(d.isoformat(), 16)
+    if as_of.hour >= 16:
+        soc_for_alert = soc16_sample if soc16_sample is not None else soc_now
+    else:
+        soc_for_alert = soc_now
+    alert = evaluate_soc16_hold_reserve(
+        soc_percent=soc_for_alert,
+        as_of=as_of,
+        reserve_percent=reserve,
+    )
+
+    weekend = is_weekend(d) or is_public_holiday(d)
+    winter = season == 'winter'
+    if weekend:
+        night_rec, night_label = False, 'weekend — cała doba tanio'
+        aft_rec, aft_label = False, 'niekrytyczne (weekend)'
+    elif winter:
+        night_rec, night_label = True, 'zawsze (22–6)'
+        if soc_now is not None and soc_now >= target:
+            aft_rec, aft_label = False, 'pomiń (SoC ≥ cel)'
+        else:
+            aft_rec, aft_label = True, 'włącz (13–15)'
+    else:
+        night_rec, night_label = False, 'nie (lato)'
+        aft_rec, aft_label = False, 'opcjonalnie'
+
+    if alert.triggered:
+        rec, action = alert.recommendation, alert.body
+    elif winter:
+        rec = 'REŻIM ZIMA'
+        action = (
+            f'Rezerwa SoC {reserve:.0f}%. ForceCharge 22–6 zawsze (dni robocze); '
+            f'13–15 gdy SoC < {target:.0f}%. System tylko doradza — bez automatyki.'
+        )
+    else:
+        rec = 'REŻIM LATO'
+        action = (
+            f'Rezerwa SoC {reserve:.0f}%. ForceCharge nocny nie jest codzienny; '
+            f'priorytet autokonsumpcja PV. System tylko doradza — bez automatyki.'
+        )
+
+    return {
+        'as_of': as_of.isoformat(timespec='seconds'),
+        'season': season,
+        'season_mode': season_mode or 'auto',
+        'soc_now_percent': soc_now,
+        'soc_min_percent': soc_min,
+        'soc_reserve_percent': reserve,
+        'soc_target_percent': target,
+        'soc_min_evening_percent': alert.min_evening_percent,
+        'force_charge_night_recommended': night_rec,
+        'force_charge_night_label': night_label,
+        'force_charge_afternoon_recommended': aft_rec,
+        'force_charge_afternoon_label': aft_label,
+        'soc16_alert': alert.triggered,
+        'soc16_hour_passed': alert.hour_passed,
+        'soc16_percent': soc16_sample,
+        'soc16_title': alert.title or None,
+        'soc16_body': alert.body or None,
+        'recommendation': rec,
+        'action': action,
+        'automation_enabled': False,
+        'note': 'Sugestia — nie wykonano automatycznie (advise-only).',
     }
