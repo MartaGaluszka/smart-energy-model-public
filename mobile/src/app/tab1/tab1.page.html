@@ -114,8 +114,8 @@
                 <ng-container *ngIf="bat.soc_now_percent !== null">
                   Teraz {{ bat.soc_now_percent | number:'1.0-0' }}%.
                 </ng-container>
-                {{ bat.force_charge_night_label }}.
-                Kalibracja: 30 min ForceCharge ≈ +50% SoC — wyłącz po czasie, nie ładuj do rana.
+                {{ bat.charge_when_summary || bat.force_charge_night_label }}.
+                Plan SE: krótkie doładowanie w taniej G12w (30 min ≈ +50%); nie pełnić „do rana”.
               </p>
             </div>
           </div>
@@ -136,14 +136,18 @@
         <p class="se-battery__action">{{ bat.action }}</p>
         <ul class="se-battery__meta">
           <li>Reżim: <strong>{{ seasonLabel(bat.season) }}</strong></li>
+          <li class="se-battery__when">
+            Plan SE:
+            <strong>{{ bat.charge_when_summary || 'brak doładowania dziś' }}</strong>
+          </li>
           <li>Rezerwa SoC: <strong>{{ bat.soc_reserve_percent | number:'1.0-0' }}%</strong>
             <ng-container *ngIf="bat.soc_now_percent !== null">
               (teraz {{ bat.soc_now_percent | number:'1.0-0' }}%)
             </ng-container>
             — podłoga na noc, nie ładuj w szczycie
           </li>
-          <li>ForceCharge 22–6: <strong>{{ bat.force_charge_night_label }}</strong></li>
-          <li>ForceCharge 13–15: <strong>{{ bat.force_charge_afternoon_label }}</strong></li>
+          <li>Noc (G12w): <strong>{{ bat.force_charge_night_label }}</strong></li>
+          <li>Popołudnie (G12w): <strong>{{ bat.force_charge_afternoon_label }}</strong></li>
           <li>Ładowanie z sieci: <strong>tylko tania G12w</strong>
             <ng-container *ngIf="bat.wait_for_cheap && bat.next_cheap_window">
               — następne {{ bat.next_cheap_window }}

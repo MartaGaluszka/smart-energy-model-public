@@ -6,8 +6,11 @@ import { catchError } from 'rxjs/operators';
 import {
   ApiService,
   BatteryPlanHour,
+  BatteryScheduleMode,
+  BatteryScheduleWindow,
   BatterySettingsResponse,
   BatterySettingsUpdate,
+  BatterySuggestionResponse,
   ShadowSavingsResponse,
 } from '../services/api.service';
 import { todayIsoLocal } from '../utils/date-utils';
@@ -45,6 +48,26 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
   socTargetPercent = 80;
   efficiencyPct = 93;
   capacityKwh: number | null = 10.36;
+  fcMaxMinutes = 15;
+  fcNightStartHour = 22;
+  recommendedFcMaxMinutes = 15;
+  scheduleWindows: BatteryScheduleWindow[] = [];
+  scheduleMaxWindows = 8;
+  schedulePreset: 'g11' | 'g12w' | 'g13' | 'custom' = 'g12w';
+
+  readonly scheduleModes: { value: BatteryScheduleMode; label: string }[] = [
+    { value: 'ForceCharge', label: 'Doładuj z sieci' },
+    { value: 'SelfUse', label: 'Zasilaj dom' },
+    { value: 'ForceDischarge', label: 'Oddaj do sieci' },
+  ];
+
+  readonly tariffPresets: { value: 'g11' | 'g12w' | 'g13'; label: string; hint: string }[] = [
+    { value: 'g11', label: 'G11', hint: '1 blok (płaska)' },
+    { value: 'g12w', label: 'G12w', hint: 'kilka okien' },
+    { value: 'g13', label: 'G13', hint: 'więcej okien' },
+  ];
+
+  suggestion: BatterySuggestionResponse | null = null;
 
   planDate = todayIsoLocal();
   planSeason = '';
@@ -72,6 +95,14 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
     autumn: 22,
     winter: 40,
     spring: 20,
+  };
+
+  /** Max czas FC: lato/wiosna krótko; jesień/zima dłużej (nie „do rana”). */
+  private readonly recommendedFcMax: Record<Exclude<SeasonMode, 'auto'>, number> = {
+    summer: 15,
+    autumn: 45,
+    winter: 90,
+    spring: 15,
   };
 
   constructor(private readonly api: ApiService) {}
@@ -105,25 +136,134 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
     return `${value.toFixed(2).replace('.', ',')} zł`;
   }
 
+  estimatedDeltaSoc(): number {
+    // Kalibracja 25–26.08: 30 min ForceCharge ≈ +50 pp SoC
+    return Math.round((this.fcMaxMinutes / 30) * 50);
+  }
+
+  /** Koniec okna FC w FoxESS (start + długość) — HH:MM. */
+  fcWindowEndLabel(): string {
+    const startMin = Math.max(0, Math.min(23, Math.round(this.fcNightStartHour))) * 60;
+    const endTotal = (startMin + Math.max(0, Math.round(this.fcMaxMinutes))) % (24 * 60);
+    const h = Math.floor(endTotal / 60);
+    const m = endTotal % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  }
+
+  fcWindowLabel(): string {
+    const start = `${Math.round(this.fcNightStartHour).toString().padStart(2, '0')}:00`;
+    return `${start}–${this.fcWindowEndLabel()}`;
+  }
+
+  modeLabel(mode: string): string {
+    return this.scheduleModes.find((m) => m.value === mode)?.label ?? mode;
+  }
+
+  canAddWindow(): boolean {
+    return this.scheduleWindows.length < this.scheduleMaxWindows;
+  }
+
+  addWindow(): void {
+    if (!this.canAddWindow()) return;
+    this.scheduleWindows = [
+      ...this.scheduleWindows,
+      { start: '13:00', end: '14:00', mode: 'ForceCharge', enabled: false },
+    ];
+    this.schedulePreset = 'custom';
+  }
+
+  removeWindow(index: number): void {
+    this.scheduleWindows = this.scheduleWindows.filter((_, i) => i !== index);
+    this.schedulePreset = 'custom';
+  }
+
+  /** Szablon startowy wg taryfy — potem zawsze możesz dodać/usunąć bloki. */
+  applyTariffPreset(preset: string | undefined): void {
+    if (preset !== 'g11' && preset !== 'g12w' && preset !== 'g13') return;
+    const nightStart = `${Math.round(this.fcNightStartHour).toString().padStart(2, '0')}:00`;
+    const nightEnd = this.fcWindowEndLabel();
+    this.schedulePreset = preset;
+    if (preset === 'g11') {
+      this.scheduleWindows = [
+        { start: nightStart, end: nightEnd, mode: 'ForceCharge', enabled: false },
+      ];
+      return;
+    }
+    if (preset === 'g13') {
+      this.scheduleWindows = [
+        { start: '06:00', end: '09:00', mode: 'SelfUse' as const, enabled: false },
+        { start: '09:00', end: '13:00', mode: 'SelfUse' as const, enabled: false },
+        { start: '13:00', end: '15:00', mode: 'ForceCharge' as const, enabled: false },
+        { start: '15:00', end: '17:00', mode: 'SelfUse' as const, enabled: false },
+        { start: '17:00', end: '22:00', mode: 'SelfUse' as const, enabled: false },
+        { start: '22:00', end: '01:00', mode: 'ForceCharge' as const, enabled: false },
+        { start: '04:00', end: '06:00', mode: 'ForceCharge' as const, enabled: false },
+      ].slice(0, this.scheduleMaxWindows);
+      return;
+    }
+    // G12w — od rana; 2 ostatnie: 22:00–01:00 i 04:00–06:00
+    this.scheduleWindows = [
+      { start: '06:00', end: '13:00', mode: 'SelfUse' as const, enabled: false },
+      { start: '13:00', end: '15:00', mode: 'ForceCharge' as const, enabled: false },
+      { start: '15:00', end: '22:00', mode: 'SelfUse' as const, enabled: false },
+      { start: '22:00', end: '01:00', mode: 'ForceCharge' as const, enabled: false },
+      { start: '04:00', end: '06:00', mode: 'ForceCharge' as const, enabled: false },
+    ].slice(0, this.scheduleMaxWindows);
+  }
+
+  /** @deprecated alias — zostawione jeśli coś jeszcze woła starą nazwę */
+  applyG12wTemplate(): void {
+    this.applyTariffPreset('g12w');
+  }
+
+  private resolvedSeasonKey(): Exclude<SeasonMode, 'auto'> {
+    if (this.season === 'auto') {
+      return (this.seasonResolved || 'summer') as Exclude<SeasonMode, 'auto'>;
+    }
+    return this.season;
+  }
+
+  syncNightIntoSchedule(): void {
+    const nightStart = `${Math.round(this.fcNightStartHour).toString().padStart(2, '0')}:00`;
+    const nightEnd = this.fcWindowEndLabel();
+    // Preferuj blok nocny 22:00 (nie popołudniowy 13–15); inaczej pierwsze ForceCharge
+    let idx = this.scheduleWindows.findIndex((w) => w.mode === 'ForceCharge' && w.start === '22:00');
+    if (idx < 0) {
+      idx = this.scheduleWindows.findIndex((w) => w.mode === 'ForceCharge');
+    }
+    if (idx >= 0) {
+      const copy = [...this.scheduleWindows];
+      // Tylko godziny z kalkulacji — toggle zostawiamy; włączasz świadomie
+      copy[idx] = { ...copy[idx], start: nightStart, end: nightEnd, enabled: false };
+      this.scheduleWindows = copy;
+      this.schedulePreset = 'custom';
+      return;
+    }
+    if (this.canAddWindow()) {
+      this.scheduleWindows = [
+        ...this.scheduleWindows,
+        { start: nightStart, end: nightEnd, mode: 'ForceCharge', enabled: false },
+      ];
+      this.schedulePreset = 'custom';
+    }
+  }
+
   onSeasonChange(value: string | number | undefined): void {
     if (typeof value !== 'string') return;
     if (!['auto', 'summer', 'autumn', 'spring', 'winter'].includes(value)) return;
     this.season = value as SeasonMode;
-    this.applyRecommendedReserveForSeason();
+    this.applyRecommendedForSeason();
   }
 
-  /** Podgląd zalecanej rezerwy przy przełączaniu sezonu (przed Zapisz). */
-  private applyRecommendedReserveForSeason(): void {
-    if (this.season === 'auto') {
-      const resolved = (this.seasonResolved || 'summer') as Exclude<SeasonMode, 'auto'>;
-      const rec = this.recommendedReserve[resolved] ?? 20;
-      this.socReservePercent = rec;
-      this.socMinPercent = rec;
-      return;
-    }
-    const rec = this.recommendedReserve[this.season];
+  /** Rezerwa + czas doładowania przy sezonie — planu dnia NIE nadpisujemy (taryfa / custom). */
+  private applyRecommendedForSeason(): void {
+    const key = this.resolvedSeasonKey();
+    const rec = this.recommendedReserve[key] ?? 20;
     this.socReservePercent = rec;
     this.socMinPercent = rec;
+    const fc = this.recommendedFcMax[key] ?? 15;
+    this.fcMaxMinutes = fc;
+    this.recommendedFcMaxMinutes = fc;
   }
 
   saveSettings(): void {
@@ -139,13 +279,21 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
       season: this.season,
       battery_capacity_kwh: this.capacityKwh,
       ac_power_kw: null,
+      fc_max_minutes: this.fcMaxMinutes,
+      fc_night_start_hour: this.fcNightStartHour,
+      schedule_windows: this.scheduleWindows,
+      schedule_preset: this.schedulePreset,
     };
     this.api.updateBatterySettings(body).subscribe({
       next: (row) => {
+        const windowsKeep = this.scheduleWindows.map((w) => ({ ...w }));
         this.applySettings(row);
+        // applySettings startuje toggle’e OFF — po zapisie zostaw to, co właśnie ustawiono
+        this.scheduleWindows = windowsKeep;
         this.saving = false;
         this.saveMessage = 'Zapisano ustawienia.';
         this.reloadPlan();
+        this.reloadSuggestion();
       },
       error: () => {
         this.saving = false;
@@ -163,6 +311,7 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
         this.loading = false;
         this.reloadPlan();
         this.reloadShadow();
+        this.reloadSuggestion();
       },
       error: () => {
         this.loading = false;
@@ -180,6 +329,25 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
     this.socTargetPercent = row.soc_target_percent;
     this.efficiencyPct = row.efficiency_pct;
     this.capacityKwh = row.battery_capacity_kwh;
+    this.fcMaxMinutes = row.fc_max_minutes ?? 15;
+    this.fcNightStartHour = row.fc_night_start_hour ?? 22;
+    this.recommendedFcMaxMinutes = row.recommended_fc_max_minutes ?? 15;
+    this.scheduleMaxWindows = row.schedule_max_windows ?? 8;
+    // Godziny/tryby z serwera; toggle zawsze startuje OFF (włączasz świadomie w tej sesji)
+    this.scheduleWindows = (row.schedule_windows ?? []).map((w) => ({ ...w, enabled: false }));
+    const preset = (row.schedule_preset || 'g12w') as 'g11' | 'g12w' | 'g13' | 'custom';
+    this.schedulePreset = ['g11', 'g12w', 'g13', 'custom'].includes(preset) ? preset : 'custom';
+  }
+
+  private reloadSuggestion(): void {
+    this.api.getBatterySuggestion().subscribe({
+      next: (row) => {
+        this.suggestion = row;
+      },
+      error: () => {
+        this.suggestion = null;
+      },
+    });
   }
 
   private periodBounds(): { key: 'day' | 'month' | 'ytd'; label: string; from: string; to: string }[] {

@@ -44,6 +44,39 @@ def init_db() -> None:
     from api import models  # noqa: F401 — rejestracja modeli w Base.metadata
 
     Base.metadata.create_all(bind=engine, checkfirst=True)
+    _ensure_battery_strategy_columns()
+
+
+def _ensure_battery_strategy_columns() -> None:
+    """create_all nie dodaje kolumn do istniejącej tabeli — ALTER przy starcie."""
+    from sqlalchemy import text
+
+    url = settings.DATABASE_URL
+    alters: list[tuple[str, str]] = [
+        ('fc_max_minutes', 'FLOAT DEFAULT 15.0'),
+        ('fc_night_start_hour', 'INTEGER DEFAULT 22'),
+        ('schedule_windows_json', 'TEXT'),
+        ('schedule_preset', "VARCHAR(10) DEFAULT 'g12w'"),
+    ]
+    with engine.begin() as conn:
+        if url.startswith('sqlite'):
+            existing = {
+                row[1]
+                for row in conn.execute(text('PRAGMA table_info(battery_strategy_settings)')).fetchall()
+            }
+            for col, col_type in alters:
+                if col not in existing:
+                    conn.execute(
+                        text(f'ALTER TABLE battery_strategy_settings ADD COLUMN {col} {col_type}')
+                    )
+            return
+        for col, col_type in alters:
+            conn.execute(
+                text(
+                    f'ALTER TABLE battery_strategy_settings '
+                    f'ADD COLUMN IF NOT EXISTS {col} {col_type}'
+                )
+            )
 
 
 def get_db_session():

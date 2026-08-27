@@ -2,7 +2,22 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+
+ScheduleMode = Literal['ForceCharge', 'SelfUse', 'ForceDischarge']
+
+
+class BatteryScheduleWindow(BaseModel):
+    """Blok planu dnia Smart Energy (G12w + sezon) — max 8; mapowanie na falownik osobno."""
+
+    start: str = Field(..., description='HH:MM')
+    end: str = Field(..., description='HH:MM (może przejść przez północ)')
+    mode: ScheduleMode = 'SelfUse'
+    # Opt-in w UI: bloki startują wyłączone, użytkownik włącza świadomie
+    enabled: bool = False
 
 
 class BatterySettingsResponse(BaseModel):
@@ -16,6 +31,12 @@ class BatterySettingsResponse(BaseModel):
     season_resolved: str
     battery_capacity_kwh: float | None = None
     ac_power_kw: float | None = None
+    fc_max_minutes: float = 15.0
+    fc_night_start_hour: int = 22
+    recommended_fc_max_minutes: float = 15.0
+    schedule_windows: list[BatteryScheduleWindow] = Field(default_factory=list)
+    schedule_max_windows: int = 8
+    schedule_preset: str = 'g12w'
 
 
 class BatterySettingsUpdate(BaseModel):
@@ -27,7 +48,10 @@ class BatterySettingsUpdate(BaseModel):
     season: str = 'auto'
     battery_capacity_kwh: float | None = None
     ac_power_kw: float | None = None
-
+    fc_max_minutes: float = 15.0
+    fc_night_start_hour: int = 22
+    schedule_windows: list[BatteryScheduleWindow] = Field(default_factory=list)
+    schedule_preset: str = 'g12w'
 
 class BatteryPlanHour(BaseModel):
     hour: int
@@ -88,6 +112,13 @@ class BatterySuggestionResponse(BaseModel):
     force_charge_night_label: str
     force_charge_afternoon_recommended: bool
     force_charge_afternoon_label: str
+    force_charge_night_start: str | None = None
+    force_charge_night_end: str | None = None
+    force_charge_night_minutes: float | None = None
+    force_charge_afternoon_window: str | None = None
+    charge_when_summary: str = 'Dziś bez doładowania z sieci — wystarczy PV / rezerwa SE'
+    fc_max_minutes: float = 15.0
+    fc_night_start_hour: int = 22
     soc16_alert: bool
     soc16_hour_passed: bool
     soc16_percent: float | None = None

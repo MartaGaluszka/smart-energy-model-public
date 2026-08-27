@@ -162,10 +162,107 @@ def test_fallback_home_suggestion_summer():
     assert fb['soc_reserve_percent'] == 20.0
     assert fb['automation_enabled'] is False
     assert fb['recommendation'] == 'REŻIM LATO'
+    assert 'charge_when_summary' in fb
+    assert fb['fc_max_minutes'] == 15.0
+    assert fb['fc_night_start_hour'] == 22
 
     live = get_home_suggestion(row, as_of=datetime(2026, 8, 27, 15, 0))
     assert live['season'] == 'summer'
     assert live['automation_enabled'] is False
+    assert 'charge_when_summary' in live
+
+
+def test_g12w_schedule_template_seasonal():
+    from api.services.battery_planner import (
+        SCHEDULE_MAX_WINDOWS,
+        g12w_schedule_template,
+        normalize_schedule_windows,
+        schedule_template_for_tariff,
+    )
+
+    g11 = schedule_template_for_tariff('g11', night_start_hour=22, night_minutes=15)
+    assert len(g11) == 1
+    assert g11[0]['mode'] == 'ForceCharge'
+    assert g11[0]['enabled'] is False
+
+    g12 = schedule_template_for_tariff('g12w', night_start_hour=22, night_minutes=30)
+    assert 4 <= len(g12) <= SCHEDULE_MAX_WINDOWS
+    assert g12[0]['start'] == '06:00'
+    assert g12[-2]['start'] == '22:00' and g12[-2]['end'] == '01:00'
+    assert g12[-1]['start'] == '04:00' and g12[-1]['end'] == '06:00'
+    assert all(w['enabled'] is False for w in g12)
+
+    g13 = schedule_template_for_tariff('g13', night_start_hour=22, night_minutes=30)
+    assert len(g13) > len(g12)
+    assert len(g13) <= SCHEDULE_MAX_WINDOWS
+    assert g13[0]['start'] == '06:00'
+    assert g13[-2]['start'] == '22:00' and g13[-2]['end'] == '01:00'
+    assert g13[-1]['start'] == '04:00' and g13[-1]['end'] == '06:00'
+
+    # Kompatybilność: sezon ≠ zima → jak G11 (1 blok)
+    summer = g12w_schedule_template(night_start_hour=22, night_minutes=15, season='summer')
+    assert len(summer) == 1
+
+    too_many = [
+        {'start': f'{h:02d}:00', 'end': f'{(h + 1) % 24:02d}:00', 'mode': 'SelfUse'} for h in range(12)
+    ]
+    assert len(normalize_schedule_windows(too_many)) == SCHEDULE_MAX_WINDOWS
+    assert all(w['enabled'] is False for w in normalize_schedule_windows(too_many))
+
+
+def test_normalize_rejects_bad_mode():
+    from api.services.battery_planner import normalize_schedule_windows
+
+    rows = normalize_schedule_windows(
+        [{'start': '13:00', 'end': '14:00', 'mode': 'Nope', 'enabled': True}]
+    )
+    assert rows[0]['mode'] == 'SelfUse'
+
+
+def test_effective_fc_max_auto_winter_uses_recommended():
+    from api.services.battery_planner import effective_fc_max, recommended_fc_max_minutes_for
+
+    assert recommended_fc_max_minutes_for('summer') == 15.0
+    assert recommended_fc_max_minutes_for('autumn') == 45.0
+    assert recommended_fc_max_minutes_for('winter') == 90.0
+    row = SimpleNamespace(season='auto', fc_max_minutes=15.0)
+    assert effective_fc_max(row, 'winter') == 90.0
+    assert effective_fc_max(row, 'autumn') == 45.0
+    assert effective_fc_max(row, 'summer') == 15.0
+    custom = SimpleNamespace(season='auto', fc_max_minutes=30.0)
+    assert effective_fc_max(custom, 'winter') == 30.0
+
+
+def test_summer_fc_respects_user_minutes_and_start_hour():
+    from src.optimization.battery_advisor import evaluate_charge_tonight_cloudy
+
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=10.0,
+        tomorrow_pv_kwh=5.0,
+        as_of=datetime(2026, 8, 27, 18, 0),
+        fc_max_minutes=10.0,
+        night_start_hour=21,
+    )
+    assert rule.triggered is True
+    assert rule.fc_minutes == 10.0
+    assert '21:00' in rule.body
+    assert '21:10' in rule.body
+
+
+def test_autumn_fc_caps_to_user_max_minutes():
+    from src.optimization.battery_advisor import evaluate_charge_tonight_cloudy, fc_minutes_for_delta_soc
+
+    # SoC 20 → cel ~85 = 65 pp ≈ 39 min; cap 15 → krócej
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=20.0,
+        tomorrow_pv_kwh=4.0,
+        as_of=datetime(2026, 10, 15, 18, 0),
+        fc_max_minutes=15.0,
+        night_start_hour=22,
+    )
+    assert rule.triggered is True
+    assert rule.fc_minutes == 15.0
+    assert rule.fc_minutes < fc_minutes_for_delta_soc(65.0)
 
 
 def test_fallback_home_suggestion_october_autumn():
@@ -189,3 +286,200 @@ def test_wait_cheap_skips_when_above_reserve():
         reserve_percent=22.0,
     )
     assert rule.triggered is False
+
+
+def test_winter_afternoon_fc_triggers_cold_weak_pv():
+    from src.optimization.battery_advisor import evaluate_winter_afternoon_fc
+
+    rule = evaluate_winter_afternoon_fc(
+        soc_percent=15.0,
+        today_pv_kwh=3.0,
+        today_temp_c=-2.0,
+        as_of=datetime(2026, 1, 14, 12, 0),  # środa
+    )
+    assert rule.triggered is True
+    assert '13–15' in rule.body or '13:00' in rule.body
+
+
+def test_winter_afternoon_fc_skips_when_soc_ok():
+    from src.optimization.battery_advisor import evaluate_winter_afternoon_fc
+
+    rule = evaluate_winter_afternoon_fc(
+        soc_percent=55.0,
+        today_pv_kwh=2.0,
+        today_temp_c=-5.0,
+        as_of=datetime(2026, 1, 14, 12, 0),
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'soc_ok'
+
+
+def test_winter_afternoon_fc_skips_mild_sunny():
+    from src.optimization.battery_advisor import evaluate_winter_afternoon_fc
+
+    rule = evaluate_winter_afternoon_fc(
+        soc_percent=25.0,
+        today_pv_kwh=18.0,
+        today_temp_c=8.0,
+        as_of=datetime(2026, 1, 14, 12, 0),
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'covered'
+
+
+# --- Plan dnia SE: szablony / tryby / toggle enabled (przyciski UI Bateria) ---
+
+
+def test_schedule_modes_map_ui_buttons():
+    """Segment: Doładuj z sieci / Zasilaj dom / Oddaj do sieci."""
+    from api.services.battery_planner import SCHEDULE_MODES, normalize_schedule_windows
+
+    assert SCHEDULE_MODES == frozenset({'ForceCharge', 'SelfUse', 'ForceDischarge'})
+    rows = normalize_schedule_windows(
+        [
+            {'start': '22:00', 'end': '22:15', 'mode': 'ForceCharge', 'enabled': True},
+            {'start': '06:00', 'end': '13:00', 'mode': 'SelfUse', 'enabled': False},
+            {'start': '13:00', 'end': '15:00', 'mode': 'ForceDischarge', 'enabled': True},
+        ]
+    )
+    assert [r['mode'] for r in rows] == ['ForceCharge', 'SelfUse', 'ForceDischarge']
+    assert rows[0]['enabled'] is True
+    assert rows[1]['enabled'] is False
+
+
+def test_schedule_toggle_opt_in_default_off():
+    """Brak pola enabled / nowe bloki → wyłączone (jak toggle „wyłączony”)."""
+    from api.services.battery_planner import normalize_schedule_windows
+
+    rows = normalize_schedule_windows([{'start': '22:00', 'end': '22:15', 'mode': 'ForceCharge'}])
+    assert rows[0]['enabled'] is False
+
+
+def test_schedule_add_remove_respects_max_8():
+    from api.services.battery_planner import SCHEDULE_MAX_WINDOWS, normalize_schedule_windows
+
+    assert SCHEDULE_MAX_WINDOWS == 8
+    many = [
+        {'start': f'{h:02d}:00', 'end': f'{(h + 1) % 24:02d}:00', 'mode': 'SelfUse', 'enabled': False}
+        for h in range(12)
+    ]
+    assert len(normalize_schedule_windows(many)) == 8
+
+
+def test_schedule_presets_g11_g12w_g13_counts_and_modes():
+    """Przyciski szablonu G11 / G12w / G13 — liczba bloków i tryby startowe."""
+    from api.services.battery_planner import schedule_template_for_tariff
+
+    g11 = schedule_template_for_tariff('g11', night_start_hour=22, night_minutes=15)
+    assert len(g11) == 1
+    assert g11[0]['start'] == '22:00'
+    assert g11[0]['end'] == '22:15'
+    assert g11[0]['mode'] == 'ForceCharge'
+    assert g11[0]['enabled'] is False
+
+    g12 = schedule_template_for_tariff('g12w', night_start_hour=22, night_minutes=15)
+    assert len(g12) == 5
+    assert g12[0]['start'] == '06:00' and g12[0]['mode'] == 'SelfUse'
+    assert any(w['start'] == '13:00' and w['mode'] == 'ForceCharge' for w in g12)
+    assert g12[-2]['start'] == '22:00' and g12[-2]['end'] == '01:00' and g12[-2]['mode'] == 'ForceCharge'
+    assert g12[-1]['start'] == '04:00' and g12[-1]['end'] == '06:00' and g12[-1]['mode'] == 'ForceCharge'
+    assert all(w['enabled'] is False for w in g12)
+
+    g13 = schedule_template_for_tariff('g13', night_start_hour=22, night_minutes=15)
+    assert len(g13) == 7
+    assert g13[0]['start'] == '06:00' and g13[0]['mode'] == 'SelfUse'
+    assert g13[-2]['start'] == '22:00' and g13[-2]['end'] == '01:00'
+    assert g13[-1]['start'] == '04:00' and g13[-1]['end'] == '06:00'
+    assert all(w['enabled'] is False for w in g13)
+
+
+def test_schedule_insert_night_fc_keeps_disabled():
+    """Przycisk „Wstaw kalkulację…” — aktualizuje godziny 1. FC, bez auto-włączania."""
+    from api.services.battery_planner import normalize_schedule_windows
+
+    plan = normalize_schedule_windows(
+        [
+            {'start': '22:00', 'end': '22:15', 'mode': 'ForceCharge', 'enabled': False},
+            {'start': '06:00', 'end': '13:00', 'mode': 'SelfUse', 'enabled': False},
+        ]
+    )
+    # Symulacja syncNightIntoSchedule: pierwsze ForceCharge → nowe godziny, enabled=False
+    idx = next(i for i, w in enumerate(plan) if w['mode'] == 'ForceCharge')
+    plan[idx] = {**plan[idx], 'start': '23:00', 'end': '00:30', 'enabled': False}
+    assert plan[0]['start'] == '23:00'
+    assert plan[0]['end'] == '00:30'
+    assert plan[0]['enabled'] is False
+
+
+def test_apply_settings_update_persists_schedule_and_preset():
+    from api.services.battery_planner import apply_settings_update, schedule_windows_from_settings
+
+    row = SimpleNamespace(
+        soc_min_percent=20.0,
+        schedule_windows_json=None,
+        schedule_preset='g12w',
+        season='auto',
+        fc_max_minutes=15.0,
+        fc_night_start_hour=22,
+    )
+    body = {
+        'soc_min_percent': 20.0,
+        'soc_target_percent': 80.0,
+        'efficiency_pct': 93.0,
+        'price_zone1': None,
+        'price_zone2': None,
+        'season': 'auto',
+        'battery_capacity_kwh': 10.36,
+        'ac_power_kw': None,
+        'fc_max_minutes': 15.0,
+        'fc_night_start_hour': 22,
+        'schedule_preset': 'custom',
+        'schedule_windows': [
+            {'start': '22:00', 'end': '22:15', 'mode': 'ForceCharge', 'enabled': True},
+            {'start': '06:00', 'end': '13:00', 'mode': 'Zasilaj', 'enabled': False},  # zły → SelfUse
+        ],
+    }
+    apply_settings_update(row, dict(body))
+    assert row.schedule_preset == 'custom'
+    windows = schedule_windows_from_settings(row)
+    assert len(windows) == 2
+    assert windows[0]['enabled'] is True
+    assert windows[0]['mode'] == 'ForceCharge'
+    assert windows[1]['mode'] == 'SelfUse'
+    assert windows[1]['enabled'] is False
+
+
+def test_battery_settings_put_schedule_roundtrip(client, auth_headers):
+    """PUT/GET /battery/settings — toggle + tryby + preset jak w UI."""
+    payload = {
+        'soc_min_percent': 20,
+        'soc_target_percent': 80,
+        'efficiency_pct': 93,
+        'season': 'auto',
+        'fc_max_minutes': 15,
+        'fc_night_start_hour': 22,
+        'schedule_preset': 'g12w',
+        'schedule_windows': [
+            {'start': '22:00', 'end': '22:15', 'mode': 'ForceCharge', 'enabled': False},
+            {'start': '22:15', 'end': '06:00', 'mode': 'SelfUse', 'enabled': False},
+            {'start': '06:00', 'end': '13:00', 'mode': 'SelfUse', 'enabled': True},
+            {'start': '13:00', 'end': '15:00', 'mode': 'ForceCharge', 'enabled': False},
+            {'start': '15:00', 'end': '22:00', 'mode': 'ForceDischarge', 'enabled': False},
+        ],
+    }
+    put = client.put('/api/v1/battery/settings', json=payload, headers=auth_headers)
+    assert put.status_code == 200, put.text
+    data = put.json()
+    assert data['schedule_preset'] == 'g12w'
+    assert len(data['schedule_windows']) == 5
+    assert data['schedule_windows'][0]['mode'] == 'ForceCharge'
+    assert data['schedule_windows'][0]['enabled'] is False
+    assert data['schedule_windows'][2]['enabled'] is True
+    assert data['schedule_windows'][4]['mode'] == 'ForceDischarge'
+
+    get = client.get('/api/v1/battery/settings', headers=auth_headers)
+    assert get.status_code == 200
+    again = get.json()
+    assert again['schedule_windows'][2]['start'] == '06:00'
+    assert again['schedule_windows'][2]['enabled'] is True
+    assert again['schedule_max_windows'] == 8

@@ -117,6 +117,12 @@ class BatteryStrategySettings(Base):
     season: Mapped[str] = mapped_column(String(10), default='auto', nullable=False)
     battery_capacity_kwh: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     ac_power_kw: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    # Preferencje bloku doładowania nocnego (plan SE, advise-only).
+    fc_max_minutes: Mapped[float] = mapped_column(Float, default=15.0, nullable=False)
+    fc_night_start_hour: Mapped[int] = mapped_column(Integer, default=22, nullable=False)
+    # Plan dnia SE (JSON) + opcjonalny preset taryfy (g11/g12w/g13/custom) — uniwersalny edytor.
+    schedule_windows_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    schedule_preset: Mapped[str] = mapped_column(String(10), default='g12w', nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
