@@ -58,6 +58,8 @@ export interface BatterySuggestionResponse {
   soc16_percent: number | null;
   soc16_title: string | null;
   soc16_body: string | null;
+  wait_for_cheap: boolean;
+  next_cheap_window: string | null;
   recommendation: string;
   action: string;
   automation_enabled: boolean;

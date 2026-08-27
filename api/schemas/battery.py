@@ -93,6 +93,8 @@ class BatterySuggestionResponse(BaseModel):
     soc16_percent: float | None = None
     soc16_title: str | None = None
     soc16_body: str | None = None
+    wait_for_cheap: bool = False
+    next_cheap_window: str | None = None
     recommendation: str
     action: str
     automation_enabled: bool = False

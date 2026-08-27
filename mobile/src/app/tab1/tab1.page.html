@@ -99,7 +99,7 @@
     </ng-container>
 
     <!-- BAT.3 + BAT.5: reżim / ForceCharge / rezerwa — advise-only -->
-    <ion-card class="se-card se-battery" *ngIf="battery$ | async as bat" [class.se-battery--alert]="bat.soc16_alert">
+    <ion-card class="se-card se-battery" *ngIf="battery$ | async as bat" [class.se-battery--alert]="bat.soc16_alert || bat.wait_for_cheap">
       <ion-card-content>
         <div class="se-battery__head">
           <ion-icon name="battery-charging-outline" class="se-battery__icon"></ion-icon>
@@ -115,9 +115,15 @@
             <ng-container *ngIf="bat.soc_now_percent !== null">
               (teraz {{ bat.soc_now_percent | number:'1.0-0' }}%)
             </ng-container>
+            — podłoga na noc, nie ładuj w szczycie
           </li>
           <li>ForceCharge 22–6: <strong>{{ bat.force_charge_night_label }}</strong></li>
           <li>ForceCharge 13–15: <strong>{{ bat.force_charge_afternoon_label }}</strong></li>
+          <li>Ładowanie z sieci: <strong>tylko tania G12w</strong>
+            <ng-container *ngIf="bat.wait_for_cheap && bat.next_cheap_window">
+              — następne {{ bat.next_cheap_window }}
+            </ng-container>
+          </li>
         </ul>
         <p class="se-battery__note">{{ bat.note }}</p>
       </ion-card-content>
