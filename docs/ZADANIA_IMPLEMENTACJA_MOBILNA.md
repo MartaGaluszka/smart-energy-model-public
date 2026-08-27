@@ -154,7 +154,7 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | **B0** advise-only | TA.8, T4.11, banner Home | `[x]` — bez auto-apply |
 | **BAT.5** `soc_min` = rezerwa sezonowa | T4.2 default + KPI SoC na Home | `[x]` 2026-08-27 — **zrobione przed** B1 |
 | **BAT.3 / B3** SoC@16 + karta reżim/FC/rezerwa | T4.19 `soc_reserve`, T4.21, `GET /battery/suggestion` | `[x]` 2026-08-27 — Home, bez ekranu suwaków |
-| **B1** sezon `autumn` + lato 20%/15 min | T4.2/T4.3, T4.10, `charge_tonight_cloudy` lato | `[~]` podłoga 20% + cap 15 min w kodzie; **autumn** `[ ]` |
+| **B1** sezon `autumn` + `spring` + lato 20%/15 min | T4.2/T4.3, T4.10, `charge_tonight_cloudy` | `[x]` 2026-08-27 — jesień PV&lt;8 (§D); wiosna III–V SoC&lt;40+PV&lt;8 (§E); suwak UI = T4.3 |
 | **B2** FC nocny od T+PV (zima) / PV (jesień od 15.09) | T5.1; `charge_tonight_cloudy` B2 | `[x]` 2026-08-27 — 30 min ≈ 50%, pomiń drobny brak vs cykl |
 | T4.3–T4.4 suwaki + wykres 24h | osobny ekran Bateria | `[ ]` po karcie Home |
 | T4.14–T4.16 control disabled + shadow UI | Faza 4 reszta | `[ ]` nie blokuje MVP sugestii |

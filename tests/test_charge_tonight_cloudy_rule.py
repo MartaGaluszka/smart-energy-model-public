@@ -33,7 +33,7 @@ def test_triggers_on_low_soc_and_weak_tomorrow():
     rule = evaluate_charge_tonight_cloudy(
         soc_percent=43.0,
         tomorrow_pv_kwh=11.6,
-        as_of=datetime(2026, 10, 15, 17, 0),  # zima: T nieznana, PV < 12 → do 90%
+        as_of=datetime(2026, 1, 14, 17, 0),  # zima: T nieznana, PV < 12 → do 90%
     )
     assert rule.triggered is True
     assert '22:00' in rule.body
@@ -60,7 +60,7 @@ def test_mild_sunny_skips_fill():
         soc_percent=43.0,
         tomorrow_pv_kwh=15.0,
         tomorrow_temp_c=8.0,
-        as_of=datetime(2026, 10, 15, 17, 0),
+        as_of=datetime(2026, 1, 14, 17, 0),
     )
     assert rule.triggered is False
     assert rule.skip_reason == 'covered'
@@ -72,21 +72,103 @@ def test_wear_skip_when_little_missing():
         soc_percent=72.0,
         tomorrow_pv_kwh=6.0,
         tomorrow_temp_c=8.0,
+        as_of=datetime(2026, 1, 14, 17, 0),
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'wear'
+
+
+def test_autumn_mid_september_pv14_covered():
+    """§D: PV ≥ 8 (tu 14) → dach pokrywa, nie ładuj."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=43.0,
+        tomorrow_pv_kwh=14.0,
+        tomorrow_temp_c=12.0,
+        as_of=datetime(2026, 9, 16, 17, 0),
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'covered'
+
+
+def test_october_pv_under_8_charges():
+    """Październik = jesień (§D): PV < 8 → FC do ~85% — live check X.2026."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=40.0,
+        tomorrow_pv_kwh=6.0,
+        tomorrow_temp_c=10.0,
+        as_of=datetime(2026, 10, 15, 17, 0),
+    )
+    assert rule.triggered is True
+    assert rule.target_soc_percent == 85.0
+    assert rule.fc_minutes == fc_minutes_for_delta_soc(85.0 - 40.0)
+    assert 'JESIEŃ' in rule.recommendation
+    assert '22:00' in rule.body
+
+
+def test_october_pv_10_skips_when_above_reserve():
+    """§D: PV 8–12 → luka ~2 → pomiń gdy SoC ≥ rezerwy."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=40.0,
+        tomorrow_pv_kwh=10.0,
+        tomorrow_temp_c=10.0,
+        as_of=datetime(2026, 10, 15, 17, 0),
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'covered'
+
+
+def test_october_pv_11_6_no_longer_winter_fill():
+    """Dawniej X = zima (PV 11.6 → ładuj); teraz jesień: PV ≥ 8 → covered."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=43.0,
+        tomorrow_pv_kwh=11.6,
+        as_of=datetime(2026, 10, 15, 17, 0),
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'covered'
+
+
+def test_october_mild_sunny_skips():
+    """X: T łagodna + PV 15 → nie pełnić (ścieżka jesienna, nie T×PV zimy)."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=43.0,
+        tomorrow_pv_kwh=15.0,
+        tomorrow_temp_c=8.0,
+        as_of=datetime(2026, 10, 15, 17, 0),
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'covered'
+
+
+def test_october_wear_skip_when_little_missing():
+    """X: SoC 78% → 85% = +7 pp — za mało vs cykl LFP."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=78.0,
+        tomorrow_pv_kwh=6.0,
+        tomorrow_temp_c=8.0,
         as_of=datetime(2026, 10, 15, 17, 0),
     )
     assert rule.triggered is False
     assert rule.skip_reason == 'wear'
 
 
-def test_autumn_mid_september_uses_b2():
+def test_spring_short_fc_when_soc_low_and_pv_weak():
     rule = evaluate_charge_tonight_cloudy(
-        soc_percent=43.0,
-        tomorrow_pv_kwh=14.0,
-        tomorrow_temp_c=12.0,
-        as_of=datetime(2026, 9, 16, 17, 0),  # środa, od 15.09 B2
+        soc_percent=30.0,
+        tomorrow_pv_kwh=6.0,
+        as_of=datetime(2026, 3, 18, 17, 0),  # środa
+    )
+    assert rule.triggered is True
+    assert 'WIOSNA' in rule.recommendation
+
+
+def test_spring_skips_when_soc_above_40():
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=45.0,
+        tomorrow_pv_kwh=5.0,
+        as_of=datetime(2026, 3, 18, 17, 0),
     )
     assert rule.triggered is False
-    assert rule.skip_reason == 'covered'
 
 
 def test_summer_skips_at_24_percent_even_if_tomorrow_weak():

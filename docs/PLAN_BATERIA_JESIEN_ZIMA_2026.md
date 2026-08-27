@@ -58,7 +58,7 @@ Noc **25→26.08:** FC 22:00–22:30 **24% → 75%** (+51 pp / 30 min). 26.08 da
 | Tryb sezonu | **jesień** (dziś kod: lato do IX, zima od X) | IX już 37% pustych nocy |
 | Rezerwa SoC | **20–25%** | mostek: lato 20% → zima 40% |
 | Min SoC wieczór (alert 16:00) | **40–50%** | X: SoC@16~60 → SoC@22~40 → dużo crashy |
-| ForceCharge 22–6 | **warunkowo**: gdy prognoza PV jutro **&lt; ~12 kWh** | X śr. PV 12,7 |
+| ForceCharge 22–6 | **warunkowo**: gdy prognoza PV jutro **&lt; ~8 kWh** (nie 12 — §D) | luka szczytu ~7 kWh; przy 8–12 kWh luka ~2 → pomiń vs cykl |
 | ForceCharge 13–15 | opcjonalnie / gdy SoC &lt; target | priorytet: **nie oddawać wszystkiego do sieci** |
 | Target SoC | **80%** | wystarczy przy silnym PV |
 
@@ -109,7 +109,53 @@ Wniosek na **FC 22–6 (advise-only)**, wieczór dnia D, horyzont dzień D+1:
 
 Dodatkowo: przy mrozie **tania noc sama zjada 14–18 kWh** (grzanie). Magazyn 10 kWh nie buforuje nocy — ForceCharge = **zasilanie domu tanim prądem + napełnienie na rano 6–13**, nie „magazyn na całą dobę”.
 
-Na **B2 zimą** próg nie może być sam `PV < 18 kWh`. Wejście: **Tśr jutro + PV jutro → cel SoC + minuty FC** (30 min ≈ +50 pp SoC). Drobny brak (**&lt; 2 kWh** albo **&lt; 15 pp**) pomijamy — spread G12w (~0,36 zł/kWh) nie pokrywa zużycia cyklu LFP. Jesień od 15.09 używa tej samej tabeli (T zwykle ≥ 5°C → zachowanie jak „łagodna zima”).
+Na **B2 zimą** próg nie może być sam `PV < 18 kWh`. Wejście: **Tśr jutro + PV jutro → cel SoC + minuty FC** (30 min ≈ +50 pp SoC). Drobny brak (**&lt; 2 kWh** albo **&lt; 15 pp**) pomijamy — spread G12w (~0,36 zł/kWh) nie pokrywa zużycia cyklu LFP.
+
+### D. Jesień — T × droga taryfa × PV (fakt, 35 dni roboczych 15.09–31.10.2025)
+
+Ta sama metodyka co §C. **Inny driver niż zimą:** corr(Tśr, load_exp) tylko **−0,28** (zima −0,8). Zużycie w drogiej jest **płaskie ~7–11 kWh**, słabo zależy od T (pas 5–15°C). Decyduje **dach**.
+
+| T śr. dnia | n | Load droga | PV doby | PV w drogiej | Luka (load−PV droga) | Import sieć droga |
+|------------|--:|-----------:|--------:|-------------:|---------------------:|------------------:|
+| **0–5°C** | 3 | 10,5 | 20,0 | 14,0 | **−3,6** | 2,6 |
+| **5–10°C** | 15 | 9,1 | 11,1 | 7,8 | **+1,3** | 2,4 |
+| **10–15°C** | 13 | 9,7 | 11,3 | 7,8 | **+2,0** | 3,6 |
+| **15–20°C** | 4 | 7,1 | 22,1 | 15,4 | **−8,3** | 0,5 |
+
+Szacunek liniowy słaby: `load_exp ≈ 12 − 0,25 × Tśr` — **nie używać jak zimą**. Lepiej patrzeć na **PV jutro**:
+
+| PV doby | n | Load droga | PV w drogiej | **Luka** | Dni z luką &gt; 5 kWh |
+|---------|--:|-----------:|-------------:|---------:|---------------------:|
+| **&lt; 8 kWh** | 12 | 9,6 | 2,9 | **+6,7** | **50%** |
+| **8–12 kWh** | 10 | 9,2 | 6,9 | **+2,2** | 10% |
+| **12–18 kWh** | 2 | 11,2 | 12,1 | **~0** | 0% |
+| **≥ 18 kWh** | 11 | 8,5 | 17,5 | **−9** | 0% |
+
+PV doby p25/p50/p75: **6 / 10 / 20 kWh**. Aż **63%** dni ma PV &lt; 12, ale przy PV 8–12 luka zwykle mała.
+
+**Wniosek na FC 22–6 jesienią (advise-only):**
+
+| PV jutro | Luka szczytu | Nocne ładowanie |
+|----------|-------------:|-----------------|
+| **&lt; 8 kWh** | ~7 kWh | **tak** — cel ~80–90% (ΔSoC → minuty; 30 min ≈ +50 pp); włącz/wyłącz okno |
+| **8–12 kWh** | ~2 kWh | **pomiń** albo krótko gdy SoC &lt; rezerwy 22% (drobny brak vs cykl) |
+| **≥ 12 kWh** | ≤ 0 | **nie** — dach pokrywa szczyt |
+
+Stary próg „jesień: PV &lt; 12” był **za agresywny** (ładowałby też dni z luką ~2 kWh). Docelowo B2 jesień: **PV &lt; ~8 kWh** (ew. 8–12 tylko przy SoC &lt; rezerwy). T nie jest pierwszym filtrem jesienią.
+
+### E. Wiosna — wstępne założenia (fakt: III.2026 n=20 roboczych; V.2025 n=10 — dane niepełne / nietypowe PV)
+
+| Miesiąc | n | Tśr | Load droga | PV doby | Luka | Uwaga |
+|---------|--:|----:|-----------:|--------:|-----:|-------|
+| **III** | 20 | 6,7 | 11,4 | **22** | **−5** | dach zwykle wygrywa; gap&gt;5 tylko 2 dni |
+| **V** | 10 | 12 | ~1 | ~5 | ~−3 | próbka podejrzana (start / luki) — **nie kalibrować** |
+
+W marcu corr(T, load_exp) umiarkowany (~−0,4); PV p50 ~25 kWh. **Wiosna ≈ odwrotność jesieni pod względem PV:** przy typowym dachu FC nocny rzadko potrzebny; reguła bliższa **latu** (FC gdy SoC niski **i** PV jutro bardzo słabe). Pełna kalibracja wiosny **po sezonie III–V.2026** (jak §D).
+
+**Założenie robocze wiosna (do weryfikacji):**
+- rezerwa **20%** (jak lato / dolna jesień),
+- FC 22–6 tylko gdy **PV jutro &lt; ~8 kWh** i SoC &lt; ~40%,
+- od **XI** wraca tabela zimowa §C (T×PV).
 
 ---
 
@@ -119,8 +165,8 @@ Na **B2 zimą** próg nie może być sam `PV < 18 kWh`. Wejście: **Tśr jutro +
 | Faza | Co | Gdzie | Status |
 |------|-----|-------|--------|
 | **B0** | Zostawić doradcę advise-only (bez auto `foxess_control` na obronę) | API §9.6 | `[x]` MVP |
-| **B1** | Sezon **autumn** + progi A/B **oraz lato: podłoga 20%, FC max 15 min / +25 pp** | `.env` / `battery_advisor.py` / settings | `[~]` lato 20%+cap **w kodzie 2026-08-27**; `autumn` jeszcze nie |
-| **B2** | FC nocny: **jesień** `PV jutro < ~12 kWh`; **zima** Tśr jutro + PV → kWh w 22–6 (§C) | advisor + prognoza RF 16 + T NWP | `[x]` 2026-08-27 (advise-only; 30 min ≈ 50%; pomiń drobny brak vs cykl) |
+| **B1** | Sezon **autumn** + **spring** + progi §D–E | `.env` / `battery_advisor.py` / settings | `[x]` 2026-08-27 — jesień PV&lt;8; wiosna III–V jak lato (SoC&lt;40, PV&lt;8); zima XI–II |
+| **B2** | FC nocny: **jesień** `PV jutro < ~8 kWh` (§D); **zima** Tśr jutro + PV → kWh w 22–6 (§C) | advisor + prognoza RF 16 + T NWP | `[x]` 2026-08-27 (advise-only; 30 min ≈ 50%; pomiń drobny brak vs cykl) |
 | **B3** | Alert / sugestia: „SoC@16 &lt; 50% → nie rozładowuj poniżej rezerwy / włącz 13–15” | mobile Home + notifications | `[x]` BAT.3 (2026-08-27, advise-only) |
 | **B4** | Shadow counterfactual: koszt z polityką A/B vs fakt IX–II | `bill_simulator` / savings | `[ ]` |
 | **B5** | Opcjonalnie: dry-run planu sterowania → log; auto-apply dopiero po B4 | `battery_control` | `[ ]` park |
@@ -129,13 +175,15 @@ Na **B2 zimą** próg nie może być sam `PV < 18 kWh`. Wejście: **Tśr jutro +
 
 ## Co już jest w kodzie (nie wymyślać od zera)
 
-- Zima = **X–III**, target 80%, min evening 50%, reserve winter **40%** / summer **20%**
-- Lato: FC nocy tylko poniżej 20%; cap **15 min / +25 pp** (nie 75%); **30 min ≈ +50 pp**
-- Okna G12w FC: **22–6**, **13–15**
-- **B2** w `evaluate_charge_tonight_cloudy`: Tśr jutro + PV → cel SoC + minuty; pomiń gdy < 2 kWh / < 15 pp (cykl)
-- Plan sterowania (ForceCharge / minSoc / SelfUse) — **bez** auto-apply w MVP
+- Zima = **XI–II**, wiosna = **III–V**, jesień = **15.09–31.10**, lato = reszta
+- Rezerwa: winter **40%** / autumn **22%** / spring+summer **20%**; min wieczór jesień **45%**
+- **Jesień FC:** PV jutro **&lt; ~8 kWh** → cel ~85% (§D); **nie** próg 12
+- **Wiosna FC:** jak lato, SoC **&lt; 40%** i PV **&lt; ~8 kWh** (§E)
+- Lato: FC nocy tylko poniżej 20%; cap **15 min / +25 pp**; **30 min ≈ +50 pp**
+- **B2 zima:** Tśr + PV → cel SoC + minuty; pomiń gdy &lt; 2 kWh / &lt; 15 pp (cykl)
+- Plan sterowania — **bez** auto-apply w MVP
 
-Luki: brak pasa **jesień** w settings (`season=autumn`); B2 od 15.09 i tak używa tabeli T×PV. Brak twardej blokady „nie zjeżdżaj poniżej X% przed 22:00”.
+Luki: brak twardej blokady „nie zjeżdżaj poniżej X% przed 22:00”. UI suwaków sezonu (T4.3). Pełna kalibracja wiosny po III–V.2026.
 
 ---
 
@@ -151,7 +199,7 @@ Luki: brak pasa **jesień** w settings (`season=autumn`); B2 od 15.09 i tak uży
 
 | ID | Status | Zadanie |
 |----|--------|---------|
-| BAT.1 | `[~]` | Sezon `autumn` + parametry w env/DB — **lato 20% / FC 15 min +25 pp już w advisorze**; brak kalendarza jesieni |
+| BAT.1 | `[x]` | Sezon autumn (15.09–31.10, PV&lt;8) + spring III–V + zima XI–II — wg §D–E 2026-08-27 |
 | BAT.2 | `[x]` | FC warunkowy: jesień od PV jutro; zima od Tśr + PV (§C) — w advisorze 2026-08-27 |
 | BAT.3 | `[x]` | Alert SoC@16 + sugestia 13–15 / hold reserve — `GET /battery/suggestion` + feed `soc_reserve` + karta Home |
 | BAT.4 | `[ ]` | Backtest kosztów IX–II (polityka vs fakt) |
@@ -160,4 +208,4 @@ Luki: brak pasa **jesień** w settings (`season=autumn`); B2 od 15.09 i tak uży
 
 ---
 
-*Plan z analizy IX.2025–II.2026 — 2026-08-02; T×droga taryfa×PV — 2026-08-27.*
+*Plan z analizy IX.2025–II.2026 — 2026-08-02; T×droga taryfa×PV zima — 2026-08-27; jesień/wiosna §D–E — 2026-08-27.*

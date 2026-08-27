@@ -58,6 +58,8 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
 
   seasonLabel(season: string): string {
     if (season === 'winter') return 'zima';
+    if (season === 'autumn') return 'jesień';
+    if (season === 'spring') return 'wiosna';
     if (season === 'summer') return 'lato';
     return season;
   }
