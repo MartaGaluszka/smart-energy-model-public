@@ -10,6 +10,10 @@ from src.optimization.battery_advisor import (
 
 
 def test_thirty_min_is_fifty_percent():
+    from src.optimization.battery_advisor import NOMINAL_CAPACITY_KWH
+
+    assert NOMINAL_CAPACITY_KWH == 10.36
+    assert round(NOMINAL_CAPACITY_KWH * 0.50, 2) == 5.18  # 30 min ≈ +50 pp
     assert fc_minutes_for_delta_soc(50) == 30
     assert fc_minutes_for_delta_soc(25) == 15
     assert fc_minutes_for_delta_soc(0) == 0
