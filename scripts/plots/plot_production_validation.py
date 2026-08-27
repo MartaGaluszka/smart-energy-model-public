@@ -45,6 +45,17 @@ COLORS = {
     'main_hyb': '#8E44AD',
 }
 
+# Retreningi i zmiany produkcji (annotacje na wykresie)
+MILESTONES = [
+    {'date': '2026-07-14', 'label': 'Start MLOps', 'color': '#95A5A6', 'type': 'deploy'},
+    {'date': '2026-07-17', 'label': 'GPS+ICON', 'color': '#3498DB', 'type': 'deploy'},
+    {'date': '2026-07-18', 'label': 'PVE target', 'color': '#9B59B6', 'type': 'deploy'},
+    {'date': '2026-07-26', 'label': 'CS4 dual', 'color': '#E74C3C', 'type': 'deploy'},
+    {'date': '2026-08-09', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-08-16', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-08-23', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
+]
+
 
 def load_validation_table(path: Path) -> pd.DataFrame:
     if not path.exists():
@@ -106,6 +117,28 @@ def _plot_series(ax, dates, values, *, label, color, marker='o', linestyle='-', 
     )
 
 
+def _add_milestones(ax, zoom_start: pd.Timestamp) -> None:
+    """Dodaj vertical lines z annotacjami o retreningach i deploymentach."""
+    for milestone in MILESTONES:
+        m_date = pd.Timestamp(milestone['date'])
+        if m_date < zoom_start:
+            continue  # pomiń jeśli poza zakresem
+        
+        ax.axvline(
+            m_date, color=milestone['color'], linestyle='--',
+            linewidth=1.2, alpha=0.7, zorder=0,
+        )
+        
+        # Annotacja nad wykresem
+        y_pos = 0.98 if milestone['type'] == 'retrain' else 0.92
+        ax.text(
+            m_date, ax.get_ylim()[1] * y_pos,
+            milestone['label'],
+            rotation=90, verticalalignment='top', horizontalalignment='right',
+            fontsize=7.5, color=milestone['color'], alpha=0.85, fontweight='bold',
+        )
+
+
 def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10.4), sharex=False)
@@ -120,6 +153,11 @@ def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
         'Raw = sam RF na cały dzień  ·  Hybryda dnia = FoxESS (minione godz.) + RF (przyszłe)'
         '  ·  to nie jest korekta ADJUST',
         ha='center', va='top', fontsize=9.5, color='#34495E',
+    )
+    fig.text(
+        0.5, 0.935,
+        'Linie pionowe: retreningi weekly (pomarańczowe) + zmiany produkcji (kolorowe)',
+        ha='center', va='top', fontsize=8.5, color='#7F8C8D', style='italic',
     )
 
     today = pd.Timestamp.now().normalize()
@@ -159,6 +197,9 @@ def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
     x_end = max(today, long_df['target_day'].max() if not long_df.empty else today)
     ax1.set_xlim(pd.Timestamp(long_start) - pd.Timedelta(hours=12),
                  x_end + pd.Timedelta(days=1))
+    
+    # Dodaj annotacje retreningów i deploymentów
+    _add_milestones(ax1, pd.Timestamp(long_start))
 
     # --- Wykres 2: zoom MLOps ---
     ax2.set_title(
@@ -201,6 +242,9 @@ def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
     ax2.tick_params(axis='x', rotation=35)
     x_end = max(today, zoom_df['target_day'].max() if not zoom_df.empty else today)
     ax2.set_xlim(zoom_start - pd.Timedelta(hours=12), x_end + pd.Timedelta(days=1))
+    
+    # Dodaj annotacje retreningów i deploymentów
+    _add_milestones(ax2, zoom_start)
 
     plt.tight_layout(rect=[0, 0, 1, 0.94])
     output.parent.mkdir(parents=True, exist_ok=True)
