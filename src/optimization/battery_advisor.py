@@ -167,7 +167,7 @@ def get_battery_snapshot(
     if not os.path.exists(db_path):
         return empty
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=2.0)
     row = conn.execute(
         '''
         SELECT timestamp, battery_soc_percent, battery_power_kw, pv_power_kw, load_power_kw
@@ -454,8 +454,8 @@ def evaluate_charge_tonight_cloudy(
             title='Sugestia: krótko doładuj od 22:00 (max 15 min)',
             body=(
                 f'SoC {soc_percent:.0f}% < nocna podłoga {soc_below:.0f}% i jutro ~{tomorrow_pv_kwh:.0f} kWh '
-                f'(próg {weak_pv_below:.0f}). Latem nawet przy jutrze do 10 kWh: max {minutes:.0f} min '
-                f'(+{delta:.0f} pp; 30 min ≈ +50 pp), nie do 75%. Sugestia doradcza, bez automatyki.'
+                f'(próg {weak_pv_below:.0f}). Latem: włącz ForceCharge 22:00, wyłącz po max {minutes:.0f} min '
+                f'(+{delta:.0f} pp; 30 min ≈ +50 pp) — nie ładuj do 75–100%. Sugestia doradcza, bez automatyki.'
             ),
             target_soc_percent=min(100.0, soc_percent + delta),
             fc_minutes=minutes,
@@ -510,9 +510,13 @@ def evaluate_charge_tonight_cloudy(
     gap_txt = f', luka szczytu ~{gap:.0f} kWh' if gap is not None else ''
     rec = 'ŁADUJ OD 22:00 (B2 T+PV)'
     title = 'Sugestia: naładuj baterię od 22:00'
+    end_min = int(round(minutes))
+    end_h, end_m = divmod((22 * 60 + end_min) % (24 * 60), 60)
     body = (
-        f'SoC {soc_percent:.0f}% → cel {target:.0f}% (~{minutes:.0f} min; 30 min ≈ +50 pp). '
-        f'Jutro {t_txt}, PV {pv_txt}{gap_txt}. Ładuj od 22:00 w taniej G12w — nie z drogiego szczytu. '
+        f'SoC {soc_percent:.0f}% → cel {target:.0f}% (+{delta_soc:.0f} pp). '
+        f'Włącz ForceCharge o 22:00, wyłącz o {end_h:02d}:{end_m:02d} '
+        f'(~{minutes:.0f} min; kalibracja: 30 min ≈ +50 pp, jak 25–26.08). '
+        f'Jutro {t_txt}, PV {pv_txt}{gap_txt}. Nie zostawiaj FC do rana — tylko okno. '
         f'Sugestia doradcza, bez automatyki.'
     )
     return ChargeTonightCloudyRule(

@@ -32,6 +32,30 @@ BATTERY_POLICY_REASONS = [
 ]
 
 
+def _fc_on_off_label(
+    *,
+    minutes: float | None,
+    target_soc: float | None,
+    soc_now: float | None,
+    start_hour: int = 22,
+    start_minute: int = 0,
+) -> str:
+    """Etykieta okna ForceCharge: włącz → wyłącz (30 min ≈ +50 pp), nie „ładuj do X% w Y min”."""
+    if minutes is None or minutes <= 0:
+        return 'włącz 22:00 (sprawdź czas)'
+    end = (datetime.combine(date.today(), time(start_hour, start_minute)) + timedelta(minutes=round(minutes)))
+    end_s = end.strftime('%H:%M')
+    start_s = f'{start_hour:02d}:{start_minute:02d}'
+    delta = None
+    if soc_now is not None and target_soc is not None:
+        delta = max(0.0, target_soc - soc_now)
+    if delta is not None and target_soc is not None:
+        return f'włącz {start_s}, wyłącz {end_s} (~+{delta:.0f} pp → ~{target_soc:.0f}%)'
+    if target_soc is not None:
+        return f'włącz {start_s}, wyłącz {end_s} (cel ~{target_soc:.0f}%)'
+    return f'włącz {start_s}, wyłącz {end_s} (~{minutes:.0f} min; 30 min ≈ +50 pp)'
+
+
 def get_battery_policy() -> dict:
     return {
         'title': BATTERY_POLICY_TITLE,
@@ -225,57 +249,64 @@ def settings_payload(settings_row, d: date | None = None) -> dict:
     }
 
 
-def fallback_home_suggestion() -> dict:
-    """Zawsze zwróć minimalną sugestię, gdy nie da się odczytać live data (Fox timeout/500)."""
-    d = date.today()
-    season = resolve_season_name('auto', d)
+def fallback_home_suggestion(settings_row=None, as_of: datetime | None = None) -> dict:
+    """Karta Home gdy SQLite/Fox blokuje odczyt — i tak pokaż reżim (lato/zima)."""
+    as_of = as_of or datetime.now()
+    d = as_of.date()
+    season_mode = getattr(settings_row, 'season', None) if settings_row else 'auto'
+    season = resolve_season_name(season_mode, d)
     reserve = seasonal_reserve_for(season, d)
-    is_winter = season == 'winter'
+    target = float(settings_row.soc_target_percent) if settings_row and settings_row.soc_target_percent else 80.0
+    winter = season == 'winter'
+    if winter:
+        rec, night, aft = 'REŻIM ZIMA', 'wg T+PV (22–6)', 'włącz (13–15)'
+        action = (
+            f'Rezerwa SoC {reserve:.0f}% — nie ładuj w drogiej G12w. '
+            f'ForceCharge 22–6 wg T jutro + PV. System tylko doradza — bez automatyki.'
+        )
+    else:
+        rec, night, aft = 'REŻIM LATO', 'pomiń — wystarczy PV', 'rzadko potrzebne'
+        action = (
+            f'Trzymaj min {reserve:.0f}% na noc (rezerwa). Ładowanie z sieci tylko gdy bateria spada poniżej 20% i jutro słabe PV. '
+            f'System tylko doradza — bez automatyki.'
+        )
     return {
-        'as_of': datetime.now().isoformat(timespec='seconds'),
+        'as_of': as_of.isoformat(timespec='seconds'),
         'season': season,
-        'season_mode': 'auto',
+        'season_mode': season_mode or 'auto',
         'soc_now_percent': None,
         'soc_min_percent': reserve,
         'soc_reserve_percent': reserve,
-        'soc_target_percent': 90.0 if is_winter else 80.0,
-        'soc_min_evening_percent': 60.0 if is_winter else 50.0,
+        'soc_target_percent': target,
+        'soc_min_evening_percent': 50.0,
         'force_charge_night_recommended': False,
-        'force_charge_night_label': 'pomiń — wystarczy PV' if not is_winter else 'sprawdź prognozę',
-        'force_charge_afternoon_recommended': False,
-        'force_charge_afternoon_label': 'rzadko potrzebne',
+        'force_charge_night_label': night,
+        'force_charge_afternoon_recommended': winter,
+        'force_charge_afternoon_label': aft,
         'soc16_alert': False,
-        'soc16_hour_passed': False,
+        'soc16_hour_passed': as_of.hour >= 16,
         'soc16_percent': None,
         'soc16_title': None,
         'soc16_body': None,
         'wait_for_cheap': False,
         'next_cheap_window': None,
-        'recommendation': f'REŻIM {"ZIMA" if is_winter else "LATO"}',
-        'action': (
-            f'Trzymaj min {reserve:.0f}% na noc (rezerwa). '
-            + (
-                'Ładuj gdy bateria spada poniżej 40% przed nocą. System tylko doradza — decyzja należy do Ciebie.'
-                if is_winter
-                else 'Ładowanie z sieci tylko gdy bateria spada poniżej 20% i jutro słabe PV. System tylko doradza — decyzja należy do Ciebie.'
-            )
-        ),
+        'recommendation': rec,
+        'action': action,
         'automation_enabled': False,
         'note': 'Sugestia — nie wykonano automatycznie (advise-only).',
     }
 
 
 def get_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
-    """Karta Home (BAT.3 + BAT.5): reżim / ForceCharge / rezerwa — bez ML, bez auto-apply."""
+    as_of = as_of or datetime.now()
     try:
         return _compose_home_suggestion(settings_row, as_of)
-    except Exception as e:
-        print(f'[battery_planner] get_home_suggestion failed: {e}')
-        return fallback_home_suggestion()
+    except Exception:
+        return fallback_home_suggestion(settings_row, as_of)
 
 
-def _compose_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
-    """Compose home suggestion with live data (extracted for fallback wrapping)."""
+def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
+    """Karta Home (BAT.3 + BAT.5): reżim / ForceCharge / rezerwa — bez ML, bez auto-apply."""
     from src.optimization.battery_advisor import (
         evaluate_below_reserve_wait_cheap,
         evaluate_charge_tonight_cloudy,
@@ -288,7 +319,6 @@ def _compose_home_suggestion(settings_row, as_of: datetime | None = None) -> dic
     )
     from src.optimization.g12w_tariff import is_public_holiday, is_weekend
 
-    as_of = as_of or datetime.now()
     d = as_of.date()
     season_mode = getattr(settings_row, 'season', None) if settings_row else 'auto'
     season = resolve_season_name(season_mode, d)
@@ -334,10 +364,10 @@ def _compose_home_suggestion(settings_row, as_of: datetime | None = None) -> dic
         mins = night_rule.fc_minutes
         tgt = night_rule.target_soc_percent
         night_rec = True
-        night_label = (
-            f'tak, ~{mins:.0f} min do {tgt:.0f}%'
-            if mins is not None and tgt is not None
-            else 'tak (22–6)'
+        night_label = _fc_on_off_label(
+            minutes=mins,
+            target_soc=tgt,
+            soc_now=soc_now,
         )
         if soc_now is not None and soc_now >= target:
             aft_rec, aft_label = False, 'pomiń (SoC ≥ cel)'
