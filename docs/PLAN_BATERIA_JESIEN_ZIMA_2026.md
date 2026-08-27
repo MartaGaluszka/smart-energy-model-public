@@ -168,7 +168,7 @@ W marcu corr(T, load_exp) umiarkowany (~−0,4); PV p50 ~25 kWh. **Wiosna ≈ od
 | **B1** | Sezon **autumn** + **spring** + progi §D–E | `.env` / `battery_advisor.py` / settings | `[x]` 2026-08-27 — jesień PV&lt;8; wiosna III–V jak lato (SoC&lt;40, PV&lt;8); zima XI–II |
 | **B2** | FC nocny: **jesień** `PV jutro < ~8 kWh` (§D); **zima** Tśr jutro + PV → kWh w 22–6 (§C) | advisor + prognoza RF 16 + T NWP | `[x]` 2026-08-27 (advise-only; 30 min ≈ 50%; pomiń drobny brak vs cykl) |
 | **B3** | Alert / sugestia: „SoC@16 &lt; 50% → nie rozładowuj poniżej rezerwy / włącz 13–15” | mobile Home + notifications | `[x]` BAT.3 (2026-08-27, advise-only) |
-| **B4** | Shadow counterfactual: koszt z polityką A/B vs fakt IX–II | `bill_simulator` / savings | `[ ]` |
+| **B4** | Shadow counterfactual: koszt z polityką A/B vs fakt IX–II | `bill_simulator` / savings | `[x]` 2026-08-27 — skrypt + notatka; B≈0 zł, B2≈86 zł, C≈327 zł |
 | **B5** | Opcjonalnie: dry-run planu sterowania → log; auto-apply dopiero po B4 | `battery_control` | `[ ]` park |
 
 ---
@@ -181,9 +181,12 @@ W marcu corr(T, load_exp) umiarkowany (~−0,4); PV p50 ~25 kWh. **Wiosna ≈ od
 - **Wiosna FC:** jak lato, SoC **&lt; 40%** i PV **&lt; ~8 kWh** (§E)
 - Lato: FC nocy tylko poniżej 20%; cap **15 min / +25 pp**; **30 min ≈ +50 pp**
 - **B2 zima:** Tśr + PV → cel SoC + minuty; pomiń gdy &lt; 2 kWh / &lt; 15 pp (cykl)
+- **Zima 13–15:** SoC &lt; **40%** i Tśr ≤ **5°C** i PV dziś &lt; **~10 kWh** (kalibracja XI–II.2025/26)
 - Plan sterowania — **bez** auto-apply w MVP
 
-Luki: brak twardej blokady „nie zjeżdżaj poniżej X% przed 22:00”. UI suwaków sezonu (T4.3) — **zrobione** `/tabs/battery` 2026-08-27. Pełna kalibracja wiosny po III–V.2026.
+Luki: brak twardej blokady „nie zjeżdżaj poniżej X% przed 22:00”. UI suwaków sezonu (T4.3) — **zrobione** `/tabs/battery` 2026-08-27; plan dnia SE **uniwersalny**: add/usuń bloki (max 8) + opcjonalne szablony **G11 / G12w / G13** — 2026-08-27. Pełna kalibracja wiosny po III–V.2026.
+
+**Odróżnienie produktu:** plan dnia wynika z taryfy **G12w (Tauron)**, tabel T×PV z *naszych* danych IX–II oraz prognozy RF — advise-only + shadow savings. Wspólne pojęcia branżowe (okna czasu, doładowanie z sieci) nie oznaczają kopiowania ekranu / schedulera producenta falownika.
 
 ---
 
@@ -202,7 +205,7 @@ Luki: brak twardej blokady „nie zjeżdżaj poniżej X% przed 22:00”. UI suwa
 | BAT.1 | `[x]` | Sezon autumn (15.09–31.10, PV&lt;8) + spring III–V + zima XI–II — wg §D–E 2026-08-27 |
 | BAT.2 | `[x]` | FC warunkowy: jesień od PV jutro; zima od Tśr + PV (§C) — w advisorze 2026-08-27 |
 | BAT.3 | `[x]` | Alert SoC@16 + sugestia 13–15 / hold reserve — `GET /battery/suggestion` + feed `soc_reserve` + karta Home |
-| BAT.4 | `[ ]` | Backtest kosztów IX–II (polityka vs fakt) |
+| BAT.4 | `[x]` | Backtest kosztów IX–II (polityka vs fakt) — `scripts/analysis/backtest_battery_policy_ix_ii.py` + [`NOTATKA_BAT4_BACKTEST_IX_II_2026-08-27.md`](NOTATKA_BAT4_BACKTEST_IX_II_2026-08-27.md) |
 | BAT.5 | `[x]` | UI `soc_min` = rezerwa sezonowa — auto: lato **20%** / zima 40%; KPI SoC na Home |
 | BAT.6 | `[ ]` | Po BAT.4: decyzja o auto-apply (park do świadomej zgody) |
 

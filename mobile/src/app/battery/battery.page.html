@@ -43,8 +43,10 @@
         <ion-card-content>
           <p class="se-battery-page__hint">
             Sezon wpływa na rezerwę SoC (zalecane: lato/wiosna 20%, jesień 22%, zima 40%).
-            FoxESS ~10% to dno sprzętowe — nie mylić z naszą rezerwą na noc/szczyt.
-            Suwak „cel SoC” to górny poziom nocnego ładowania w planie doradczym.
+            Plan dnia budujemy z <strong>G12w (Tauron)</strong>, historii SoC i prognozy PV —
+            nie kopiujemy ekranu producenta falownika. Ty decydujesz, czy wpisać okna ręcznie
+            u siebie. Krótsze doładowanie = mniej SoC (kalibracja z naszej instalacji:
+            <strong>30 min ≈ +50%</strong>).
           </p>
 
           <div class="se-battery-page__season">
@@ -56,11 +58,13 @@
             </ion-segment>
             <p class="se-battery-page__resolved" *ngIf="season === 'auto'">
               Dziś: <strong>{{ seasonLabel(seasonResolved) }}</strong>
-              · zalecana rezerwa {{ socReservePercent | number:'1.0-0' }}%
+              · rezerwa {{ socReservePercent | number:'1.0-0' }}%
+              · okno ~{{ recommendedFcMaxMinutes | number:'1.0-0' }} min
             </p>
             <p class="se-battery-page__resolved" *ngIf="season !== 'auto'">
               Tryb ręczny: <strong>{{ seasonLabel(season) }}</strong>
-              · zalecana rezerwa {{ socReservePercent | number:'1.0-0' }}%
+              · rezerwa {{ socReservePercent | number:'1.0-0' }}%
+              · okno ~{{ recommendedFcMaxMinutes | number:'1.0-0' }} min
             </p>
           </div>
 
@@ -84,7 +88,7 @@
 
           <ion-item lines="none" class="se-battery-page__slider">
             <ion-label position="stacked">
-              Cel SoC — {{ socTargetPercent | number:'1.0-0' }}%
+              Cel SoC (doradczy) — {{ socTargetPercent | number:'1.0-0' }}%
             </ion-label>
             <ion-range
               [min]="50"
@@ -94,7 +98,147 @@
               [(ngModel)]="socTargetPercent"
               color="primary"
             ></ion-range>
+            <p class="se-battery-page__slider-note">
+              Służy do wyliczenia długości bloku doładowania w planie SE — nie jest limitem sprzętowym.
+            </p>
           </ion-item>
+
+          <div class="se-battery-page__window">
+            <span class="se-battery-page__label">Kalkulacja okna FC — nie zmienia ładowania</span>
+            <p class="se-battery-page__window-value">
+              {{ fcWindowLabel() }}
+              <span class="se-battery-page__fixed-tag">~+{{ estimatedDeltaSoc() }}% SoC</span>
+            </p>
+            <p class="se-battery-page__slider-note">
+              Tylko wyliczenie: {{ fcNightStartHour | number:'2.0-0' }}:00–{{ fcWindowEndLabel() }}.
+              Lato/wiosna trzymaj krótko (~15 min) — nie pełnić baterii „na zapas”.
+              Żeby użyć w planie: wstaw poniżej i włącz toggle bloku.
+            </p>
+          </div>
+
+          <ion-item lines="none" class="se-battery-page__slider">
+            <ion-label position="stacked">
+              Od której godziny — {{ fcNightStartHour | number:'2.0-0' }}:00
+            </ion-label>
+            <ion-range
+              [min]="21"
+              [max]="23"
+              [step]="1"
+              [snaps]="true"
+              [pin]="true"
+              [(ngModel)]="fcNightStartHour"
+              color="tertiary"
+            ></ion-range>
+            <p class="se-battery-page__slider-note">
+              Start taniej strefy G12w zwykle 22:00 (pn–pt). Suwaki nie włączają FC.
+            </p>
+          </ion-item>
+
+          <ion-item lines="none" class="se-battery-page__slider">
+            <ion-label position="stacked">
+              Do której — {{ fcWindowEndLabel() }}
+              ({{ fcMaxMinutes | number:'1.0-0' }} min ≈ +{{ estimatedDeltaSoc() }} pp)
+            </ion-label>
+            <ion-range
+              [min]="5"
+              [max]="120"
+              [step]="5"
+              [snaps]="true"
+              [pin]="true"
+              [(ngModel)]="fcMaxMinutes"
+              color="warning"
+            ></ion-range>
+            <p class="se-battery-page__slider-note">
+              Lato/wiosna ~15 min; jesień ~45; zima do ~90 (zalecenie: {{ recommendedFcMaxMinutes | number:'1.0-0' }} min).
+            </p>
+          </ion-item>
+
+          <div class="se-battery-page__schedule">
+            <span class="se-battery-page__label">
+              Plan dnia — uniwersalny ({{ scheduleWindows.length }}/{{ scheduleMaxWindows }} bloków)
+            </span>
+            <p class="se-battery-page__slider-note">
+              Sam decydujesz, ile okien potrzebujesz: <strong>G11</strong> zwykle mało,
+              <strong>G12w</strong> kilka, <strong>G13</strong> więcej.
+              Szablon tylko startuje listę — zawsze możesz dodać lub usunąć bloki (max {{ scheduleMaxWindows }}).
+            </p>
+
+            <span class="se-battery-page__label">Szablon startowy (opcjonalnie)</span>
+            <ion-segment
+              [value]="schedulePreset === 'custom' ? '' : schedulePreset"
+              (ionChange)="applyTariffPreset($any($event.detail).value)"
+            >
+              <ion-segment-button *ngFor="let p of tariffPresets" [value]="p.value">
+                <ion-label>{{ p.label }}</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+            <p class="se-battery-page__slider-note" *ngIf="schedulePreset === 'custom'">
+              Tryb własny — lista zmieniona ręcznie.
+            </p>
+            <p class="se-battery-page__slider-note" *ngIf="schedulePreset !== 'custom'">
+              Aktywny szablon: {{ schedulePreset | uppercase }}
+              <ng-container *ngFor="let p of tariffPresets">
+                <ng-container *ngIf="p.value === schedulePreset"> ({{ p.hint }})</ng-container>
+              </ng-container>
+            </p>
+
+            <p class="se-battery-page__slider-note">
+              Bloki startują wyłączone — włącz tylko te, które chcesz w planie SE.
+            </p>
+
+            <div class="se-schedule-row" *ngFor="let w of scheduleWindows; let i = index">
+              <div class="se-schedule-row__head">
+                <span>Blok {{ i + 1 }}</span>
+                <span class="se-schedule-row__toggle-label">{{ w.enabled ? 'w planie' : 'wyłączony' }}</span>
+                <ion-toggle [(ngModel)]="w.enabled" (ionChange)="schedulePreset = 'custom'"></ion-toggle>
+                <ion-button fill="clear" size="small" color="medium" (click)="removeWindow(i)">
+                  Usuń
+                </ion-button>
+              </div>
+              <div class="se-schedule-row__times">
+                <label>
+                  Od
+                  <input type="time" [(ngModel)]="w.start" (change)="schedulePreset = 'custom'" />
+                </label>
+                <label>
+                  Do
+                  <input type="time" [(ngModel)]="w.end" (change)="schedulePreset = 'custom'" />
+                </label>
+              </div>
+              <ion-segment
+                [value]="w.mode"
+                (ionChange)="w.mode = $any($event.detail).value; schedulePreset = 'custom'"
+              >
+                <ion-segment-button *ngFor="let m of scheduleModes" [value]="m.value">
+                  <ion-label>{{ m.label }}</ion-label>
+                </ion-segment-button>
+              </ion-segment>
+            </div>
+
+            <div class="se-schedule-actions">
+              <ion-button
+                expand="block"
+                fill="outline"
+                size="small"
+                [disabled]="!canAddWindow()"
+                (click)="addWindow()"
+              >
+                Dodaj blok ({{ scheduleWindows.length }}/{{ scheduleMaxWindows }})
+              </ion-button>
+              <ion-button
+                expand="block"
+                fill="outline"
+                size="small"
+                [disabled]="scheduleWindows.length === 0"
+                (click)="removeWindow(scheduleWindows.length - 1)"
+              >
+                Usuń ostatni blok
+              </ion-button>
+              <ion-button expand="block" fill="outline" size="small" (click)="syncNightIntoSchedule()">
+                Wstaw kalkulację do bloku nocnego FC (22:00)
+              </ion-button>
+            </div>
+          </div>
 
           <div class="se-battery-page__fixed">
             <span class="se-battery-page__label">Sprawność cyklu</span>
@@ -113,6 +257,42 @@
             {{ saving ? 'Zapisuję…' : 'Zapisz ustawienia' }}
           </ion-button>
           <p *ngIf="saveMessage" class="se-battery-page__ok">{{ saveMessage }}</p>
+        </ion-card-content>
+      </ion-card>
+
+      <div class="se-section-title">
+        <ion-icon name="time-outline"></ion-icon>
+        <span>Sugestia SE — plan doładowania</span>
+      </div>
+
+      <ion-card class="se-card se-charge-suggest" *ngIf="suggestion as sug">
+        <ion-card-content>
+          <p class="se-battery-page__plan-kicker">{{ sug.recommendation }}</p>
+          <p class="se-charge-suggest__when">{{ sug.charge_when_summary }}</p>
+          <ul class="se-charge-suggest__list">
+            <li>
+              Noc (tania G12w):
+              <strong>{{ sug.force_charge_night_label }}</strong>
+              <ng-container *ngIf="sug.force_charge_night_start && sug.force_charge_night_end">
+                · {{ sug.force_charge_night_start }}–{{ sug.force_charge_night_end }}
+                <ng-container *ngIf="sug.force_charge_night_minutes != null">
+                  ({{ sug.force_charge_night_minutes | number:'1.0-0' }} min;
+                  30 min ≈ +50%)
+                </ng-container>
+              </ng-container>
+            </li>
+            <li>
+              Popołudnie (tania G12w):
+              <strong>{{ sug.force_charge_afternoon_label }}</strong>
+              <ng-container *ngIf="sug.force_charge_afternoon_window">
+                · {{ sug.force_charge_afternoon_window }}
+              </ng-container>
+            </li>
+          </ul>
+          <p class="se-battery-page__hint">
+            {{ sug.action }}
+            Plan jest doradczy (shadow vs reality) — bez automatyki falownika w MVP.
+          </p>
         </ion-card-content>
       </ion-card>
 

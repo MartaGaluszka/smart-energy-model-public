@@ -36,6 +36,41 @@ const FALLBACK_KPI: HomeKpi = {
   gridExportKwh: 18.5,
 };
 
+/** Zawsze pokaż kartę — *ngIf ukrywa ją przy null (timeout Fox / 500). */
+const FALLBACK_BATTERY: BatterySuggestionResponse = {
+  as_of: new Date().toISOString(),
+  season: 'summer',
+  season_mode: 'auto',
+  soc_now_percent: null,
+  soc_min_percent: 20,
+  soc_reserve_percent: 20,
+  soc_target_percent: 80,
+  soc_min_evening_percent: 50,
+  force_charge_night_recommended: false,
+  force_charge_night_label: 'pomiń — wystarczy PV',
+  force_charge_afternoon_recommended: false,
+  force_charge_afternoon_label: 'rzadko potrzebne',
+  force_charge_night_start: null,
+  force_charge_night_end: null,
+  force_charge_night_minutes: null,
+  force_charge_afternoon_window: null,
+  charge_when_summary: 'Dziś bez doładowania z sieci — wystarczy PV / rezerwa SE',
+  fc_max_minutes: 15,
+  fc_night_start_hour: 22,
+  soc16_alert: false,
+  soc16_hour_passed: false,
+  soc16_percent: null,
+  soc16_title: null,
+  soc16_body: null,
+  wait_for_cheap: false,
+  next_cheap_window: null,
+  recommendation: 'REŻIM LATO',
+  action:
+    'Trzymaj min 20% na noc (rezerwa). Ładowanie z sieci tylko gdy bateria spada poniżej 20% i jutro słabe PV. System tylko doradza — decyzja należy do Ciebie.',
+  automation_enabled: false,
+  note: 'Sugestia — nie wykonano automatycznie (advise-only).',
+};
+
 // FoxESS Cloud bywa limitowane (40402) — istniejąca logika sync w src/data/foxess_fetch_all.py
 // wtedy retry'uje z narastającym backoffem, co może zająć naprawdę długo (nawet >10 min).
 // Klient nie może na to czekać w nieskończoność — po timeoucie pokazujemy komunikat
@@ -52,34 +87,6 @@ const LOOKBACK_DAYS = 5;
  * pokazujemy najnowszy dzień z realnymi danymi (`dataDay`) — nigdy fałszywych liczb
  * pod etykietą "dziś".
  */
-/** Zawsze pokaż kartę — *ngIf ukrywa ją przy null (timeout Fox / 500). */
-const FALLBACK_BATTERY: BatterySuggestionResponse = {
-  as_of: new Date().toISOString(),
-  season: 'summer',
-  season_mode: 'auto',
-  soc_now_percent: null,
-  soc_min_percent: 20,
-  soc_reserve_percent: 20,
-  soc_target_percent: 80,
-  soc_min_evening_percent: 50,
-  force_charge_night_recommended: false,
-  force_charge_night_label: 'pomiń — wystarczy PV',
-  force_charge_afternoon_recommended: false,
-  force_charge_afternoon_label: 'rzadko potrzebne',
-  soc16_alert: false,
-  soc16_hour_passed: false,
-  soc16_percent: null,
-  soc16_title: null,
-  soc16_body: null,
-  wait_for_cheap: false,
-  next_cheap_window: null,
-  recommendation: 'REŻIM LATO',
-  action:
-    'Trzymaj min 20% na noc (rezerwa). Ładowanie z sieci tylko gdy bateria spada poniżej 20% i jutro słabe PV. System tylko doradza — decyzja należy do Ciebie.',
-  automation_enabled: false,
-  note: 'Sugestia — nie wykonano automatycznie (advise-only).',
-};
-
 @Injectable({ providedIn: 'root' })
 export class HomeDataService {
   private readonly kpi$ = new BehaviorSubject<HomeKpi>(FALLBACK_KPI);

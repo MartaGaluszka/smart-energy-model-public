@@ -49,8 +49,7 @@ def update_settings(
     db: Session = Depends(get_db),
 ) -> BatterySettingsResponse:
     row = _get_or_create_settings(db, current_user.id)
-    for field, value in body.model_dump().items():
-        setattr(row, field, value)
+    battery_planner.apply_settings_update(row, body.model_dump())
     db.commit()
     db.refresh(row)
     return BatterySettingsResponse(**battery_planner.settings_payload(row))
@@ -94,7 +93,8 @@ def suggestion(
     db: Session = Depends(get_db),
 ) -> BatterySuggestionResponse:
     settings_row = _get_or_create_settings(db, current_user.id)
-    return BatterySuggestionResponse(**battery_planner.get_home_suggestion(settings_row))
+    payload = battery_planner.get_home_suggestion(settings_row)
+    return BatterySuggestionResponse(**payload)
 
 
 @router.post('/ac-runtime', response_model=AcRuntimeResponse, summary='Formuła czasu bezpiecznej pracy klimatyzacji (§10.4)')

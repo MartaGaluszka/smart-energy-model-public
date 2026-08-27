@@ -80,6 +80,143 @@
   border-radius: 10px;
 }
 
+.se-battery-page__window {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.se-battery-page__window-value {
+  margin: 4px 0 6px;
+  font-size: 22px;
+  font-weight: 650;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.se-battery-page__schedule {
+  margin: 12px 0 14px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.se-schedule-row {
+  margin: 10px 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.se-schedule-row__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.se-schedule-row__toggle-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted, #6b7280);
+  margin-left: 4px;
+}
+
+.se-schedule-row__head ion-toggle {
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+  margin: 0;
+  --handle-width: 16px;
+  --handle-height: 16px;
+  --track-width: 36px;
+  --track-height: 18px;
+  --handle-spacing: 1px;
+  // Kompromis: czytelny, nie domyślny „duży” Ionic
+  transform: scale(0.88);
+  transform-origin: left center;
+}
+
+.se-schedule-row__head ion-toggle::part(track) {
+  width: 36px;
+  height: 18px;
+  border-radius: 999px;
+}
+
+.se-schedule-row__head ion-toggle::part(handle) {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.se-schedule-row__head ion-button {
+  margin-left: auto;
+  --padding-start: 6px;
+  --padding-end: 6px;
+  height: 28px;
+  font-size: 12px;
+}
+
+.se-schedule-row__times {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.se-schedule-row__times label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.se-schedule-row__times input[type='time'] {
+  box-sizing: border-box;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  font-size: 13px;
+  line-height: 1.2;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card, #fff);
+  color: var(--text);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.se-schedule-row ion-segment {
+  --background: var(--card, #fff);
+}
+
+.se-schedule-row ion-segment-button {
+  --padding-start: 2px;
+  --padding-end: 2px;
+  min-width: 0;
+  font-size: 10px;
+  text-transform: none;
+}
+
+.se-schedule-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .se-battery-page__fixed-value {
   margin: 4px 0 6px;
   font-size: 18px;
@@ -261,4 +398,25 @@
   --color: var(--solar-pressed);
   margin: 4px 0 0;
   font-size: 13px;
+}
+
+.se-charge-suggest__when {
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.se-charge-suggest__list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.se-charge-suggest__list li + li {
+  margin-top: 6px;
 }

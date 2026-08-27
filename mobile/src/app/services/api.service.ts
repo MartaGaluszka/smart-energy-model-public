@@ -53,6 +53,13 @@ export interface BatterySuggestionResponse {
   force_charge_night_label: string;
   force_charge_afternoon_recommended: boolean;
   force_charge_afternoon_label: string;
+  force_charge_night_start?: string | null;
+  force_charge_night_end?: string | null;
+  force_charge_night_minutes?: number | null;
+  force_charge_afternoon_window?: string | null;
+  charge_when_summary?: string;
+  fc_max_minutes?: number;
+  fc_night_start_hour?: number;
   soc16_alert: boolean;
   soc16_hour_passed: boolean;
   soc16_percent: number | null;
@@ -67,6 +74,15 @@ export interface BatterySuggestionResponse {
 }
 
 /** GET/PUT /battery/settings (T4.2 / T4.3). */
+export type BatteryScheduleMode = 'ForceCharge' | 'SelfUse' | 'ForceDischarge';
+
+export interface BatteryScheduleWindow {
+  start: string;
+  end: string;
+  mode: BatteryScheduleMode;
+  enabled: boolean;
+}
+
 export interface BatterySettingsResponse {
   soc_min_percent: number;
   soc_reserve_percent: number;
@@ -78,6 +94,12 @@ export interface BatterySettingsResponse {
   season_resolved: string;
   battery_capacity_kwh: number | null;
   ac_power_kw: number | null;
+  fc_max_minutes: number;
+  fc_night_start_hour: number;
+  recommended_fc_max_minutes: number;
+  schedule_windows: BatteryScheduleWindow[];
+  schedule_max_windows: number;
+  schedule_preset: string;
 }
 
 export interface BatterySettingsUpdate {
@@ -89,6 +111,10 @@ export interface BatterySettingsUpdate {
   season: string;
   battery_capacity_kwh: number | null;
   ac_power_kw: number | null;
+  fc_max_minutes: number;
+  fc_night_start_hour: number;
+  schedule_windows: BatteryScheduleWindow[];
+  schedule_preset: string;
 }
 
 export interface BatteryPlanHour {
