@@ -66,6 +66,47 @@ export interface BatterySuggestionResponse {
   note: string;
 }
 
+/** GET/PUT /battery/settings (T4.2 / T4.3). */
+export interface BatterySettingsResponse {
+  soc_min_percent: number;
+  soc_reserve_percent: number;
+  soc_target_percent: number;
+  efficiency_pct: number;
+  price_zone1: number | null;
+  price_zone2: number | null;
+  season: string;
+  season_resolved: string;
+  battery_capacity_kwh: number | null;
+  ac_power_kw: number | null;
+}
+
+export interface BatterySettingsUpdate {
+  soc_min_percent: number;
+  soc_target_percent: number;
+  efficiency_pct: number;
+  price_zone1: number | null;
+  price_zone2: number | null;
+  season: string;
+  battery_capacity_kwh: number | null;
+  ac_power_kw: number | null;
+}
+
+export interface BatteryPlanHour {
+  hour: number;
+  zone: number;
+  zone_label: string;
+  force_charge_recommended: boolean;
+  planned_soc_percent: number | null;
+}
+
+/** GET /battery/plan?date= — plan doradczy 24h (T4.1 / T4.4). */
+export interface BatteryPlanResponse {
+  date: string;
+  season: string;
+  hours: BatteryPlanHour[];
+  note: string;
+}
+
 export interface HourlyForecastResponse {
   day: string;
   hours: {
@@ -243,6 +284,31 @@ export class ApiService {
       this.http.get<BatterySuggestionResponse>(`${this.baseUrl}/api/v1/battery/suggestion`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
+    );
+  }
+
+  getBatterySettings(): Observable<BatterySettingsResponse> {
+    return this.authed((token) =>
+      this.http.get<BatterySettingsResponse>(`${this.baseUrl}/api/v1/battery/settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  updateBatterySettings(body: BatterySettingsUpdate): Observable<BatterySettingsResponse> {
+    return this.authed((token) =>
+      this.http.put<BatterySettingsResponse>(`${this.baseUrl}/api/v1/battery/settings`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  getBatteryPlan(date: string): Observable<BatteryPlanResponse> {
+    return this.authed((token) =>
+      this.http.get<BatteryPlanResponse>(
+        `${this.baseUrl}/api/v1/battery/plan?date=${encodeURIComponent(date)}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      ),
     );
   }
 

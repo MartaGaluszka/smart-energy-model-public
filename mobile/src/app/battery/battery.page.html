@@ -1,0 +1,156 @@
+<ion-header [translucent]="true" class="se-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/tab1" text="Home"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="font-serif">Bateria</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="se-battery-page">
+  <div class="se-page">
+
+    <ion-card class="se-card se-banner">
+      <ion-card-content>
+        <div class="se-banner__row">
+          <ion-icon name="information-circle-outline" class="se-banner__icon"></ion-icon>
+          <p class="se-banner__text">
+            System na razie tylko <strong>doradza</strong>. Nie steruje falownikiem —
+            przycisk sterowania odblokujemy po roku walidacji algorytmu.
+          </p>
+        </div>
+        <ion-button fill="clear" size="small" class="se-banner__more" routerLink="/tabs/more">
+          Dowiedz się więcej
+          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <div *ngIf="loading" class="se-battery-page__loading">
+      <ion-spinner name="crescent"></ion-spinner>
+      <span>Ładuję ustawienia…</span>
+    </div>
+
+    <p *ngIf="error" class="se-battery-page__error">{{ error }}</p>
+
+    <ng-container *ngIf="!loading">
+      <div class="se-section-title">
+        <ion-icon name="options-outline"></ion-icon>
+        <span>Ustawienia strategii</span>
+      </div>
+
+      <ion-card class="se-card">
+        <ion-card-content>
+          <p class="se-battery-page__hint">
+            Sezon wpływa na rezerwę SoC (auto: lato/jesień/wiosna/zima z kalendarza).
+            Suwak „cel SoC” to górny poziom nocnego ładowania w planie doradczym.
+          </p>
+
+          <div class="se-battery-page__season">
+            <span class="se-battery-page__label">Sezon</span>
+            <ion-segment [value]="season" (ionChange)="onSeasonChange($any($event.detail).value)">
+              <ion-segment-button *ngFor="let opt of seasonOptions" [value]="opt.value">
+                <ion-label>{{ opt.label }}</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+            <p class="se-battery-page__resolved" *ngIf="season === 'auto'">
+              Dziś: <strong>{{ seasonLabel(seasonResolved) }}</strong>
+              · rezerwa {{ socReservePercent | number:'1.0-0' }}%
+            </p>
+            <p class="se-battery-page__resolved" *ngIf="season !== 'auto'">
+              Tryb ręczny: <strong>{{ seasonLabel(season) }}</strong>
+              · rezerwa {{ socReservePercent | number:'1.0-0' }}%
+            </p>
+          </div>
+
+          <ion-item lines="none" class="se-battery-page__slider">
+            <ion-label position="stacked">
+              Rezerwa SoC (min) — {{ socMinPercent | number:'1.0-0' }}%
+            </ion-label>
+            <ion-range
+              [min]="10"
+              [max]="50"
+              [step]="1"
+              [snaps]="true"
+              [(ngModel)]="socMinPercent"
+              color="secondary"
+            ></ion-range>
+            <p class="se-battery-page__slider-note">
+              Przy season=auto backend i tak stosuje rezerwę sezonową (BAT.5). Suwak zapisuje preferencję.
+            </p>
+          </ion-item>
+
+          <ion-item lines="none" class="se-battery-page__slider">
+            <ion-label position="stacked">
+              Cel SoC — {{ socTargetPercent | number:'1.0-0' }}%
+            </ion-label>
+            <ion-range
+              [min]="50"
+              [max]="100"
+              [step]="1"
+              [snaps]="true"
+              [(ngModel)]="socTargetPercent"
+              color="primary"
+            ></ion-range>
+          </ion-item>
+
+          <ion-item lines="none" class="se-battery-page__slider">
+            <ion-label position="stacked">
+              Sprawność — {{ efficiencyPct | number:'1.0-0' }}%
+            </ion-label>
+            <ion-range
+              [min]="70"
+              [max]="98"
+              [step]="1"
+              [snaps]="true"
+              [(ngModel)]="efficiencyPct"
+              color="medium"
+            ></ion-range>
+          </ion-item>
+
+          <ion-button expand="block" class="se-battery-page__save" [disabled]="saving" (click)="saveSettings()">
+            <ion-spinner *ngIf="saving" slot="start" name="crescent"></ion-spinner>
+            {{ saving ? 'Zapisuję…' : 'Zapisz ustawienia' }}
+          </ion-button>
+          <p *ngIf="saveMessage" class="se-battery-page__ok">{{ saveMessage }}</p>
+        </ion-card-content>
+      </ion-card>
+
+      <div class="se-section-title">
+        <ion-icon name="analytics-outline"></ion-icon>
+        <span>Plan 24h · {{ planDate }}</span>
+      </div>
+
+      <ion-card class="se-card">
+        <ion-card-content>
+          <p class="se-battery-page__plan-kicker">
+            Plan doradczy
+            <ng-container *ngIf="planSeason"> · reżim {{ seasonLabel(planSeason) }}</ng-container>
+          </p>
+          <div class="se-battery-page__chart-wrap">
+            <canvas #planCanvas></canvas>
+          </div>
+          <ul class="se-battery-page__legend">
+            <li><span class="se-dot se-dot--grid"></span> SoC plan (%)</li>
+            <li><span class="se-dot se-dot--solar"></span> PV prognoza (kWh)</li>
+            <li><span class="se-dot se-dot--moss"></span> tło = tania G12w</li>
+          </ul>
+          <p class="se-battery-page__hint">{{ planNote }}</p>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card class="se-card">
+        <ion-card-content>
+          <ion-button expand="block" fill="outline" disabled class="se-battery-page__control">
+            Steruj falownikiem
+          </ion-button>
+          <p class="se-battery-page__hint">
+            Niedostępne w MVP (advise-only). Po ~roku walidacji shadow vs reality — osobna zgoda.
+          </p>
+        </ion-card-content>
+      </ion-card>
+    </ng-container>
+
+    <p class="se-demo-note">Smart Energy · advise-only · bez automatyki FoxESS</p>
+  </div>
+</ion-content>

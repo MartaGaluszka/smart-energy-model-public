@@ -216,6 +216,12 @@
   color: var(--text-muted);
 }
 
+.se-battery__link {
+  --color: var(--solar-pressed);
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
 .se-section-title {
   display: flex;
   align-items: center;
