@@ -156,8 +156,8 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | **BAT.3 / B3** SoC@16 + karta reżim/FC/rezerwa | T4.19 `soc_reserve`, T4.21, `GET /battery/suggestion` | `[x]` 2026-08-27 — Home, bez ekranu suwaków |
 | **B1** sezon `autumn` + `spring` + lato 20%/15 min | T4.2/T4.3, T4.10, `charge_tonight_cloudy` | `[x]` 2026-08-27 — jesień PV&lt;8 (§D); wiosna III–V SoC&lt;40+PV&lt;8 (§E); suwak UI = T4.3 |
 | **B2** FC nocny od T+PV (zima) / PV (jesień od 15.09) | T5.1; `charge_tonight_cloudy` B2 | `[x]` 2026-08-27 — 30 min ≈ 50%, pomiń drobny brak vs cykl |
-| T4.3–T4.4 suwaki + wykres 24h | osobny ekran Bateria | `[ ]` po karcie Home |
-| T4.14–T4.16 control disabled + shadow UI | Faza 4 reszta | `[ ]` nie blokuje MVP sugestii |
+| T4.3–T4.4 suwaki + wykres 24h | osobny ekran Bateria | `[x]` 2026-08-27 — `/tabs/battery`: sezon auto/L/J/W/Z + suwaki + Chart.js plan/PV |
+| T4.14–T4.16 control disabled + shadow UI | Faza 4 reszta | `[~]` T4.14 disabled na ekranie Bateria; T4.16 shadow UI nadal `[ ]` |
 
 ### 4.1 Bateria (reguły — tylko doradztwo)
 
@@ -165,8 +165,8 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 |----|-----|---------|-----|
 | T4.1 | P0 | `[x]` `GET /api/v1/battery/plan?date=` — okna G12w + plan SoC (reguły); **bez** wywołań `foxess_control` | Backend: `battery_planner.build_daily_plan` (BAT.5: `soc_min` z rezerwy sezonowej). Wykres 24h = T4.4 |
 | T4.2 | P0 | `[x]` Tabela `battery_strategy_settings` (SoC min, sprawność, ceny z1/z2, sezon) | CRUD API; GET zwraca `soc_min_percent` efektywne + `soc_reserve_percent` (BAT.5) |
-| T4.3 | P0 | `[ ]` UI suwaki + toggle zima/lato | Zapis ustawień — **po** karcie Home (BAT.3/5) |
-| T4.4 | P0 | `[ ]` Wykres liniowy 24h: strefa, SoC plan, PV forecast | Kolory §9.4; etykieta „plan doradczy” |
+| T4.3 | P0 | `[x]` UI suwaki + sezon auto/lato/jesień/wiosna/zima | `/tabs/battery` — PUT settings; link z Home i Więcej (2026-08-27) |
+| T4.4 | P0 | `[x]` Wykres liniowy/słupkowy 24h: strefa G12w, SoC plan, PV forecast | Chart.js; etykieta „plan doradczy”; tło = tania strefa |
 | T4.5 | P1 | Formuła czasu klimatyzacji (`POST .../ac-runtime`) | Wynik w godzinach na karcie |
 | T4.6 | P2 | Eksport planu jako rekomendacja tekstowa / PDF | Bez komend do falownika |
 
@@ -175,9 +175,9 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | ID | Pri | Zadanie | DoD |
 |----|-----|---------|-----|
 | T4.11 | P0 | `[x]` `GET /api/v1/battery/policy` — treść polityki §9.6 (PL) | JSON: `title`, `body`, `automation_enabled: false` |
-| T4.12 | P0 | `[~]` **Banner / karta stała** na ekranie Bateria (+ skrót na Home) | Home: banner §9.6 + karta sugestii (BAT.3/5). Brak osobnego ekranu Bateria (T4.3) |
+| T4.12 | P0 | `[x]` **Banner / karta stała** na ekranie Bateria (+ skrót na Home) | Home + `/tabs/battery` banner §9.6 (2026-08-27) |
 | T4.13 | P0 | `[x]` Ekran „Dowiedz się więcej”: punkty (ryzyko kosztowe, walidacja ~1 rok, potem przycisk sterowania) | Tekst na `/tabs/more` |
-| T4.14 | P0 | `[ ]` UI: przycisk „Steruj falownikiem” **disabled** + tooltip | Brak trasy API control w MVP |
+| T4.14 | P0 | `[x]` UI: przycisk „Steruj falownikiem” **disabled** + tooltip | Na `/tabs/battery` — disabled + tekst §9.6 (2026-08-27) |
 | T4.15 | P0 | `[x]` `GET /api/v1/battery/shadow-savings?from=&to=` — kontrfaktyczne oszczędności | Backend MVP (przybliżenie); UI karta = T4.16 |
 | T4.16 | P0 | `[ ]` UI karta „Ile BYŚMY zaoszczędzili przy automatyce” (`shadow_savings_pln` dzień/miesiąc/YTD) | Kolor `--moss`; jasna etykieta „hipotetycznie” |
 | T4.17 | P1 | Log / tabela `advice_events` (data, typ sugestii, czy użytkownik mógł wykonać) pod przyszłą walidację roczną | Seed pod rok testów |
@@ -296,7 +296,7 @@ Aktualizuj status w tej tabeli przy domknięciu fazy:
 | 1 Shell + sync + prognoza | `[x]` | 2026-07-28 | P0 zamknięte: Ionic Solar Graphite, 4 taby, Home KPI + sync Fox + banner §9.6 + sugestie, Prognoza z wykresem Chart.js + porównaniem błędu % vs rzeczywistość (T1.14, patrz wyżej). Screenshoty: `mobile/docs/screenshots/`. **Korekta 2026-07-28:** T1.13 był błędnie oznaczony jako gotowy 2026-07-27 — ekran Prognoza był w rzeczywistości placeholderem; dobudowany teraz razem z T1.14. Otwarte P1: T1.6 splash, T1.10 Fox 40402. P2: T1.11 pull-refresh, T1.15 cache prognoz (świadomie odłożone). |
 | 2 Symulator | `[~]` | 2026-07-29 | Backend (T2.1–T2.3) + **UI P0** (T2.4 formularz stawek, T2.5 wykres słupkowy) + **P1** (T2.6 mini tabela kWh, T2.7 netto/brutto VAT, T2.10 przebudowa UX + polski `ion-datetime`) na `/tabs/simulator`. Otwarte P2: T2.8 depozyt, T2.9 prefill z tauron_bills. |
 | 3 ROI | `[~]` | 2026-07-27 | **Backend gotowy** (T3.1–T3.2, TA.7). **Brakuje UI mobilnego** (T3.3–T3.4 P0). Zależność: wynik symulatora (Faza 2). |
-| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-08-27 | Backend plan/settings/policy `[x]`. Home: karta sugestii + `soc_min`=rezerwa (BAT.5, BAT.3). **B2** T+PV + 30 min≈50% + próg cyklu `[x]`. Brak: T4.3–T4.4 ekran Bateria, T4.16 shadow UI, B1 `season=autumn`. |
+| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-08-27 | Backend plan/settings/policy `[x]`. Home + **ekran Bateria** T4.3–T4.4 (suwaki, sezon, wykres 24h). **B1/B2** `[x]`. Brak: T4.16 shadow UI, pełny cron T4.20, FCM. |
 | 5 ML advice (bez control) | `[ ]` | | |
 | 6 Sterowanie Fox (po ~roku) | `[ ]` | | poza MVP |
 

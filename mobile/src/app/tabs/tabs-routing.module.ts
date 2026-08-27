@@ -28,6 +28,10 @@ const routes: Routes = [
         loadChildren: () => import('../simulator/simulator.module').then(m => m.SimulatorPageModule)
       },
       {
+        path: 'battery',
+        loadChildren: () => import('../battery/battery.module').then(m => m.BatteryPageModule)
+      },
+      {
         path: '',
         redirectTo: '/tabs/tab1',
         pathMatch: 'full'

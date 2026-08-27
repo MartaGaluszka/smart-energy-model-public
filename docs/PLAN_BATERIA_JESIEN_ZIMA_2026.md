@@ -183,7 +183,7 @@ W marcu corr(T, load_exp) umiarkowany (~−0,4); PV p50 ~25 kWh. **Wiosna ≈ od
 - **B2 zima:** Tśr + PV → cel SoC + minuty; pomiń gdy &lt; 2 kWh / &lt; 15 pp (cykl)
 - Plan sterowania — **bez** auto-apply w MVP
 
-Luki: brak twardej blokady „nie zjeżdżaj poniżej X% przed 22:00”. UI suwaków sezonu (T4.3). Pełna kalibracja wiosny po III–V.2026.
+Luki: brak twardej blokady „nie zjeżdżaj poniżej X% przed 22:00”. UI suwaków sezonu (T4.3) — **zrobione** `/tabs/battery` 2026-08-27. Pełna kalibracja wiosny po III–V.2026.
 
 ---
 
