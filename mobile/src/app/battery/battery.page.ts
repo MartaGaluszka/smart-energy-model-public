@@ -8,12 +8,21 @@ import {
   BatteryPlanHour,
   BatterySettingsResponse,
   BatterySettingsUpdate,
+  ShadowSavingsResponse,
 } from '../services/api.service';
 import { todayIsoLocal } from '../utils/date-utils';
 
 Chart.register(...registerables);
 
 type SeasonMode = 'auto' | 'summer' | 'autumn' | 'spring' | 'winter';
+
+interface ShadowPeriodRow {
+  key: 'day' | 'month' | 'ytd';
+  label: string;
+  loading: boolean;
+  error: boolean;
+  data: ShadowSavingsResponse | null;
+}
 
 @Component({
   selector: 'app-battery',
@@ -34,7 +43,7 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
   socMinPercent = 20;
   socReservePercent = 20;
   socTargetPercent = 80;
-  efficiencyPct = 90;
+  efficiencyPct = 93;
   capacityKwh: number | null = 10.36;
 
   planDate = todayIsoLocal();
@@ -43,6 +52,9 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
   planHours: BatteryPlanHour[] = [];
   pvByHour: (number | null)[] = [];
 
+  shadowRows: ShadowPeriodRow[] = [];
+  shadowMethodNote = '';
+
   private chart?: Chart;
   private viewReady = false;
 
@@ -50,9 +62,17 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
     { value: 'auto', label: 'Auto' },
     { value: 'summer', label: 'Lato' },
     { value: 'autumn', label: 'Jesień' },
-    { value: 'spring', label: 'Wiosna' },
     { value: 'winter', label: 'Zima' },
+    { value: 'spring', label: 'Wiosna' },
   ];
+
+  /** Zalecane rezerwy = backend BAT.5 / B1 (nie mylić z dnem FoxESS ~10%). */
+  private readonly recommendedReserve: Record<Exclude<SeasonMode, 'auto'>, number> = {
+    summer: 20,
+    autumn: 22,
+    winter: 40,
+    spring: 20,
+  };
 
   constructor(private readonly api: ApiService) {}
 
@@ -80,10 +100,30 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
     return map[season] ?? season;
   }
 
+  formatPln(value: number | null | undefined): string {
+    if (value === null || value === undefined || Number.isNaN(value)) return '—';
+    return `${value.toFixed(2).replace('.', ',')} zł`;
+  }
+
   onSeasonChange(value: string | number | undefined): void {
     if (typeof value !== 'string') return;
     if (!['auto', 'summer', 'autumn', 'spring', 'winter'].includes(value)) return;
     this.season = value as SeasonMode;
+    this.applyRecommendedReserveForSeason();
+  }
+
+  /** Podgląd zalecanej rezerwy przy przełączaniu sezonu (przed Zapisz). */
+  private applyRecommendedReserveForSeason(): void {
+    if (this.season === 'auto') {
+      const resolved = (this.seasonResolved || 'summer') as Exclude<SeasonMode, 'auto'>;
+      const rec = this.recommendedReserve[resolved] ?? 20;
+      this.socReservePercent = rec;
+      this.socMinPercent = rec;
+      return;
+    }
+    const rec = this.recommendedReserve[this.season];
+    this.socReservePercent = rec;
+    this.socMinPercent = rec;
   }
 
   saveSettings(): void {
@@ -122,10 +162,12 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
         this.applySettings(row);
         this.loading = false;
         this.reloadPlan();
+        this.reloadShadow();
       },
       error: () => {
         this.loading = false;
         this.error = 'Nie udało się pobrać ustawień baterii.';
+        this.reloadShadow();
       },
     });
   }
@@ -138,6 +180,57 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
     this.socTargetPercent = row.soc_target_percent;
     this.efficiencyPct = row.efficiency_pct;
     this.capacityKwh = row.battery_capacity_kwh;
+  }
+
+  private periodBounds(): { key: 'day' | 'month' | 'ytd'; label: string; from: string; to: string }[] {
+    const to = todayIsoLocal();
+    const [y, m] = to.split('-');
+    const monthStart = `${y}-${m}-01`;
+    const ytdStart = `${y}-01-01`;
+    return [
+      { key: 'day', label: 'Dziś', from: to, to },
+      { key: 'month', label: 'Ten miesiąc', from: monthStart, to },
+      { key: 'ytd', label: 'Od początku roku', from: ytdStart, to },
+    ];
+  }
+
+  private reloadShadow(): void {
+    const periods = this.periodBounds();
+    this.shadowRows = periods.map((p) => ({
+      key: p.key,
+      label: p.label,
+      loading: true,
+      error: false,
+      data: null,
+    }));
+    this.shadowMethodNote = '';
+
+    periods.forEach((p, idx) => {
+      this.api.getShadowSavings(p.from, p.to).subscribe({
+        next: (data) => {
+          this.shadowRows[idx] = {
+            key: p.key,
+            label: p.label,
+            loading: false,
+            error: false,
+            data,
+          };
+          if (data.method_note) this.shadowMethodNote = data.method_note;
+          // trigger change detection for array mutation
+          this.shadowRows = [...this.shadowRows];
+        },
+        error: () => {
+          this.shadowRows[idx] = {
+            key: p.key,
+            label: p.label,
+            loading: false,
+            error: true,
+            data: null,
+          };
+          this.shadowRows = [...this.shadowRows];
+        },
+      });
+    });
   }
 
   private reloadPlan(): void {

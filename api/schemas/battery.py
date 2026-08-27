@@ -21,7 +21,7 @@ class BatterySettingsResponse(BaseModel):
 class BatterySettingsUpdate(BaseModel):
     soc_min_percent: float = 20.0
     soc_target_percent: float = 80.0
-    efficiency_pct: float = 90.0
+    efficiency_pct: float = 93.0
     price_zone1: float | None = None
     price_zone2: float | None = None
     season: str = 'auto'

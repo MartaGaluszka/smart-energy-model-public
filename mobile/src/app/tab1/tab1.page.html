@@ -158,6 +158,20 @@
       </ion-card-content>
     </ion-card>
 
+    <!-- T4.16: skrót shadow (pełna karta dzień/miesiąc/YTD na Baterii) -->
+    <ion-card class="se-card se-shadow-teaser" button routerLink="/tabs/battery">
+      <ion-card-content>
+        <div class="se-shadow-teaser__row">
+          <div>
+            <span class="se-shadow-teaser__kicker">hipotetycznie</span>
+            <span class="se-shadow-teaser__title">Ile BYŚMY zaoszczędzili (ten miesiąc)</span>
+          </div>
+          <ion-spinner *ngIf="shadowLoading" name="crescent"></ion-spinner>
+          <span *ngIf="!shadowLoading" class="se-shadow-teaser__value">{{ formatPln(shadowMonthPln) }}</span>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
     <!-- Advise-only banner (§9.6) -->
     <ion-card class="se-card se-banner">
       <ion-card-content>

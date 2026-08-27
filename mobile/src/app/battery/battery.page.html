@@ -42,7 +42,8 @@
       <ion-card class="se-card">
         <ion-card-content>
           <p class="se-battery-page__hint">
-            Sezon wpływa na rezerwę SoC (auto: lato/jesień/wiosna/zima z kalendarza).
+            Sezon wpływa na rezerwę SoC (zalecane: lato/wiosna 20%, jesień 22%, zima 40%).
+            FoxESS ~10% to dno sprzętowe — nie mylić z naszą rezerwą na noc/szczyt.
             Suwak „cel SoC” to górny poziom nocnego ładowania w planie doradczym.
           </p>
 
@@ -55,17 +56,17 @@
             </ion-segment>
             <p class="se-battery-page__resolved" *ngIf="season === 'auto'">
               Dziś: <strong>{{ seasonLabel(seasonResolved) }}</strong>
-              · rezerwa {{ socReservePercent | number:'1.0-0' }}%
+              · zalecana rezerwa {{ socReservePercent | number:'1.0-0' }}%
             </p>
             <p class="se-battery-page__resolved" *ngIf="season !== 'auto'">
               Tryb ręczny: <strong>{{ seasonLabel(season) }}</strong>
-              · rezerwa {{ socReservePercent | number:'1.0-0' }}%
+              · zalecana rezerwa {{ socReservePercent | number:'1.0-0' }}%
             </p>
           </div>
 
           <ion-item lines="none" class="se-battery-page__slider">
             <ion-label position="stacked">
-              Rezerwa SoC (min) — {{ socMinPercent | number:'1.0-0' }}%
+              Rezerwa SoC (zalecana) — {{ socMinPercent | number:'1.0-0' }}%
             </ion-label>
             <ion-range
               [min]="10"
@@ -73,10 +74,11 @@
               [step]="1"
               [snaps]="true"
               [(ngModel)]="socMinPercent"
+              (ionChange)="socReservePercent = socMinPercent"
               color="secondary"
             ></ion-range>
             <p class="se-battery-page__slider-note">
-              Przy season=auto backend i tak stosuje rezerwę sezonową (BAT.5). Suwak zapisuje preferencję.
+              Po wyborze sezonu suwak ustawia zalecenie (20 / 22 / 40). Przy Auto backend i tak bierze rezerwę z kalendarza (BAT.5).
             </p>
           </ion-item>
 
@@ -94,25 +96,52 @@
             ></ion-range>
           </ion-item>
 
-          <ion-item lines="none" class="se-battery-page__slider">
-            <ion-label position="stacked">
-              Sprawność — {{ efficiencyPct | number:'1.0-0' }}%
-            </ion-label>
-            <ion-range
-              [min]="70"
-              [max]="98"
-              [step]="1"
-              [snaps]="true"
-              [(ngModel)]="efficiencyPct"
-              color="medium"
-            ></ion-range>
-          </ion-item>
+          <div class="se-battery-page__fixed">
+            <span class="se-battery-page__label">Sprawność cyklu</span>
+            <p class="se-battery-page__fixed-value">
+              {{ efficiencyPct | number:'1.0-0' }}%
+              <span class="se-battery-page__fixed-tag">kalibracja 08.2026</span>
+            </p>
+            <p class="se-battery-page__slider-note">
+              Z liczników FoxESS (~15 mies.): Δ rozładowanie / Δ ładowanie ≈ 92,7% → w apce 93%.
+              Następny przegląd za rok. Nie mierzymy na żywo co dzień.
+            </p>
+          </div>
 
           <ion-button expand="block" class="se-battery-page__save" [disabled]="saving" (click)="saveSettings()">
             <ion-spinner *ngIf="saving" slot="start" name="crescent"></ion-spinner>
             {{ saving ? 'Zapisuję…' : 'Zapisz ustawienia' }}
           </ion-button>
           <p *ngIf="saveMessage" class="se-battery-page__ok">{{ saveMessage }}</p>
+        </ion-card-content>
+      </ion-card>
+
+      <div class="se-section-title">
+        <ion-icon name="leaf-outline"></ion-icon>
+        <span>Shadow savings</span>
+      </div>
+
+      <ion-card class="se-card se-shadow">
+        <ion-card-content>
+          <div class="se-shadow__head">
+            <span class="se-shadow__title">Ile BYŚMY zaoszczędzili przy automatyce</span>
+            <span class="se-shadow__badge">hipotetycznie</span>
+          </div>
+          <p class="se-battery-page__hint">
+            Porównanie kosztu bez PV vs z instalacją (MVP). To nie jest realny przelew —
+            pokazuje skalę korzyści, gdyby plan doradczy był wykonywany automatycznie.
+          </p>
+          <div class="se-shadow__grid">
+            <div class="se-shadow__cell" *ngFor="let row of shadowRows">
+              <span class="se-shadow__period">{{ row.label }}</span>
+              <ion-spinner *ngIf="row.loading" name="crescent" class="se-shadow__spin"></ion-spinner>
+              <span *ngIf="!row.loading && row.error" class="se-shadow__na">brak danych</span>
+              <span *ngIf="!row.loading && !row.error && row.data" class="se-shadow__value">
+                {{ formatPln(row.data.shadow_savings_pln) }}
+              </span>
+            </div>
+          </div>
+          <p *ngIf="shadowMethodNote" class="se-shadow__method">{{ shadowMethodNote }}</p>
         </ion-card-content>
       </ion-card>
 
