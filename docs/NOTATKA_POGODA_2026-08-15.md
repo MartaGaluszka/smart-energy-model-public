@@ -6,6 +6,9 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-08-27 ~12:00** | AccuWeather dziś-na-dziś (27) / jutro (28) / +2 (29) |
+| **2026-08-27 ~12:00** | **MB** MultiModel + meteogram + ensemble (czw.–nd.) · 27≈Accu; 28 MB łagodniejszy |
+| **2026-08-26 ~18:25** | **Closeout app:** PV dnia **21,1** kWh (vs daily RF **12,5**) |
 | **2026-08-26 ~11:05** | AccuWeather dziś-na-dziś (26) / jutro (27) / +2 (28) |
 | **2026-08-26 ~11:08** | **MB** MultiModel + meteogram + ensemble (śr.–pt.) · 26 clearing PM |
 | **2026-08-26 ~przed 7:30** | **Obserwacja:** deszcz (mokra nawierzchnia); **@7:30** już bez opadu |
@@ -54,7 +57,48 @@ Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletnoś�
 
 ---
 
-## AccuWeather — 26.08 ~11:05 (obecny run)
+## AccuWeather — 27.08 ~12:00 (obecny run)
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
+|-------|------:|--------:|------:|------:|------------------|----------------|-----|
+| **27.08** czw. (dziś) | **25°C** (RF 25° / Shade 23°) | **10** b. jasne | **0%** | **0 mm** | 1% / 0% | E 17 / **37** | **peak clear** — undershoot |
+| **28.08** pt. | **29°C** (RF 28° / Shade 27°) | **5** średnie | **58%** | **0 mm** | 1% / 0% | ESE 19 / **37** | **pogorszenie** Accu (było 9/18%) |
+| **29.08** sob. | **23°C** (RF 22° / Shade 20°) | **3** przyćmione | **66%** | **1,8 mm** | 87% / 17% | W 15 / **43** | deszcz wcześnie → CS4 |
+
+Opis 27: *„Jaskrawe słońce"* · UV 5.  
+Opis 28: *„Zachmurzenie duże"* · UV 5.  
+Opis 29: *„Przelotne opady, zwykle wcześnie"* · UV 3 · deszcz **2 h**.
+
+### Alarmy Accu (27.08)
+
+| Alarm | Okno |
+|-------|------|
+| Susza | tło (×3 w UI) |
+
+### Drift vs Accu 26.08 ~11:05
+
+| | Accu 26.08 (outlook) | **Accu 27.08 dziś-na-dziś** | Okno |
+|--|----------------------|-----------------------------|------|
+| **27** jasność / cloud | **10** / 0% | **10 / 0%** — **bez zmian** | — |
+| **28** | **9** / 18% (upał+jasne) | **5 / 58%** — **pogorszenie** | — |
+| **29** | (brak) | **3** / 66% / **1,8 mm** / burze 17% | — |
+
+**Wniosek:** **27** bez zmian (peak). **28** pogorszony — było „upał+słońce" (9/18%), teraz „zachmurzenie duże" (5/58%); RF ~30 może za wysoko. **29** deszcz wcześnie rano + burze → CS4 kandydat.  
+Dzień: [`NOTATKA_2026-08-27.md`](NOTATKA_2026-08-27.md).
+
+### MB 27.08 ~12:00 — Accu vs MB
+
+| Dzień | Accu | MB | Zgodność |
+|-------|------|-----|----------|
+| **27** | jasność **10** / 0% | konsensus słońce (wszystkie); cloud ~20–30% | **Tak** — MB≈Accu≈okno |
+| **28** | jasność **5** / **58%** | słońce+lekkie chmury; cloud ~**40–50%** | **MB łagodniejszy** — Accu może za ciemny |
+| **29** | jasność **3** / 66% / **1,8 mm** | deszcz rano (spike 6–12h, ~3–4 mm/h); cloud ~60–80% | **Tak** — agreement |
+
+**Wniosek operacyjny:** 27 undershoot (MB≈Accu słońce). 28 czekać midday Accu — MB optymistyczny vs Accu pesymistyczny; RF ~30 może być OK lub za wysoko. 29 = CS4.
+
+---
+
+## AccuWeather — 26.08 ~11:05 (archiwum)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
 |-------|------:|--------:|------:|------:|------------------|----------------|-----|
@@ -80,7 +124,7 @@ Opis 28: *„Przeważnie słonecznie”* · UV 5.
 | **27** | **10** / 0% | **10 / 0%** | — |
 | **28** | (MB upał) | **9** / 18% | — |
 
-**Wniosek:** Accu podniósł 26 do jasności 9 od rana — lokalnie rano jak 25. **MB ~11:08:** rano gęste chmury → **clearing PM**; 27–28 pełne słońce (konsensus MultiModel). Nie pełnić baterii wieczór 26.  
+**Wniosek:** Accu podniósł 26 do jasności 9 od rana — lokalnie rano jak 25. **MB ~11:08:** rano gęste chmury → **clearing PM** (**TAK**). **Actual ~18:25: 21,1** vs RF **12,5** (−8,6) — ICON zaniżył; Accu 9 bliżej EOD. Nie pełnić baterii wieczór 26.  
 Dzień: [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md).
 
 ### MB 26.08 ~11:08 — Accu vs MB
@@ -91,7 +135,7 @@ Dzień: [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md).
 | **27** | jasność **10** / 0% | pełne słońce, T~25° | **Tak** |
 | **28** | jasność **9** / 18% | słońce, T~**29–31°** | **Tak** |
 
-**Wniosek operacyjny:** 26 śledzić clearing PM (EOD może > wczoraj 4,4). 27–28 peak PV / undershoot RF.
+**Wniosek operacyjny:** 26 = **dwa akty** → actual **21,1** (RF 12,5 undershoot). 27–28 peak PV / undershoot RF — bez FC wieczór.
 
 ---
 
@@ -122,7 +166,7 @@ Opis 27: *„Jaskrawe słońce”* · UV 5.
 | **27.08** | (brak) | jasność **10**, cloud **0%**, 0 mm |
 
 **Wniosek:** **25** Accu≈ICON na **cloud** — paper-trade **CS4**. Deszcz: **od 11:25** ≈ ilościowy **ICON** (1. wet godz. 11); **UKMO** za późny/suchy; ikony MultiModel rano za wcześnie; **NEMS** OK do 11:25. **26** Accu mix vs ICON bardzo chmurny — midday. **27** Accu jasność 10 → undershoot risk. Primary bez zmian.  
-Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade (tylko repo prywatne).
+Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade: [`NOTATKA_PAPER_TRADE_ACCU_REGIME.md`](NOTATKA_PAPER_TRADE_ACCU_REGIME.md).
 
 ### MB 25.08 ~10:35 — Accu vs MB · NEMS vs ICON/UKMO
 

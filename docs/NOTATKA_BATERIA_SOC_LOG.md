@@ -48,18 +48,19 @@ Pogoda → `NOTATKA_YYYY-MM-DD.md`; reguła push → notatka reguły.
 |--------|----:|------------|
 | ~08:00 | **61–64%** | po deszczu przed 7:30; wolny start PV |
 | **~10:55** | **74%** | **+13 pp** od min (~**1,3 kWh** w baterii z dachu); DB max godz. 10 = **75%** |
-| **~11:02** | — | **prześwit** na ciemnym niebie · chwilowo **1,52 kW** (mix / nie ciągłe słońce) |
-| ~12:00 midday | — | *(uzupełnij)* |
-| ~14:00 | — | *(uzupełnij)* |
-| ~17:00 / peak | — | *(uzupełnij)* |
-| ~22:00 przed ewentualnym FC | — | decyzja: 27 jasny → **nie** pełnić na styk |
-| closeout 26 | — | PV actual · zużycie · sieć · SoC EOD |
+| **~11:02** | — | **prześwit** · chwilowo **1,52 kW** |
+| **~11:58** (DB) | **90%** | clearing: PV ~2–3 kW; SoC 74%→90% |
+| **12:38→** (app) | **~pełna** | **eksport do Tauron** — nadwyżka PV; bateria nie ładuje dalej |
+| **~13:55–14:00** (app) | — | PV dnia **12,4 kWh**; chwilowo **1,99 kW**; eksport **4,1 kWh** (od 12:38 → 14:00) |
+| **~18:25** (app) | — | PV dnia **21,1 kWh** (vs daily RF **12,5**); nadal **~30 W** na dachu → EOD może +odrobinę |
+| ~22:00 przed ewentualnym FC | — | decyzja: 27 jasny → **nie** pełnić |
+| closeout 26 | — | PV **21,1** · zużycie / sieć / SoC EOD *(uzupełnij)* |
 
-**Werdykt dzień (rano ~11):**
+**Werdykt dzień (~18:25):**
 
-> Na słaby ranek 26 zapas **74%** @10:55; @11:02 prześwit 1,52 kW.  
-> **MB:** clearing **PM** możliwe → dach może doładować SoC popołudniu.  
-> Wieczór: pod **27–28** pełne słońce (MB≈Accu) zostaw **luz** — nie ForceCharge do 100%.
+> MB clearing PM **potwierdzony**. Actual **21,1** vs RF **12,5** (**+8,6**) — wczoraj **4,4**.  
+> SoC pełna od **12:38** → eksport (do 14:00 już **4,1**). Nocny FC 24→75% **za agresywny** ex post.  
+> Wieczór **27–28**: **nie** ForceCharge.
 
 ---
 
