@@ -24,6 +24,13 @@ Context = Literal['morning', 'pre_cheap', 'peak']
 WINTER_MONTHS = {10, 11, 12, 1, 2, 3}
 LOG_FILE = 'data/processed/battery_advisor_log.csv'
 OUTAGE_LOG_FILE = 'data/processed/battery_outage_log.csv'
+# 25–26.08: ForceCharge 22:00–22:30, 24% → 75% ≈ +50 pp / 30 min (~10 kW).
+FC_MINUTES_PER_50_SOC = 30.0
+FC_SOC_PER_30_MIN = 50.0
+# load_exp ≈ 18 − 1.0×Tśr (dni robocze zima X.2025–III.2026); ~70% PV w drogiej G12w.
+LOAD_EXP_INTERCEPT_KWH = 18.0
+LOAD_EXP_SLOPE_PER_C = -1.0
+PV_IN_PEAK_FRACTION = 0.70
 
 
 @dataclass
@@ -48,7 +55,7 @@ class PvOutlook:
 
 @dataclass
 class ChargeTonightCloudyRule:
-    """Reguła: niski SoC + jutro słabe PV → sugestia ładowania od 22:00 (G12w)."""
+    """Reguła B2: nocne FC 22–6 (lato krótki cap / zima T×PV) — advise-only."""
 
     triggered: bool
     soc_percent: float | None
@@ -58,6 +65,11 @@ class ChargeTonightCloudyRule:
     recommendation: str
     title: str
     body: str
+    target_soc_percent: float | None = None
+    fc_minutes: float | None = None
+    tomorrow_temp_c: float | None = None
+    estimated_gap_kwh: float | None = None
+    skip_reason: str = ''
 
 
 @dataclass
@@ -70,6 +82,20 @@ class Soc16HoldReserveRule:
     min_evening_percent: float
     reserve_percent: float
     in_afternoon_window: bool
+    recommendation: str
+    title: str
+    body: str
+
+
+@dataclass
+class BelowReserveWaitCheapRule:
+    """Poniżej rezerwy w drogiej G12w → nie ładuj z sieci teraz; poczekaj na tanie okno."""
+
+    triggered: bool
+    in_cheap_zone: bool
+    next_cheap_window: str
+    soc_percent: float | None
+    reserve_percent: float
     recommendation: str
     title: str
     body: str
@@ -112,6 +138,14 @@ class BatteryAdvice:
 def is_winter_season(d: date | None = None) -> bool:
     d = d or date.today()
     return d.month in WINTER_MONTHS
+
+
+def is_b2_night_season(d: date | None = None) -> bool:
+    """B2: zima X–III albo jesień od 15.09 (PV/T → FC; bez osobnego season=autumn w settings)."""
+    d = d or date.today()
+    if is_winter_season(d):
+        return True
+    return d.month == 9 and d.day >= 15
 
 
 def _db_path() -> str:
@@ -246,6 +280,113 @@ def _cloudy_day_pv_kwh() -> float:
     return float(os.getenv('BATTERY_CLOUDY_DAY_PV_KWH', '18'))
 
 
+def _summer_fc_max_minutes() -> float:
+    """Lato: jeśli już ładować w nocy — max minut (25–26.08: 30 min ≈ +50 pp)."""
+    return float(os.getenv('BATTERY_SUMMER_FC_MAX_MINUTES', '15'))
+
+
+def _summer_fc_delta_soc() -> float:
+    """Lato: przyrost SoC na krótki FC (~15 min ≈ +25 pp przy ~10 kW)."""
+    return float(os.getenv('BATTERY_SUMMER_FC_DELTA_SOC', '25'))
+
+
+def _summer_tomorrow_max_kwh() -> float:
+    """Lato: jutro do tylu kWh nadal obowiązuje podłoga 20% + cap 15 min (nie pełnić)."""
+    return float(os.getenv('BATTERY_SUMMER_TOMORROW_MAX_KWH', '10'))
+
+
+def _b2_pv_skip_kwh() -> float:
+    """B2: przy T ≥ 0°C dach ≥ tyle kWh zwykle pokrywa szczyt — nie pełnić."""
+    return float(os.getenv('BATTERY_B2_PV_SKIP_KWH', '12'))
+
+
+def _b2_mild_weak_pv_kwh() -> float:
+    """B2: T ≥ 5°C i PV poniżej tego → ładuj do ~80%."""
+    return float(os.getenv('BATTERY_B2_MILD_WEAK_PV_KWH', '8'))
+
+
+def _fc_minutes_per_50_soc() -> float:
+    return float(os.getenv('BATTERY_FC_MINUTES_PER_50_SOC', str(FC_MINUTES_PER_50_SOC)))
+
+
+def _fc_soc_per_30_min() -> float:
+    return float(os.getenv('BATTERY_FC_SOC_PER_30_MIN', str(FC_SOC_PER_30_MIN)))
+
+
+def fc_minutes_for_delta_soc(delta_soc: float) -> float:
+    """Czas ForceCharge: 30 min ≈ +50 pp SoC (fakt 25–26.08)."""
+    per_30 = _fc_soc_per_30_min()
+    minutes_30 = _fc_minutes_per_50_soc()
+    if per_30 <= 0:
+        return 0.0
+    return round(max(0.0, delta_soc) * minutes_30 / per_30, 1)
+
+
+def estimate_expensive_load_kwh(t_mean_c: float) -> float:
+    intercept = float(os.getenv('BATTERY_LOAD_EXP_INTERCEPT_KWH', str(LOAD_EXP_INTERCEPT_KWH)))
+    slope = float(os.getenv('BATTERY_LOAD_EXP_SLOPE_PER_C', str(LOAD_EXP_SLOPE_PER_C)))
+    return max(8.0, intercept + slope * t_mean_c)
+
+
+def estimate_peak_gap_kwh(t_mean_c: float, tomorrow_pv_kwh: float) -> float:
+    frac = float(os.getenv('BATTERY_PV_IN_PEAK_FRACTION', str(PV_IN_PEAK_FRACTION)))
+    return estimate_expensive_load_kwh(t_mean_c) - frac * max(0.0, tomorrow_pv_kwh)
+
+
+def winter_night_target_soc(
+    t_mean_c: float | None,
+    tomorrow_pv_kwh: float,
+) -> float | None:
+    """Docelowy SoC po FC 22–6. None = nie pełnić (zostaw rezerwę / dach)."""
+    skip_pv = _b2_pv_skip_kwh()
+    mild_weak = _b2_mild_weak_pv_kwh()
+    if t_mean_c is None:
+        return 90.0 if tomorrow_pv_kwh < skip_pv else None
+    if t_mean_c < 0:
+        return 95.0
+    if t_mean_c < 5:
+        return 95.0 if tomorrow_pv_kwh < skip_pv else None
+    if tomorrow_pv_kwh < mild_weak:
+        return 80.0
+    if tomorrow_pv_kwh >= skip_pv:
+        return None
+    return 80.0
+
+
+def _b2_capacity_kwh(capacity_kwh: float | None) -> float:
+    if capacity_kwh is not None:
+        return float(capacity_kwh)
+    env = os.getenv('BATTERY_CAPACITY_KWH', '').strip()
+    if env:
+        return float(env)
+    return float(os.getenv('BATTERY_CAPACITY_KWH_DEFAULT', '10.36'))
+
+
+def _charge_worth_vs_wear(
+    *,
+    energy_kwh: float,
+    delta_soc: float,
+    gap_kwh: float | None,
+    frost: bool,
+    below_reserve: bool,
+) -> bool:
+    """False = drobny brak vs cykl LFP; True = ładuj (albo bezpieczeństwo / mróz)."""
+    if below_reserve or frost:
+        return True
+    min_kwh = float(os.getenv('BATTERY_FC_MIN_WORTH_KWH', '2.0'))
+    min_delta = float(os.getenv('BATTERY_FC_MIN_DELTA_SOC', '15'))
+    if delta_soc < min_delta or energy_kwh < min_kwh:
+        return False
+    if gap_kwh is not None and gap_kwh < min_kwh:
+        return False
+    spread = float(os.getenv('BATTERY_TARIFF_SPREAD_PLN_PER_KWH', '0.36'))
+    cycle = float(os.getenv('BATTERY_CYCLE_COST_PLN_PER_KWH', '0.30'))
+    # Spread G12w ~0,36 zł/kWh, cykl LFP ~0,30 — małe doładowanie prawie nic nie zostawia.
+    if spread <= cycle + 0.08 and energy_kwh < 3.0:
+        return False
+    return True
+
+
 def evaluate_charge_tonight_cloudy(
     *,
     soc_percent: float | None,
@@ -253,42 +394,123 @@ def evaluate_charge_tonight_cloudy(
     as_of: datetime | None = None,
     soc_below: float | None = None,
     weak_pv_below: float | None = None,
+    tomorrow_temp_c: float | None = None,
+    capacity_kwh: float | None = None,
 ) -> ChargeTonightCloudyRule:
     """Czysta reguła produktowa (bez I/O) — advise-only.
 
-    IF pn–pt AND SoC < próg AND jutro PV < próg AND przed 22:00
-    → komunikat: zalecane ładowanie baterii od 22:00 (G12w tanio).
+    B2 zima/jesień (X–III oraz od 15.09): Tśr jutro + PV jutro → cel SoC i minuty
+    (30 min ≈ +50 pp). Drobny brak (< ~2 kWh / < 15 pp) pomijamy — cykl vs spread G12w.
+    Lato: podłoga 20% + cap 15 min / +25 pp; krótki FC gdy SoC < 20% i jutro ≤ 10 kWh.
     """
     as_of = as_of or datetime.now()
-    soc_below = _soc_charge_tonight_below() if soc_below is None else soc_below
-    weak_pv_below = _cloudy_day_pv_kwh() if weak_pv_below is None else weak_pv_below
+    b2 = is_b2_night_season(as_of.date())
+    if soc_below is None:
+        soc_below = _soc_reserve_winter() if b2 else _soc_reserve_summer()
+    if weak_pv_below is None:
+        weak_pv_below = _b2_pv_skip_kwh() if b2 else _summer_tomorrow_max_kwh()
 
-    empty = ChargeTonightCloudyRule(
-        triggered=False,
-        soc_percent=soc_percent,
-        tomorrow_pv_kwh=tomorrow_pv_kwh,
-        soc_below=soc_below,
-        weak_pv_below=weak_pv_below,
-        recommendation='',
-        title='',
-        body='',
-    )
+    def _empty(*, skip_reason: str = '', **extra) -> ChargeTonightCloudyRule:
+        return ChargeTonightCloudyRule(
+            triggered=False,
+            soc_percent=soc_percent,
+            tomorrow_pv_kwh=tomorrow_pv_kwh,
+            soc_below=soc_below,
+            weak_pv_below=weak_pv_below,
+            recommendation='',
+            title='',
+            body='',
+            tomorrow_temp_c=tomorrow_temp_c,
+            skip_reason=skip_reason,
+            **extra,
+        )
+
     if is_weekend(as_of.date()) or is_public_holiday(as_of.date()):
-        return empty
+        return _empty()
     if as_of.hour >= 22:
-        return empty
-    if soc_percent is None or tomorrow_pv_kwh is None:
-        return empty
-    if soc_percent >= soc_below or tomorrow_pv_kwh >= weak_pv_below:
-        return empty
+        return _empty()
+    if soc_percent is None:
+        return _empty()
 
-    rec = 'ŁADUJ OD 22:00 (POCHMURNO + NISKI SOC)'
+    if not b2:
+        if soc_percent >= soc_below:
+            return _empty()
+        if tomorrow_pv_kwh is None:
+            return _empty()
+        if tomorrow_pv_kwh > weak_pv_below:
+            return _empty()
+        minutes = _summer_fc_max_minutes()
+        delta = _summer_fc_delta_soc()
+        return ChargeTonightCloudyRule(
+            triggered=True,
+            soc_percent=soc_percent,
+            tomorrow_pv_kwh=tomorrow_pv_kwh,
+            soc_below=soc_below,
+            weak_pv_below=weak_pv_below,
+            recommendation='LATO: KRÓTKI FC 15 MIN (+25%)',
+            title='Sugestia: krótko doładuj od 22:00 (max 15 min)',
+            body=(
+                f'SoC {soc_percent:.0f}% < nocna podłoga {soc_below:.0f}% i jutro ~{tomorrow_pv_kwh:.0f} kWh '
+                f'(próg {weak_pv_below:.0f}). Latem nawet przy jutrze do 10 kWh: max {minutes:.0f} min '
+                f'(+{delta:.0f} pp; 30 min ≈ +50 pp), nie do 75%. Sugestia doradcza, bez automatyki.'
+            ),
+            target_soc_percent=min(100.0, soc_percent + delta),
+            fc_minutes=minutes,
+            tomorrow_temp_c=tomorrow_temp_c,
+        )
+
+    frost = tomorrow_temp_c is not None and tomorrow_temp_c < 0
+    if tomorrow_pv_kwh is None and not frost:
+        return _empty()
+    pv_for_target = 0.0 if tomorrow_pv_kwh is None else tomorrow_pv_kwh
+    target = winter_night_target_soc(tomorrow_temp_c, pv_for_target)
+    gap = (
+        estimate_peak_gap_kwh(tomorrow_temp_c, pv_for_target)
+        if tomorrow_temp_c is not None
+        else None
+    )
+    reserve = soc_below
+    if target is None:
+        if soc_percent < reserve:
+            target = reserve
+        else:
+            return _empty(skip_reason='covered', estimated_gap_kwh=gap)
+
+    if soc_percent >= target:
+        return _empty(
+            skip_reason='full',
+            target_soc_percent=target,
+            estimated_gap_kwh=gap,
+        )
+
+    delta_soc = target - soc_percent
+    cap = _b2_capacity_kwh(capacity_kwh)
+    energy_kwh = delta_soc / 100.0 * cap
+    minutes = fc_minutes_for_delta_soc(delta_soc)
+    below_reserve = soc_percent < reserve
+    if not _charge_worth_vs_wear(
+        energy_kwh=energy_kwh,
+        delta_soc=delta_soc,
+        gap_kwh=gap,
+        frost=frost,
+        below_reserve=below_reserve,
+    ):
+        return _empty(
+            skip_reason='wear',
+            target_soc_percent=target,
+            fc_minutes=minutes,
+            estimated_gap_kwh=gap,
+        )
+
+    pv_txt = f'~{tomorrow_pv_kwh:.0f} kWh' if tomorrow_pv_kwh is not None else 'brak prognozy PV'
+    t_txt = f'{tomorrow_temp_c:.0f}°C' if tomorrow_temp_c is not None else 'T nieznana'
+    gap_txt = f', luka szczytu ~{gap:.0f} kWh' if gap is not None else ''
+    rec = 'ŁADUJ OD 22:00 (B2 T+PV)'
     title = 'Sugestia: naładuj baterię od 22:00'
     body = (
-        f'SoC {soc_percent:.0f}% (próg {soc_below:.0f}%) i jutro słabe PV '
-        f'(~{tomorrow_pv_kwh:.0f} kWh, próg {weak_pv_below:.0f}). '
-        f'Zalecane ładowanie magazynu od 22:00 w taniej strefie G12w — '
-        f'jutro rano dach raczej nie odbuduje baterii. Sugestia doradcza, bez automatyki.'
+        f'SoC {soc_percent:.0f}% → cel {target:.0f}% (~{minutes:.0f} min; 30 min ≈ +50 pp). '
+        f'Jutro {t_txt}, PV {pv_txt}{gap_txt}. Ładuj od 22:00 w taniej G12w — nie z drogiego szczytu. '
+        f'Sugestia doradcza, bez automatyki.'
     )
     return ChargeTonightCloudyRule(
         triggered=True,
@@ -299,6 +521,10 @@ def evaluate_charge_tonight_cloudy(
         recommendation=rec,
         title=title,
         body=body,
+        target_soc_percent=target,
+        fc_minutes=minutes,
+        tomorrow_temp_c=tomorrow_temp_c,
+        estimated_gap_kwh=None if gap is None else round(gap, 1),
     )
 
 
@@ -332,6 +558,57 @@ def get_day_pv_forecast_sum(
         return None
 
 
+def get_archived_day_pv_kwh(target_day: str) -> float | None:
+    """Suma PV z forecast_history.csv (bez ładowania modelu) — karta Home."""
+    path = os.path.join('data', 'processed', 'forecasts', 'forecast_history.csv')
+    if not os.path.exists(path):
+        return None
+    try:
+        df = pd.read_csv(path)
+        if 'target_day' not in df.columns:
+            return None
+        sub = df[df['target_day'].astype(str) == str(target_day)]
+        if sub.empty:
+            return None
+        if 'run_at' in sub.columns:
+            sub = sub.sort_values('run_at')
+        row = sub.iloc[-1]
+        for col in ('predicted_kwh_raw', 'predicted_kwh'):
+            if col in row.index and pd.notna(row[col]):
+                return round(float(row[col]), 2)
+        return None
+    except Exception:
+        return None
+
+
+def get_day_mean_temp_c(
+    target_day: str,
+    *,
+    db_path: str | None = None,
+) -> float | None:
+    """Średnia temperatura doby z weather_data (fakt lub prognoza Open-Meteo)."""
+    db_path = db_path or _db_path()
+    if not os.path.exists(db_path):
+        return None
+    try:
+        conn = sqlite3.connect(db_path)
+        row = conn.execute(
+            '''
+            SELECT AVG(temperature_celsius)
+            FROM weather_data
+            WHERE substr(timestamp, 1, 10) = ?
+              AND temperature_celsius IS NOT NULL
+            ''',
+            (target_day,),
+        ).fetchone()
+        conn.close()
+        if row and row[0] is not None:
+            return round(float(row[0]), 1)
+        return None
+    except Exception:
+        return None
+
+
 def _battery_capacity_kwh(db_path: str | None = None) -> float:
     env = os.getenv('BATTERY_CAPACITY_KWH', '').strip()
     if env:
@@ -359,7 +636,7 @@ def _soc_reserve_winter() -> float:
 
 
 def _soc_reserve_summer() -> float:
-    return float(os.getenv('BATTERY_SOC_RESERVE_SUMMER', '15'))
+    return float(os.getenv('BATTERY_SOC_RESERVE_SUMMER', '20'))
 
 
 def resolve_calendar_season(d: date | None = None) -> Literal['winter', 'summer']:
@@ -467,6 +744,70 @@ def evaluate_soc16_hold_reserve(
         min_evening_percent=min_evening,
         reserve_percent=reserve_percent,
         in_afternoon_window=in_afternoon,
+        recommendation=rec,
+        title=title,
+        body=body,
+    )
+
+
+def next_cheap_window_label(as_of: datetime) -> str:
+    """Kolejne tanie okno G12w (albo 'teraz', jeśli już jesteśmy w tanim)."""
+    d = as_of.date()
+    if is_weekend(d) or is_public_holiday(d):
+        return 'teraz (weekend/święto — cała doba tanio)'
+    h = as_of.hour
+    if h >= 22 or h < 6:
+        return 'teraz (22–6)'
+    if 13 <= h < 15:
+        return 'teraz (13–15)'
+    if 6 <= h < 13:
+        return '13–15'
+    return '22–6'
+
+
+def evaluate_below_reserve_wait_cheap(
+    *,
+    soc_percent: float | None,
+    as_of: datetime | None = None,
+    reserve_percent: float | None = None,
+) -> BelowReserveWaitCheapRule:
+    """Czysta reguła: SoC < rezerwa i droga taryfa → nie ForceCharge teraz.
+
+    40% zimą to podłoga na noc po tanim oknie, nie polecenie ładowania w szczycie 6–13 / 15–22.
+    """
+    as_of = as_of or datetime.now()
+    reserve_percent = (
+        seasonal_soc_reserve(as_of.date()) if reserve_percent is None else reserve_percent
+    )
+    cheap = classify_zone(as_of) == 2
+    nxt = next_cheap_window_label(as_of)
+    empty = BelowReserveWaitCheapRule(
+        triggered=False,
+        in_cheap_zone=cheap,
+        next_cheap_window=nxt,
+        soc_percent=soc_percent,
+        reserve_percent=reserve_percent,
+        recommendation='',
+        title='',
+        body='',
+    )
+    if soc_percent is None or soc_percent >= reserve_percent or cheap:
+        return empty
+
+    rec = 'PONIŻEJ REZERWY — POCZEKAJ NA TANIĄ TARYFĘ'
+    title = 'Sugestia: nie ładuj w drogiej taryfie'
+    body = (
+        f'SoC {soc_percent:.0f}% jest poniżej rezerwy {reserve_percent:.0f}%, '
+        f'ale teraz G12w jest drogo (pn–pt 6–13 i 15–22). '
+        f'Nie ładuj z sieci w szczycie — poczekaj na tanie okno {nxt}. '
+        f'Sugestia doradcza, bez automatyki.'
+    )
+    return BelowReserveWaitCheapRule(
+        triggered=True,
+        in_cheap_zone=False,
+        next_cheap_window=nxt,
+        soc_percent=soc_percent,
+        reserve_percent=reserve_percent,
         recommendation=rec,
         title=title,
         body=body,
@@ -600,7 +941,7 @@ def build_resilience_outlook(
     as_of = as_of or datetime.now()
     db_path = db_path or _db_path()
     capacity = _battery_capacity_kwh(db_path)
-    reserve = _soc_reserve_winter() if winter else float(os.getenv('BATTERY_SOC_RESERVE_SUMMER', '15'))
+    reserve = _soc_reserve_winter() if winter else _soc_reserve_summer()
 
     avg_load, peak_load = get_winter_night_load_stats(db_path)
     if snap.load_power_kw is not None and snap.load_power_kw > 0.3:
@@ -852,20 +1193,24 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
 
         tomorrow = (date.fromisoformat(target_day) + timedelta(days=1)).isoformat()
         tomorrow_pv = get_day_pv_forecast_sum(tomorrow, as_of=as_of)
+        tomorrow_t = get_day_mean_temp_c(tomorrow)
         cloudy_rule = evaluate_charge_tonight_cloudy(
             soc_percent=soc,
             tomorrow_pv_kwh=tomorrow_pv,
             as_of=as_of,
+            tomorrow_temp_c=tomorrow_t,
         )
         if tomorrow_pv is not None:
             details.append(f'Prognoza PV jutro (suma): {tomorrow_pv:.1f} kWh')
+        if tomorrow_t is not None:
+            details.append(f'T śr. jutro: {tomorrow_t:.1f}°C')
 
         if cloudy_rule.triggered:
             rec = cloudy_rule.recommendation
             action = cloudy_rule.body
             details.append(
-                f'Reguła pochmurno+niski SoC: SoC < {cloudy_rule.soc_below:.0f}% '
-                f'i jutro < {cloudy_rule.weak_pv_below:.0f} kWh → ładuj od 22:00'
+                f'B2 T+PV: cel {cloudy_rule.target_soc_percent:.0f}% '
+                f'~{cloudy_rule.fc_minutes:.0f} min (30 min ≈ +50 pp)'
             )
         elif soc is not None and soc >= min_eve:
             rec = 'BATERIA NA WIECZÓR OK'

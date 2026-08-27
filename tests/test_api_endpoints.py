@@ -50,8 +50,8 @@ def test_battery_suggestion_advise_only(client, auth_headers):
         'season': 'summer',
         'season_mode': 'auto',
         'soc_now_percent': 62.0,
-        'soc_min_percent': 15.0,
-        'soc_reserve_percent': 15.0,
+        'soc_min_percent': 20.0,
+        'soc_reserve_percent': 20.0,
         'soc_target_percent': 80.0,
         'soc_min_evening_percent': 50.0,
         'force_charge_night_recommended': False,
@@ -64,7 +64,7 @@ def test_battery_suggestion_advise_only(client, auth_headers):
         'soc16_title': None,
         'soc16_body': None,
         'recommendation': 'REŻIM LATO',
-        'action': 'Rezerwa SoC 15%.',
+        'action': 'Rezerwa SoC 20%.',
         'automation_enabled': False,
         'note': 'Sugestia — nie wykonano automatycznie (advise-only).',
     }
@@ -75,8 +75,8 @@ def test_battery_suggestion_advise_only(client, auth_headers):
     assert response.status_code == 200
     data = response.json()
     assert data['automation_enabled'] is False
-    assert data['soc_reserve_percent'] == 15.0
-    assert data['soc_min_percent'] == 15.0
+    assert data['soc_reserve_percent'] == 20.0
+    assert data['soc_min_percent'] == 20.0
 
 
 def test_simulate_bill_requires_auth():

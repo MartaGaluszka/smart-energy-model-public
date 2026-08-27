@@ -8,7 +8,7 @@ Nie importuje ani nie woła `src/data/foxess_control.py` / `mlops/foxess_control
 
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 from api.config import get_settings
 
@@ -228,8 +228,12 @@ def settings_payload(settings_row, d: date | None = None) -> dict:
 def get_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
     """Karta Home (BAT.3 + BAT.5): reżim / ForceCharge / rezerwa — bez ML, bez auto-apply."""
     from src.optimization.battery_advisor import (
+        evaluate_below_reserve_wait_cheap,
+        evaluate_charge_tonight_cloudy,
         evaluate_soc16_hold_reserve,
+        get_archived_day_pv_kwh,
         get_battery_snapshot,
+        get_day_mean_temp_c,
         get_soc_at_hour,
         seasonal_soc_reserve,
     )
@@ -255,14 +259,59 @@ def get_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
         as_of=as_of,
         reserve_percent=reserve,
     )
+    wait_cheap = evaluate_below_reserve_wait_cheap(
+        soc_percent=soc_now,
+        as_of=as_of,
+        reserve_percent=reserve,
+    )
+
+    tomorrow_s = (d + timedelta(days=1)).isoformat()
+    night_rule = evaluate_charge_tonight_cloudy(
+        soc_percent=soc_now,
+        tomorrow_pv_kwh=get_archived_day_pv_kwh(tomorrow_s),
+        as_of=as_of,
+        tomorrow_temp_c=get_day_mean_temp_c(tomorrow_s),
+        capacity_kwh=(
+            settings_row.battery_capacity_kwh if settings_row and settings_row.battery_capacity_kwh else None
+        ),
+    )
 
     weekend = is_weekend(d) or is_public_holiday(d)
     winter = season == 'winter'
     if weekend:
         night_rec, night_label = False, 'weekend — cała doba tanio'
         aft_rec, aft_label = False, 'niekrytyczne (weekend)'
+    elif night_rule.triggered:
+        mins = night_rule.fc_minutes
+        tgt = night_rule.target_soc_percent
+        night_rec = True
+        night_label = (
+            f'tak, ~{mins:.0f} min do {tgt:.0f}%'
+            if mins is not None and tgt is not None
+            else 'tak (22–6)'
+        )
+        if soc_now is not None and soc_now >= target:
+            aft_rec, aft_label = False, 'pomiń (SoC ≥ cel)'
+        elif winter:
+            aft_rec, aft_label = True, 'włącz (13–15)'
+        else:
+            aft_rec, aft_label = False, 'opcjonalnie'
+    elif night_rule.skip_reason == 'wear':
+        night_rec, night_label = False, 'pomiń (niewiele brakuje vs cykl)'
+        aft_rec, aft_label = (False, 'opcjonalnie') if not winter else (
+            soc_now is None or soc_now < target,
+            'włącz (13–15)' if (soc_now is None or soc_now < target) else 'pomiń (SoC ≥ cel)',
+        )
+    elif night_rule.skip_reason in ('covered', 'full'):
+        night_rec, night_label = False, 'nie (dach pokryje szczyt)' if night_rule.skip_reason == 'covered' else 'nie (SoC ≥ cel)'
+        if soc_now is not None and soc_now >= target:
+            aft_rec, aft_label = False, 'pomiń (SoC ≥ cel)'
+        elif winter:
+            aft_rec, aft_label = True, 'włącz (13–15)'
+        else:
+            aft_rec, aft_label = False, 'opcjonalnie'
     elif winter:
-        night_rec, night_label = True, 'zawsze (22–6)'
+        night_rec, night_label = False, 'sprawdź T+PV (brak prognozy)'
         if soc_now is not None and soc_now >= target:
             aft_rec, aft_label = False, 'pomiń (SoC ≥ cel)'
         else:
@@ -271,19 +320,32 @@ def get_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
         night_rec, night_label = False, 'nie (lato)'
         aft_rec, aft_label = False, 'opcjonalnie'
 
-    if alert.triggered:
+    if wait_cheap.triggered:
+        rec, action = wait_cheap.recommendation, wait_cheap.body
+    elif alert.triggered:
         rec, action = alert.recommendation, alert.body
+    elif night_rule.triggered:
+        rec, action = night_rule.recommendation, night_rule.body
+    elif night_rule.skip_reason == 'wear':
+        rec = 'POMIŃ FC (CYKL)'
+        action = (
+            'Niewiele brakuje do celu — spread G12w nie pokrywa zużycia cyklu LFP. '
+            'Zostaw rezerwę, ewentualnie 13–15. System tylko doradza — bez automatyki.'
+        )
     elif winter:
         rec = 'REŻIM ZIMA'
         action = (
-            f'Rezerwa SoC {reserve:.0f}%. ForceCharge 22–6 zawsze (dni robocze); '
-            f'13–15 gdy SoC < {target:.0f}%. System tylko doradza — bez automatyki.'
+            f'Rezerwa SoC {reserve:.0f}% to podłoga na noc po tanim oknie G12w — '
+            f'nie ładuj z sieci w drogiej taryfie (6–13 i 15–22). '
+            f'ForceCharge 22–6 wg T jutro + PV jutro (B2), nie zawsze do 100%. '
+            f'System tylko doradza — bez automatyki.'
         )
     else:
         rec = 'REŻIM LATO'
         action = (
-            f'Rezerwa SoC {reserve:.0f}%. ForceCharge nocny nie jest codzienny; '
-            f'priorytet autokonsumpcja PV. System tylko doradza — bez automatyki.'
+            f'Rezerwa SoC {reserve:.0f}% wystarcza na noc — także gdy jutro PV do 10 kWh. '
+            f'Nie pełnić do 75%. Krótki FC (max 15 min / +25 pp; 30 min ≈ +50 pp) tylko gdy SoC < 20% i jutro ≤ 10 kWh. '
+            f'System tylko doradza — bez automatyki.'
         )
 
     return {
@@ -304,6 +366,8 @@ def get_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
         'soc16_percent': soc16_sample,
         'soc16_title': alert.title or None,
         'soc16_body': alert.body or None,
+        'wait_for_cheap': wait_cheap.triggered,
+        'next_cheap_window': wait_cheap.next_cheap_window,
         'recommendation': rec,
         'action': action,
         'automation_enabled': False,

@@ -3,7 +3,7 @@
 Pełny generator (worker/cron analizujący plan G12w + prognozę PV codziennie,
 T4.20) to zakres Fazy 4. Tutaj:
 - seed „cheap_window” dla pustego feedu (happy-path testów),
-- reguła **charge_tonight_cloudy**: niski SoC + jutro słabe PV → sugestia ładowania od 22:00.
+- reguła **charge_tonight_cloudy** (B2): T jutro + PV jutro → FC od 22:00 (albo pomiń vs cykl).
 
 Wszystkie treści są doradcze — nigdy "wykonano automatycznie" (§9.6, T4.24).
 """
@@ -55,6 +55,7 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
         from src.optimization.battery_advisor import (
             evaluate_charge_tonight_cloudy,
             get_battery_snapshot,
+            get_day_mean_temp_c,
             get_day_pv_forecast_sum,
         )
     except Exception:
@@ -64,10 +65,12 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
     snap = get_battery_snapshot()
     tomorrow_s = (as_of.date() + timedelta(days=1)).isoformat()
     tomorrow_pv = get_day_pv_forecast_sum(tomorrow_s, as_of=as_of)
+    tomorrow_t = get_day_mean_temp_c(tomorrow_s)
     rule = evaluate_charge_tonight_cloudy(
         soc_percent=snap.soc_percent,
         tomorrow_pv_kwh=tomorrow_pv,
         as_of=as_of,
+        tomorrow_temp_c=tomorrow_t,
     )
     if not rule.triggered:
         return None
@@ -79,8 +82,11 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
             'day': day_key,
             'soc_percent': rule.soc_percent,
             'tomorrow_pv_kwh': rule.tomorrow_pv_kwh,
+            'tomorrow_temp_c': rule.tomorrow_temp_c,
             'soc_below': rule.soc_below,
             'weak_pv_below': rule.weak_pv_below,
+            'target_soc_percent': rule.target_soc_percent,
+            'fc_minutes': rule.fc_minutes,
             'recommendation': rule.recommendation,
         },
         ensure_ascii=False,

@@ -16,7 +16,7 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
   sync$!: Observable<SyncStatus>;
   suggestions$!: Observable<Suggestion[]>;
   battery$!: Observable<BatterySuggestionResponse | null>;
-  /** BAT.5: próg koloru SoC = rezerwa sezonowa (lato 15 / zima 40), nie sztywne 20. */
+  /** BAT.5: próg koloru SoC = rezerwa sezonowa (lato 20 / zima 40). */
   socReserve = 20;
   private batterySub?: Subscription;
 
