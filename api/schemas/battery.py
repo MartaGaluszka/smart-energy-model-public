@@ -59,6 +59,8 @@ class BatteryPlanHour(BaseModel):
     zone_label: str
     force_charge_recommended: bool
     planned_soc_percent: float | None = None
+    mode: str = 'Auto'  # 'ForceCharge', 'Auto', 'Discharge'
+    note: str = ''  # Krótki opis co się dzieje (np. "Ładowanie z PV")
 
 
 class BatteryPlanResponse(BaseModel):
@@ -80,14 +82,14 @@ class NightChargeAdviceResponse(BaseModel):
 class ShadowSavingsResponse(BaseModel):
     period_from: str
     period_to: str
-    shadow_savings_pln: float
-    baseline_cost_pln: float
-    actual_cost_pln: float
+    shadow_savings_pln: float  # brutto (z VAT 23%)
+    baseline_cost_pln: float  # brutto (z VAT 23%)
+    actual_cost_pln: float  # brutto (z VAT 23%)
     method_note: str = (
-        'MVP: przybliżenie — oszczędność autokonsumpcji (bez PV vs z PV/baterią) w okresie; '
-        'pełna symulacja "plan doradczy vs rzeczywisty przebieg SoC" to Faza 4 (T4.15/T4.17).'
+        'Kwoty brutto (z VAT 23%). Oszczędność = koszt bez PV minus koszt z PV/baterią. '
+        'MVP: przybliżenie autokonsumpcji; pełna symulacja SoC godzina po godzinie to Faza 4.'
     )
-    is_hypothetical: bool = True
+    is_hypothetical: bool = False
 
 
 class BatteryPolicyResponse(BaseModel):

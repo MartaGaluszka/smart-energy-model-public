@@ -335,6 +335,12 @@
   width: 100%;
 }
 
+.se-battery-page__chart-wrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .se-battery-page__legend {
   list-style: none;
   padding: 0;

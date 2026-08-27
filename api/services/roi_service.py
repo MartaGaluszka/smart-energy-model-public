@@ -20,10 +20,13 @@ def calculate_roi(period_start: str, period_end: str, assumptions: dict) -> dict
     finally:
         analyzer.close()
 
+    # VAT 23% — wszystkie kwoty brutto (jak na fakturze)
+    vat_rate = 1.23
+
     d0 = date.fromisoformat(period_start)
     d1 = date.fromisoformat(period_end)
     period_days = max(1, (d1 - d0).days + 1)
-    savings_period = roi_data['savings_pln']
+    savings_period = roi_data['savings_pln'] * vat_rate
     savings_annualized = savings_period * (365.0 / period_days)
 
     capex = assumptions.get('capex_pln', 0.0) + (assumptions.get('battery_capex_pln') or 0.0)
