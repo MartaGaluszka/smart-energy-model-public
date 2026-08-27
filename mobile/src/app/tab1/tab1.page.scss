@@ -121,6 +121,39 @@
   font-size: 13px;
 }
 
+/* T4.20a — zalecenie nocnego ładowania (słabe PV jutro) */
+.se-charge-alert {
+  border-left: 3px solid var(--cost);
+  background: color-mix(in srgb, var(--cost) 8%, var(--ion-background-color, #fff));
+}
+
+.se-charge-alert__row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.se-charge-alert__icon {
+  font-size: 22px;
+  color: var(--cost);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.se-charge-alert__title {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.se-charge-alert__body {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
 .se-battery {
   border-left: 3px solid var(--solar);
 

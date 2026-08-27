@@ -98,8 +98,33 @@
       </ion-grid>
     </ng-container>
 
+    <!-- T4.20a: banner gdy nocne FC zalecane (słabe PV jutro / niski SoC) -->
+    <ng-container *ngIf="battery$ | async as bat">
+      <ion-card
+        class="se-card se-charge-alert"
+        *ngIf="bat.force_charge_night_recommended"
+      >
+        <ion-card-content>
+          <div class="se-charge-alert__row">
+            <ion-icon name="warning-outline" class="se-charge-alert__icon"></ion-icon>
+            <div>
+              <span class="se-charge-alert__title">Załaduj baterię wieczorem</span>
+              <p class="se-charge-alert__body">
+                Bateria poniżej oczekiwań na jutro — słaba produkcja PV.
+                <ng-container *ngIf="bat.soc_now_percent !== null">
+                  Teraz {{ bat.soc_now_percent | number:'1.0-0' }}%.
+                </ng-container>
+                {{ bat.force_charge_night_label }}.
+                Kalibracja: 30 min ForceCharge ≈ +50% SoC — wyłącz po czasie, nie ładuj do rana.
+              </p>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </ng-container>
+
     <!-- BAT.3 + BAT.5: reżim / ForceCharge / rezerwa — advise-only -->
-    <ion-card class="se-card se-battery" *ngIf="battery$ | async as bat" [class.se-battery--alert]="bat.soc16_alert || bat.wait_for_cheap">
+    <ion-card class="se-card se-battery" *ngIf="battery$ | async as bat" [class.se-battery--alert]="bat.soc16_alert || bat.wait_for_cheap || bat.force_charge_night_recommended">
       <ion-card-content>
         <div class="se-battery__head">
           <ion-icon name="battery-charging-outline" class="se-battery__icon"></ion-icon>
