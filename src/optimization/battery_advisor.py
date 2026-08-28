@@ -1076,6 +1076,123 @@ def next_cheap_window_label(as_of: datetime) -> str:
     return '22–6'
 
 
+def _hours_until_morning_six(as_of: datetime) -> float:
+    """Godziny do najbliższego 6:00 (koniec drogiego poranka / koniec taniej nocy)."""
+    target = as_of.replace(hour=6, minute=0, second=0, microsecond=0)
+    if as_of >= target:
+        target = target + timedelta(days=1)
+    return max(0.0, (target - as_of).total_seconds() / 3600.0)
+
+
+def _fmt_duration_hm(hours: float) -> str:
+    """np. 10.6 → '10 h 36 min' (czytelniej niż zaokrąglone 11 h)."""
+    total_min = max(0, int(round(float(hours) * 60)))
+    h, m = divmod(total_min, 60)
+    return f'{h} h {m:02d} min'
+
+
+def _evening_planning_load_kw() -> float:
+    """Uśredniony pobór wieczór/noc latem (bez pompy) — do szacunku „starczy do rana”."""
+    return float(os.getenv('BATTERY_EVENING_LOAD_KW', '0.55'))
+
+
+def get_today_pv_observed_kwh(target_day: str, db_path: str | None = None) -> float | None:
+    """Suma PV dotychczas (ΔPVE) dla dnia — jeśli są pomiary."""
+    try:
+        from src.models.forecast_validation import get_actual_hourly_ml
+
+        df = get_actual_hourly_ml(target_day, db_path=db_path or _db_path())
+        if df is None or df.empty:
+            return None
+        return round(float(df['actual_pv_ml_kwh'].sum()), 1)
+    except Exception:
+        return None
+
+
+def format_evening_battery_plan_note(
+    *,
+    soc_percent: float | None,
+    today_pv_kwh: float | None,
+    tomorrow_pv_kwh: float | None,
+    as_of: datetime | None = None,
+    reserve_percent: float | None = None,
+    capacity_kwh: float | None = None,
+    today_pv_actual_kwh: float | None = None,
+) -> str:
+    """Tekst doradczy: SoC po słonecznym dniu + czy starczy do rana / jutro.
+
+    Accu/MB deszcz vs model ~20 kWh — wzmianka o rozjeździe (bez API Accu).
+    """
+    as_of = as_of or datetime.now()
+    reserve = (
+        seasonal_soc_reserve(as_of.date()) if reserve_percent is None else float(reserve_percent)
+    )
+    capacity = _battery_capacity_kwh() if capacity_kwh is None else float(capacity_kwh)
+    pv_today = today_pv_actual_kwh if today_pv_actual_kwh is not None else today_pv_kwh
+    sunny_today = pv_today is not None and pv_today >= 18.0
+
+    parts: list[str] = []
+    if soc_percent is not None:
+        if sunny_today and soc_percent >= 85:
+            parts.append(
+                f'Po słonecznym dniu (PV dziś ~{pv_today:.0f} kWh) SoC ~{soc_percent:.0f}% — '
+                f'bateria praktycznie pełna.'
+            )
+        elif sunny_today and soc_percent >= 60:
+            parts.append(
+                f'Po słonecznym dniu (PV ~{pv_today:.0f} kWh) SoC ~{soc_percent:.0f}% — '
+                f'dobry bufor na noc.'
+            )
+        elif soc_percent >= 85:
+            parts.append(f'SoC teraz ~{soc_percent:.0f}% — bateria pełna/wysoka.')
+        elif soc_percent < reserve + 10:
+            parts.append(
+                f'SoC teraz ~{soc_percent:.0f}% — blisko rezerwy {reserve:.0f}%; '
+                f'rozważ FC 22–6.'
+            )
+        else:
+            parts.append(f'SoC teraz ~{soc_percent:.0f}% (rezerwa {reserve:.0f}%).')
+
+        usable = capacity * max(0.0, soc_percent - reserve) / 100.0
+        load_kw = _evening_planning_load_kw()
+        hours_left = usable / load_kw if load_kw > 0.05 else None
+        hours_to_6 = _hours_until_morning_six(as_of)
+        if hours_left is not None:
+            left_s = _fmt_duration_hm(hours_left)
+            to6_s = _fmt_duration_hm(hours_to_6)
+            if hours_left >= hours_to_6 + 1.0:
+                parts.append(
+                    f'Szacunek: starczy do rana (~{left_s} użytecznych przy ~{load_kw:.1f} kW '
+                    f'vs ~{to6_s} do 6:00).'
+                )
+            elif hours_left >= hours_to_6 - 0.5:
+                parts.append(
+                    f'Szacunek: do rana na styk (~{left_s} vs ~{to6_s} do 6:00).'
+                )
+            else:
+                parts.append(
+                    f'Szacunek: może nie starczyć do rana (~{left_s} vs ~{to6_s}) — '
+                    f'FC 22–6 ma sens.'
+                )
+
+    if tomorrow_pv_kwh is not None:
+        if tomorrow_pv_kwh >= 18:
+            parts.append(
+                f'Model PV jutro ~{tomorrow_pv_kwh:.0f} kWh — przy suchym dniu dach zwykle pokryje zużycie; '
+                f'jeśli Accu/MB zapowiadają deszcz, licz na mniej i nie rozładowuj rezerwy wieczorem.'
+            )
+        elif tomorrow_pv_kwh < 12:
+            parts.append(
+                f'PV jutro tylko ~{tomorrow_pv_kwh:.0f} kWh — słaby dzień; FC nocny bardziej uzasadniony.'
+            )
+        else:
+            parts.append(
+                f'PV jutro ~{tomorrow_pv_kwh:.0f} kWh — dzień mieszany; trzymaj rezerwę na szczyt.'
+            )
+
+    return ' '.join(parts)
+
+
 def evaluate_below_reserve_wait_cheap(
     *,
     soc_percent: float | None,
