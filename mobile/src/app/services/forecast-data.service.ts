@@ -21,6 +21,7 @@ export interface ApplianceTip {
   predictedKwh: number;
   rank: number;
   appliances: string[];
+  loadKw: number;
 }
 
 export interface ApplianceThreshold {
@@ -210,6 +211,7 @@ export class ForecastDataService {
             predictedKwh: t.predicted_kwh,
             rank: t.rank,
             appliances: t.appliances,
+            loadKw: t.load_kw ?? 0,
           })),
           applianceThresholds: (hourly.appliance_thresholds ?? []).map((t) => ({
             key: t.key,

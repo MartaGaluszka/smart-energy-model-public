@@ -77,7 +77,8 @@
       <ion-card class="se-card se-agd">
         <ion-card-content>
           <p class="se-agd__intro">
-            Sugestia doradcza — przy jakiej mocy z dachu (~kWh/h) ma sens uruchomić sprzęt.
+            Sugestia doradcza — jedna kombinacja AGD mieszcząca się w prognozowanej mocy
+            z dachu (suma ≤ prognoza). Progi poniżej = moc pojedynczego urządzenia.
           </p>
           <div class="se-agd__thresholds" *ngIf="state.applianceThresholds.length">
             <span class="se-agd__chip" *ngFor="let t of state.applianceThresholds">
@@ -90,7 +91,7 @@
                 <th>#</th>
                 <th>Godz.</th>
                 <th>Prognoza</th>
-                <th>AGD</th>
+                <th>Kombinacja</th>
               </tr>
             </thead>
             <tbody>
@@ -100,7 +101,8 @@
                 <td>{{ tip.predictedKwh | number: '1.1-2' }}</td>
                 <td>
                   <ng-container *ngIf="tip.appliances.length; else tooLow">
-                    {{ tip.appliances.join(', ') }}
+                    {{ tip.appliances.join(' + ') }}
+                    <span class="se-agd__load">({{ tip.loadKw | number: '1.1-1' }}&nbsp;kW)</span>
                   </ng-container>
                   <ng-template #tooLow>
                     <span class="se-agd__low">za mało PV</span>

@@ -83,6 +83,7 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
             'predicted_kwh': round(r.predicted_kwh, 2),
             'rank': r.rank,
             'appliances': r.appliances,
+            'load_kw': r.load_kw,
         }
         for r in tips_raw
         if r.day == target_day

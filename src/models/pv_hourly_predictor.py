@@ -89,6 +89,8 @@ class ApplianceRecommendation:
     predicted_kw: float
     appliances: list[str]
     rank: int
+    # Suma mocy wybranych AGD w budżecie (≤ predicted_kw); 0 gdy „za mało PV”.
+    load_kw: float = 0.0
 
 
 @dataclass
@@ -442,14 +444,27 @@ def build_forecast_feature_frame(
     return df
 
 
+def pack_appliances_for_budget(predicted_kwh: float) -> tuple[list[str], float]:
+    """Kombinacja AGD mieszcząca się w budżecie mocy [kW ≈ kWh/h].
+
+    Nie „każde osobno” — greedy od największego urządzenia, suma ≤ prognoza.
+    """
+    budget = max(float(predicted_kwh), 0.0)
+    items = sorted(APPLIANCE_PROFILES.values(), key=lambda p: float(p['min_kw']), reverse=True)
+    chosen: list[str] = []
+    load = 0.0
+    for profile in items:
+        need = float(profile['min_kw'])
+        if load + need <= budget + 1e-9:
+            chosen.append(str(profile['label']))
+            load += need
+    return chosen, round(load, 2)
+
+
 def _appliances_for_hour(predicted_kwh: float) -> list[str]:
-    """Które urządzenia można sensownie uruchomić przy danej produkcji [kWh/h ≈ kW]."""
-    kw = max(predicted_kwh, 0.0)
-    return [
-        profile['label']
-        for profile in APPLIANCE_PROFILES.values()
-        if kw >= profile['min_kw']
-    ]
+    """Etykiety AGD w jednej kombinacji mieszczącej się w prognozowanej mocy."""
+    labels, _ = pack_appliances_for_budget(predicted_kwh)
+    return labels
 
 
 def rank_hours_for_appliances(
@@ -466,13 +481,15 @@ def rank_hours_for_appliances(
         top = group.nlargest(top_n_per_day, 'predicted_kwh')
         for rank, (_, row) in enumerate(top.iterrows(), 1):
             kwh = float(row['predicted_kwh'])
+            apps, load_kw = pack_appliances_for_budget(kwh)
             recs.append(ApplianceRecommendation(
                 day=str(day),
                 hour=int(row['hour']),
                 predicted_kwh=kwh,
                 predicted_kw=kwh,
-                appliances=_appliances_for_hour(kwh),
+                appliances=apps,
                 rank=rank,
+                load_kw=load_kw,
             ))
     return recs
 
