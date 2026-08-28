@@ -799,19 +799,23 @@ def _battery_capacity_kwh(db_path: str | None = None) -> float:
         return float(env)
     db_path = db_path or _db_path()
     if os.path.exists(db_path):
-        conn = sqlite3.connect(db_path)
-        row = conn.execute(
-            '''
-            SELECT MAX(t.value)
-            FROM foxess_timeseries t
-            JOIN foxess_data f ON f.timestamp = t.timestamp
-            WHERE t.variable = 'ResidualEnergy'
-              AND f.battery_soc_percent >= 95
-            '''
-        ).fetchone()
-        conn.close()
-        if row and row[0] and float(row[0]) > 1:
-            return float(row[0])
+        try:
+            conn = sqlite3.connect(db_path)
+            row = conn.execute(
+                '''
+                SELECT MAX(t.value)
+                FROM foxess_timeseries t
+                JOIN foxess_data f ON f.timestamp = t.timestamp
+                WHERE t.variable = 'ResidualEnergy'
+                  AND f.battery_soc_percent >= 95
+                '''
+            ).fetchone()
+            conn.close()
+            if row and row[0] and float(row[0]) > 1:
+                return float(row[0])
+        except Exception:
+            # CI / pusta baza bez foxess_* — nominal zamiast crasha
+            pass
     return float(os.getenv('BATTERY_CAPACITY_KWH_DEFAULT', str(NOMINAL_CAPACITY_KWH)))
 
 
