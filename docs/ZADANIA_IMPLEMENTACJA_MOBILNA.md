@@ -180,7 +180,7 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | T4.14 | P0 | `[x]` UI: przycisk „Steruj falownikiem” **disabled** + tooltip | Na `/tabs/battery` — disabled + tekst §9.6 (2026-08-27) |
 | T4.15 | P0 | `[x]` `GET /api/v1/battery/shadow-savings?from=&to=` — kontrfaktyczne oszczędności | Backend MVP (przybliżenie); UI karta = T4.16 |
 | T4.16 | P0 | `[x]` UI karta „Ile BYŚMY zaoszczędzili przy automatyce” (`shadow_savings_pln` dzień/miesiąc/YTD) | `/tabs/battery` + skrót miesiąc na Home; `--moss` + etykieta „hipotetycznie” (2026-08-27) |
-| T4.17 | P1 | Log / tabela `advice_events` (data, typ sugestii, czy użytkownik mógł wykonać) pod przyszłą walidację roczną | Seed pod rok testów |
+| T4.17 | P1 | `[x]` Log / tabela `advice_events` (data, typ sugestii, czy użytkownik mógł wykonać) pod przyszłą walidację roczną | 2026-08-28: zapis przy upsert sugestii + `GET /notifications/advice-events` |
 
 ### 4.3 Powiadomienia push i feed sugestii (MVP)
 
