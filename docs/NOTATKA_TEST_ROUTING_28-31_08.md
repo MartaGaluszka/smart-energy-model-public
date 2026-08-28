@@ -33,10 +33,14 @@
 
 | Dzień | Cloud fcst | Regime | Pick | App | ICON | Ensemble | CS4 | **Routing** | Błąd ICON | Błąd Routing |
 |-------|------------|--------|------|-----|------|----------|-----|-------------|-----------|--------------|
-| **28.08** | **54.4%** | pochmurny | **CS4** | ? | ~30 | ? | ? | **= CS4** | ? | ? |
-| **29.08** | ? | ? | ? | ? | ~CS4 | ? | ? | ? | ? | ? |
-| **30.08** | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| **28.08** | ICON cloud **49,8%** · Accu **21%** | routing **pochmurny** / Accu **jasny** | routing→**CS4** · Accu→RF | ? | **31,8** | **31,8** | **31,8** | =CS4 | ? | ? |
+| **29.08** | ICON **56,7%** · MB deszcz AM | pochmurny | **CS4** | ? | **20,7** | **20,3** | **21,5** | =CS4 | ? | ? |
+| **30.08** | ICON **62,6%** · Accu 30% | pochmurny (ICON) / Accu jasny | routing→**CS4** · Accu→RF | ? | **23,6** | **30,7** | 24,8 | =CS4 | ? | ? |
 | **31.08** | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+
+**Uwaga 28.08 ~17:35:** shadow ensemble **WŁĄCZONY** (`mlops/forecast_ensemble_shadow.sh` w daily/midday/peak).  
+CSV: `pv_forecast_ensemble.csv`. Primary ICON nienaruszony (osobny `data_source`).  
+Dogonienie: pierwszy live run peak 28.08 (rana 28 bez ensemble = 1 dzień straty na D+0 raw).
 
 **Routing value:** = ensemble jeśli jasny, = CS4 jeśli pochmurny
 
