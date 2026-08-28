@@ -82,6 +82,9 @@ run_step "Routing pick (ensemble vs CS4)" \
 run_step "Bateria — poranek (tanio do 6:00 / prognoza PV)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/battery_advisor_report.py" --context morning
 
+run_step "Sugestie baterii → notifications (T4.20)" \
+  "$PYTHON" "${PROJECT_ROOT}/mlops/generate_battery_suggestions.py" --context morning
+
 run_step "Bateria — plan sterowania (dry-run)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/foxess_control.py" --context morning
 
