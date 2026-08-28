@@ -19,6 +19,7 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
 
     try:
         from datetime import date as date_cls
+        from datetime import datetime
 
         base_date = date_cls.fromisoformat(target_day)
         # hybrid_today=False (celowo, inaczej niż domyślne True) — ten endpoint zasila
@@ -43,6 +44,7 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
         raise ApiError(422, 'FORECAST_NO_WEATHER_DATA', f'Brak prognozy dla dnia {target_day} (brak cech pogodowych)')
 
     from src.models.forecast_validation import get_actual_hourly_ml
+    from src.models.pv_hourly_predictor import APPLIANCE_PROFILES, rank_hours_for_appliances
 
     settings = get_settings()
     try:
@@ -70,11 +72,33 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
         })
     total_kwh = round(float(day_frame['predicted_kwh'].sum()), 2)
 
+    # T1.20: ranking godzin pod AGD (dziś = tylko godziny ≥ teraz; inne dni = cały dzień)
+    tip_frame = day_frame.copy()
+    if target_day == date.today().isoformat():
+        tip_frame = tip_frame[tip_frame['hour'] >= datetime.now().hour]
+    tips_raw = rank_hours_for_appliances(tip_frame, top_n_per_day=5, future_only=False)
+    appliance_tips = [
+        {
+            'hour': r.hour,
+            'predicted_kwh': round(r.predicted_kwh, 2),
+            'rank': r.rank,
+            'appliances': r.appliances,
+        }
+        for r in tips_raw
+        if r.day == target_day
+    ]
+    appliance_thresholds = [
+        {'key': key, 'label': meta['label'], 'min_kw': float(meta['min_kw'])}
+        for key, meta in APPLIANCE_PROFILES.items()
+    ]
+
     return {
         'day': target_day,
         'hours': hours,
         'total_kwh': total_kwh,
         'model_path': predictor.model_path,
+        'appliance_tips': appliance_tips,
+        'appliance_thresholds': appliance_thresholds,
     }
 
 

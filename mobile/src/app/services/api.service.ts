@@ -155,6 +155,18 @@ export interface HourlyForecastResponse {
   }[];
   total_kwh: number;
   model_path: string;
+  /** T1.20 — top godziny PV + które AGD przy tej mocy. */
+  appliance_tips?: {
+    hour: number;
+    predicted_kwh: number;
+    rank: number;
+    appliances: string[];
+  }[];
+  appliance_thresholds?: {
+    key: string;
+    label: string;
+    min_kw: number;
+  }[];
 }
 
 export interface ForecastValidationHourlyRow {

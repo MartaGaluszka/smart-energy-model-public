@@ -13,11 +13,30 @@ class HourlyForecastPoint(BaseModel):
     error_pct: float | None = None
 
 
+class ApplianceTip(BaseModel):
+    """Top godzina PV → które AGD ma sens przy tej mocy (T1.20)."""
+
+    hour: int
+    predicted_kwh: float
+    rank: int
+    appliances: list[str]
+
+
+class ApplianceThreshold(BaseModel):
+    """Próg mocy [kW ≈ kWh/h] dla etykiety AGD."""
+
+    key: str
+    label: str
+    min_kw: float
+
+
 class HourlyForecastResponse(BaseModel):
     day: str
     hours: list[HourlyForecastPoint]
     total_kwh: float
     model_path: str
+    appliance_tips: list[ApplianceTip] = []
+    appliance_thresholds: list[ApplianceThreshold] = []
 
 
 class ForecastValidationHourlyRow(BaseModel):
