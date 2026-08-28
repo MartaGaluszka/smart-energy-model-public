@@ -342,7 +342,7 @@ def rank_hours_conservative(
     value_column: str = 'predicted_kwh_conservative',
 ) -> list:
     """Ranking godzin na wartości konserwatywnej (po korekcie operacyjnej)."""
-    from src.models.pv_hourly_predictor import ApplianceRecommendation, _appliances_for_hour
+    from src.models.pv_hourly_predictor import ApplianceRecommendation, pack_appliances_for_budget
 
     recs = []
     df = predictions.copy()
@@ -358,13 +358,15 @@ def rank_hours_conservative(
         for rank, (_, row) in enumerate(top.iterrows(), 1):
             kwh = float(row[value_column])
             raw_kwh = float(row.get('predicted_kwh_adjusted', row.get('predicted_kwh', kwh)))
+            apps, load_kw = pack_appliances_for_budget(kwh)
             recs.append(ApplianceRecommendation(
                 day=str(day),
                 hour=int(row['hour']),
                 predicted_kwh=raw_kwh,
                 predicted_kw=raw_kwh,
-                appliances=_appliances_for_hour(kwh),
+                appliances=apps,
                 rank=rank,
+                load_kw=load_kw,
             ))
     return recs
 

@@ -161,6 +161,7 @@ export interface HourlyForecastResponse {
     predicted_kwh: number;
     rank: number;
     appliances: string[];
+    load_kw?: number;
   }[];
   appliance_thresholds?: {
     key: string;

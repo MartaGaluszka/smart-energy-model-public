@@ -38,4 +38,6 @@ def test_hourly_forecast_includes_appliance_tips_and_thresholds(monkeypatch):
     top = out['appliance_tips'][0]
     assert top['rank'] == 1
     assert top['hour'] == 11
-    assert 'Suszarka' in top['appliances']  # 4.0 >= 2.0
+    # 4.0 kW: Suszarka(2) + Pralka(1.5) = 3.5 (nie wszystkie naraz)
+    assert top['appliances'] == ['Suszarka', 'Pralka']
+    assert top['load_kw'] == 3.5

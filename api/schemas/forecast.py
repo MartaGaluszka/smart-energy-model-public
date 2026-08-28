@@ -14,12 +14,14 @@ class HourlyForecastPoint(BaseModel):
 
 
 class ApplianceTip(BaseModel):
-    """Top godzina PV → które AGD ma sens przy tej mocy (T1.20)."""
+    """Top godzina PV → kombinacja AGD w budżecie mocy (T1.20)."""
 
     hour: int
     predicted_kwh: float
     rank: int
     appliances: list[str]
+    # Suma mocy wybranej kombinacji [kW]; 0 gdy za mało PV.
+    load_kw: float = 0.0
 
 
 class ApplianceThreshold(BaseModel):
