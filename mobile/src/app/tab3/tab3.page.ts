@@ -31,6 +31,8 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
     canGoNext: true,
     isComplete: true,
     actualSoFarKwh: null,
+    applianceTips: [],
+    applianceThresholds: [],
   };
 
   private chart?: Chart;
@@ -300,7 +302,13 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
             type: 'linear',
             position: 'right',
             grid: { drawOnChartArea: false },
-            ticks: { color: '#B23B3B', font: { size: 10 }, callback: (v) => `${v} kWh` },
+            ticks: {
+              color: '#B23B3B',
+              font: { size: 10 },
+              // Chart.js czasem daje ticki z float noise (np. 2.0500000000000007) —
+              // przy krótkim zakresie błędu (dziś rano) widać to na osi; toFixed(2) stabilizuje.
+              callback: (v) => `${Number(v).toFixed(2)} kWh`,
+            },
             title: {
               display: true,
               text: 'Błąd (kWh) = prognoza − rzeczywistość',

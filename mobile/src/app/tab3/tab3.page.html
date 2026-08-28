@@ -68,6 +68,54 @@
       </ion-card-content>
     </ion-card>
 
+    <!-- T1.20: kiedy włączyć AGD (progi mocy + top godziny) -->
+    <ng-container *ngIf="!state.error && (state.applianceThresholds.length || state.applianceTips.length)">
+      <div class="se-section-title">
+        <ion-icon name="home-outline"></ion-icon>
+        <span>Kiedy włączyć AGD</span>
+      </div>
+      <ion-card class="se-card se-agd">
+        <ion-card-content>
+          <p class="se-agd__intro">
+            Sugestia doradcza — przy jakiej mocy z dachu (~kWh/h) ma sens uruchomić sprzęt.
+          </p>
+          <div class="se-agd__thresholds" *ngIf="state.applianceThresholds.length">
+            <span class="se-agd__chip" *ngFor="let t of state.applianceThresholds">
+              {{ t.label }} ≥ {{ t.minKw | number: '1.1-1' }}&nbsp;kW
+            </span>
+          </div>
+          <table class="se-hourly-table se-agd__table" *ngIf="state.applianceTips.length">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Godz.</th>
+                <th>Prognoza</th>
+                <th>AGD</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tip of state.applianceTips">
+                <td>{{ tip.rank }}</td>
+                <td>{{ tip.hour }}:00</td>
+                <td>{{ tip.predictedKwh | number: '1.1-2' }}</td>
+                <td>
+                  <ng-container *ngIf="tip.appliances.length; else tooLow">
+                    {{ tip.appliances.join(', ') }}
+                  </ng-container>
+                  <ng-template #tooLow>
+                    <span class="se-agd__low">za mało PV</span>
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="se-agd__empty" *ngIf="!state.applianceTips.length">
+            Brak okien z sensowną produkcją w pozostałych godzinach.
+          </p>
+        </ion-card-content>
+      </ion-card>
+    </ng-container>
+
     <!-- Produkcja dotychczas (dziś, w trakcie dnia) — jak "Dzienna produkcja" w apce FoxESS.
          Jedna wartość dla całego dnia (nie per run_label), więc osobna karta NAD listą
          "Prognoza vs rzeczywistość" zamiast powtarzania jej w każdej karcie run_label. -->

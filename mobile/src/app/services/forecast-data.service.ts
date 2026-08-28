@@ -16,6 +16,19 @@ export interface ForecastHourPoint {
   errorPct: number | null;
 }
 
+export interface ApplianceTip {
+  hour: number;
+  predictedKwh: number;
+  rank: number;
+  appliances: string[];
+}
+
+export interface ApplianceThreshold {
+  key: string;
+  label: string;
+  minKw: number;
+}
+
 export interface ForecastState {
   day: string;
   loading: boolean;
@@ -35,6 +48,9 @@ export interface ForecastState {
   isComplete: boolean;
   /** Produkcja dotychczasowa (jak "Dzienna produkcja" w apce FoxESS) — tylko gdy !isComplete. */
   actualSoFarKwh: number | null;
+  /** T1.20 — kiedy włączyć AGD. */
+  applianceTips: ApplianceTip[];
+  applianceThresholds: ApplianceThreshold[];
 }
 
 /** Pierwszy dzień, dla którego istnieje zarchiwizowana prognoza (forecast_history.csv). */
@@ -77,6 +93,8 @@ export class ForecastDataService {
     canGoNext: todayIso() < maxFutureDayIso(),
     isComplete: true,
     actualSoFarKwh: null,
+    applianceTips: [],
+    applianceThresholds: [],
   });
 
   constructor(private readonly api: ApiService) {
@@ -147,6 +165,8 @@ export class ForecastDataService {
             }[],
             total_kwh: null as unknown as number,
             model_path: '',
+            appliance_tips: [],
+            appliance_thresholds: [],
             __error: err?.error?.detail ?? 'Brak prognozy dla tego dnia (brak danych pogodowych).',
           }),
         ),
@@ -185,6 +205,17 @@ export class ForecastDataService {
           canGoNext: day < maxFutureDayIso(),
           isComplete: validation.is_complete,
           actualSoFarKwh: validation.actual_so_far_kwh,
+          applianceTips: (hourly.appliance_tips ?? []).map((t) => ({
+            hour: t.hour,
+            predictedKwh: t.predicted_kwh,
+            rank: t.rank,
+            appliances: t.appliances,
+          })),
+          applianceThresholds: (hourly.appliance_thresholds ?? []).map((t) => ({
+            key: t.key,
+            label: t.label,
+            minKw: t.min_kw,
+          })),
         };
       }),
     );
