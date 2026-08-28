@@ -15,7 +15,7 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 | Target | Δ`PVEnergyTotal` (PVE = skala app FoxESS) |
 | Pogoda | Open-Meteo **ICON** · GPS dach |
 | Artefakt | `models/pv_hourly_model.joblib` |
-| Shadow | CS4 (19) + XGB+TS — **nie** primary |
+| Shadow | CS4 (19) + XGB+TS + **ICON+UKMO** (`pv_forecast_ensemble.csv`, LIVE od 28.08) — **nie** primary |
 
 ### Offline (80/20 po dniach, expanding)
 
@@ -51,9 +51,9 @@ Wykresy (do **24.08**, odświeżone **25.08**): [`images/ml/july_validation_plot
 
 | Kiedy | Job |
 |-------|-----|
-| 05:00 | daily sync + prognoza (+ shadow) |
-| 12:00 | midday |
-| 16:00 | peak |
+| 05:00 | daily sync + prognoza (+ shadow CS4/XGB + ensemble) |
+| 12:00 | midday (+ ensemble) |
+| 16:00 | peak (+ ensemble) |
 | wieczór | evening closeout → walidacja |
 | niedziela **04:30** | `train_dual_weekly.sh` (16 + CS4 + XGB) |
 
@@ -72,11 +72,13 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Decyzje (PVE, ICON, 16 cech) | [`03_ZALOZENIA_I_DECYZJE.md`](03_ZALOZENIA_I_DECYZJE.md) |
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
-| Pogoda 15–27.08 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) |
+| Pogoda 15–29.08 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) |
 | Weekly **23.08** | [`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md) |
 | Weekly 16.08 | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
-| Dzień 19–26.08 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · [`NOTATKA_2026-08-20.md`](NOTATKA_2026-08-20.md) · [`NOTATKA_2026-08-21.md`](NOTATKA_2026-08-21.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md) · [`NOTATKA_2026-08-23.md`](NOTATKA_2026-08-23.md) · [`NOTATKA_2026-08-24.md`](NOTATKA_2026-08-24.md) · [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md) |
+| Dzień 19–28.08 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · [`NOTATKA_2026-08-20.md`](NOTATKA_2026-08-20.md) · [`NOTATKA_2026-08-21.md`](NOTATKA_2026-08-21.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md) · [`NOTATKA_2026-08-23.md`](NOTATKA_2026-08-23.md) · [`NOTATKA_2026-08-24.md`](NOTATKA_2026-08-24.md) · [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md) · [`NOTATKA_2026-08-27.md`](NOTATKA_2026-08-27.md) · [`NOTATKA_2026-08-28.md`](NOTATKA_2026-08-28.md) |
 | Oneshot shadow | [`NOTATKA_ONESHOT_2026-08-17.md`](NOTATKA_ONESHOT_2026-08-17.md) |
+| Paper-trade Accu→RF/CS4 | tylko repo prywatne |
+| Routing test 28–31.08 | [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md) · plan [`PLAN_ENSEMBLE_NWP_2026.md`](PLAN_ENSEMBLE_NWP_2026.md) E1.6 |
 | Reguła apki: SoC↓ + pochmurno → ładuj 22:00 | [`NOTATKA_REGULA_BATERIA_POCHMURNO_22.md`](NOTATKA_REGULA_BATERIA_POCHMURNO_22.md) |
 | Log SoC / ForceCharge / AGD | [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) |
 

@@ -56,7 +56,8 @@ ensemble = (44 + 7) / 2 = 25.5%  # vs Accu 26% ✅ bliżej!
 1. Przeczytaj docs Open-Meteo: https://open-meteo.com/en/docs
 2. Test request na dzisiaj (27.08):
    ```bash
-   curl "https://api.open-meteo.com/v1/forecast?latitude=49.98&longitude=19.9&hourly=cloud_cover,temperature_2m,shortwave_radiation&models=ukmo_seamless"
+   curl "https://api.open-meteo.com/v1/forecast?latitude=50.0&longitude=20.0&hourly=cloud_cover,temperature_2m,shortwave_radiation&models=ukmo_seamless"
+   # (przykład ~okolice Krakowa; dokładne GPS tylko w lokalnym .env)
    ```
 3. Sprawdź czy zwraca JSON z danymi (nie 403/404)
 4. Porównaj UKMO vs ICON cloud dla dziś — czy są różnice?
@@ -80,7 +81,7 @@ ensemble = (44 + 7) / 2 = 25.5%  # vs Accu 26% ✅ bliżej!
 4. Test ręczny:
    ```python
    from src.weather.openmeteo_client import get_ukmo_forecast
-   ukmo = get_ukmo_forecast(lat=49.98, lon=19.9, date='2026-08-27')
+   ukmo = get_ukmo_forecast(lat=50.0, lon=20.0, date='2026-08-27')  # przykład; GPS z .env
    print(ukmo['cloud_cover'])  # sprawdź czy nie NaN
    ```
 
@@ -282,13 +283,13 @@ LSTM z `GHI[6–12h]` sekwencją mógłby przewidzieć „GHI rośnie 3h z rzęd
 | Ensemble averaging | E1.3 | 30 min | `[x]` DONE | 27.08 | 3d6daa05 |
 | Backtest 3 dni | E1.4 | 1 h | `[x]` DONE | 27.08 | 5243886f |
 | Retrain ensemble | E1.5 | — | `[x]` DOC | 27.08 | 290b8238 |
-| Live closeouty | E1.6 | 5–7 dni | `[ ]` DEFER | IX 2026 | — |
+| Live closeouty | E1.6 | 5–7 dni | `[~]` **LIVE od 28.08 ~17:35** | 28.08 | `forecast_ensemble_shadow.sh` |
 | Gate decyzja | E1.7 | 1 h | `[ ]` DEFER | IX 2026 | — |
 | Wdrożenie (jeśli ACCEPT) | E1.8 | 30 min | `[ ]` DEFER | IX 2026 | — |
 
-**Status 27.08:** 5/8 tasków DONE · Faza 1 kod gotowy · backtest +3.9pp poprawa
+**Status 28.08:** E1.6 **włączone** — shadow `pv_forecast_ensemble.csv` w daily/midday/peak; primary ICON bez zmian. Gate E1.7 nadal po serii closeoutów (28–31.08 + IX).
 
-**Decyzja:** E1.6–E1.8 defer do IX 2026 (≥30 dni danych) · focus operacyjny (paper-trade routing)
+**Decyzja:** obserwacja routing 28–31.08 **aktywna** (1 dzień straty rano → dogonione peak 28.08).
 
 ---
 

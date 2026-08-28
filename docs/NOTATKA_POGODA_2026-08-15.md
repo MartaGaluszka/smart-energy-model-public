@@ -1,4 +1,4 @@
-# Notatka pogoda — 16–28.08.2026
+# Notatka pogoda — 16–29.08.2026
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
 **Produkcja ML:** Open-Meteo **ICON** (`icon_seamless`)  
@@ -6,6 +6,8 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-08-28 ~17:20** | AccuWeather dziś-na-dziś (28) / jutro (29) / +2 (30) · **28** poprawa 5/58%→9/21%; **29** mix; **30** jasny 8/30% |
+| **2026-08-28 ~17:25** | **MB** MultiModel + meteogram + ensemble · **29 deszcz rano** (konsensus ICON/UKMO/IFS…); Accu 0,7 mm za suchy |
 | **2026-08-27 ~12:00** | AccuWeather dziś-na-dziś (27) / jutro (28) / +2 (29) |
 | **2026-08-27 ~12:00** | **MB** MultiModel + meteogram + ensemble (czw.–nd.) · 27≈Accu; 28 MB łagodniejszy |
 | **2026-08-26 ~18:25** | **Closeout app:** PV dnia **21,1** kWh (vs daily RF **12,5**) |
@@ -57,7 +59,50 @@ Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletnoś�
 
 ---
 
-## AccuWeather — 27.08 ~12:00 (obecny run)
+## AccuWeather — 28.08 ~17:20 (obecny run)
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
+|-------|------:|--------:|------:|------:|------------------|----------------|-----|
+| **28.08** pt. (dziś) | **28°C** (RF 28° / Shade 26°) | **9** b. jasne | **21%** | **0 mm** | 1% / 0% | E 17 / **41** | **jasny** — poprawa vs 5/58% |
+| **29.08** sob. | **25°C** (RF 26° / Shade 24°) | **8** jasne | **39%** | **0,7 mm** | 55% / 11% | W 13 / **35** | **mix** — przelotny; flood yellow 00–12 |
+| **30.08** nd. | **28°C** (RF 29° / Shade 27°) | **8** jasne | **30%** | **0 mm** | 3% / 0% | SW 9 / **32** | **jasny** — lokalne chmury → słońce |
+
+Opis 28: *„Rosnące zachmurzenie"* · UV 5.  
+Opis 29: *„Możliwy przelotny opad"* · UV 5 · deszcz **2 h**.  
+Opis 30: *„Lokalne zachmurzenia, następnie słonecznie"* · UV 5.
+
+### Alarmy Accu (28.08)
+
+| Alarm | Okno |
+|-------|------|
+| Susza | tło (×3 w UI) — dziś |
+| Żółte ostrzeżenie — powódź | **00:00–12:00 sobota (29.08)** |
+
+### Drift vs Accu 27.08 ~12:00
+
+| | Accu 27.08 (outlook) | **Accu 28.08 dziś-na-dziś** | Okno |
+|--|----------------------|-----------------------------|------|
+| **28** jasność / cloud | **5** / **58%** | **9 / 21%** — **mocna poprawa** | MB wczoraj był bliżej |
+| **29** | **3** / 66% / **1,8 mm** / burze 17% | **8** / 39% / **0,7 mm** / 11% | mniej mm; P 55% + flood yellow |
+| **30** | (brak) | **8** / **30%** / 0 mm | lokalne chmury → słońce |
+
+**Wniosek:** **28** = jasny (RF + undershoot) — Accu 27.08 za ciemny. **29** = Accu mix / **MB mokry rano** → mentalnie CS4; flood yellow. **30** = jasny → RF + undershoot.  
+**Shadow ICON+UKMO:** **LIVE** od 28.08 ~17:35 (`forecast_ensemble_shadow.sh`); shadow CS4+XGB też.  
+Dzień: [`NOTATKA_2026-08-28.md`](NOTATKA_2026-08-28.md).
+
+### MB 28.08 ~17:25 — Accu vs MB
+
+| Dzień | Accu | MB (MultiModel / meteogram / ensemble) | Zgodność |
+|-------|------|----------------------------------------|----------|
+| **28** | jasność **9** / 21% / 0 | sucho; T~28–29; cloud ↑ PM; wiatr E | **Tak** |
+| **29** | **0,7 mm** / P 55% / jasność 8 | **deszcz rano** — ICON+UKMO+IFS… agreement; peak MultiModel do ~7 mm/h; ensemble akum. ~5–8 mm; NEMS ±pioruny | **MB mokrzejszy** |
+| **30** | **8** / 30% / 0 | słońce / lokalne chmury; T~27–28 | **Tak** |
+
+**Wniosek operacyjny:** 28 undershoot. 29 nie ufać Accu mm — wet morning. 30 RF. Ensemble ICON+UKMO shadow **w launchd** od 28.08 ~17:35.
+
+---
+
+## AccuWeather — 27.08 ~12:00 (archiwum)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | PV |
 |-------|------:|--------:|------:|------:|------------------|----------------|-----|
@@ -166,7 +211,7 @@ Opis 27: *„Jaskrawe słońce”* · UV 5.
 | **27.08** | (brak) | jasność **10**, cloud **0%**, 0 mm |
 
 **Wniosek:** **25** Accu≈ICON na **cloud** — paper-trade **CS4**. Deszcz: **od 11:25** ≈ ilościowy **ICON** (1. wet godz. 11); **UKMO** za późny/suchy; ikony MultiModel rano za wcześnie; **NEMS** OK do 11:25. **26** Accu mix vs ICON bardzo chmurny — midday. **27** Accu jasność 10 → undershoot risk. Primary bez zmian.  
-Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade: [`NOTATKA_PAPER_TRADE_ACCU_REGIME.md`](NOTATKA_PAPER_TRADE_ACCU_REGIME.md).
+Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade: paper-trade (tylko prywatne).
 
 ### MB 25.08 ~10:35 — Accu vs MB · NEMS vs ICON/UKMO
 
