@@ -50,6 +50,12 @@ run_step "Prognoza CS4 (shadow)" \
 run_step "Prognoza XGB+TS (shadow)" \
   bash "${PROJECT_ROOT}/mlops/forecast_xgb_ts_shadow.sh" midday
 
+run_step "Prognoza ensemble ICON+UKMO (shadow)" \
+  bash "${PROJECT_ROOT}/mlops/forecast_ensemble_shadow.sh" midday
+
+run_step "Routing pick (ensemble vs CS4)" \
+  "$PYTHON" "${PROJECT_ROOT}/scripts/analysis/routing_decision.py" --date today --also-next 2
+
 run_step "Bateria — przed oknem tanio 13:00–15:00" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/battery_advisor_report.py" --context pre_cheap
 

@@ -201,9 +201,17 @@ def load_forecast_weather_hourly(
     end_date: str,
     location: str | None = None,
 ) -> pd.DataFrame:
-    """Godzinowa prognoza pogody z weather_data (OpenMeteo-forecast)."""
+    """Godzinowa prognoza pogody z weather_data.
+
+    Domyślnie tylko `OpenMeteo-forecast` (ICON / primary) — **bez** ensemble,
+    żeby shadow ICON+UKMO nie mieszał się w AVG z produkcją.
+    Shadow: ustaw `WEATHER_FORECAST_SOURCE_LIKE=%ensemble%`.
+    """
+    import os
+
+    like = os.getenv('WEATHER_FORECAST_SOURCE_LIKE', '').strip() or 'OpenMeteo-forecast'
     return load_weather_hourly(
-        db_path, start_date, end_date, location, data_source_like='%forecast%',
+        db_path, start_date, end_date, location, data_source_like=like,
     )
 
 
