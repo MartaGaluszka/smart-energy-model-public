@@ -1,55 +1,41 @@
-"""Feed sugestii baterii (§9.6 / T4.18-T4.20) — LEKKI stub + reguła pochmurno.
+"""Feed sugestii baterii (§9.6 / T4.18–T4.20) — advise-only.
 
-Pełny generator (worker/cron analizujący plan G12w + prognozę PV codziennie,
-T4.20) to zakres Fazy 4. Tutaj:
-- seed „cheap_window” dla pustego feedu (happy-path testów),
-- reguła **charge_tonight_cloudy** (B2): T jutro + PV jutro → FC od 22:00 (albo pomiń vs cykl),
-- T4.17: każdy upsert sugestii → `advice_events` (1×/dzień/typ, audit pod rok testów).
+T4.20: generator (cron + GET) upsertuje na dzień:
+- cheap_window — okno G12w + plan dziś/jutro (kontekst morning / pre_cheap / peak),
+- charge_tonight_cloudy — B2 (T+PV → FC 22–6),
+- soc_reserve — BAT.3 (SoC@16).
 
-Wszystkie treści są doradcze — nigdy "wykonano automatycznie" (§9.6, T4.24).
+Cron: mlops/generate_battery_suggestions.py (daily/midday/peak).
+GET /notifications woła ten sam generator dla bieżącego użytkownika.
+
+Wszystkie treści są doradcze — nigdy „wykonano automatycznie” (§9.6, T4.24).
 """
 
 from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
-from api.models import Notification
+from api.models import AppUser, Notification
 from api.services.advice_events import record_advice_event
 
 NOTIF_TYPE_CHEAP_WINDOW = 'cheap_window'
 NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY = 'charge_tonight_cloudy'
 NOTIF_TYPE_SOC16_RESERVE = 'soc_reserve'
 
+SuggestionContext = Literal['morning', 'pre_cheap', 'peak']
 
-def ensure_seed_notification(db: Session, user_id: int) -> None:
-    existing = db.query(Notification).filter(Notification.user_id == user_id).first()
-    if existing is not None:
-        return
 
-    from src.optimization.g12w_tariff import tariff_summary
-
-    day_key = datetime.utcnow().date().isoformat()
-    notif = Notification(
-        user_id=user_id,
-        notif_type=NOTIF_TYPE_CHEAP_WINDOW,
-        title='Sugestia: tania strefa G12w',
-        body=f'Sugestia doradcza — {tariff_summary()} Rozważ ładowanie magazynu w taniej strefie.',
-        payload_json=json.dumps({'day': day_key, 'rule': NOTIF_TYPE_CHEAP_WINDOW}, ensure_ascii=False),
-        created_at=datetime.utcnow(),
-    )
-    db.add(notif)
-    db.commit()
-    record_advice_event(
-        db,
-        user_id,
-        event_date=day_key,
-        advice_type=NOTIF_TYPE_CHEAP_WINDOW,
-        payload_json=notif.payload_json,
-        was_actionable=True,
-    )
+def suggestion_context_for_hour(hour: int | None = None) -> SuggestionContext:
+    h = datetime.now().hour if hour is None else hour
+    if h < 11:
+        return 'morning'
+    if h < 15:
+        return 'pre_cheap'
+    return 'peak'
 
 
 def _payload_day(payload_json: str | None) -> str | None:
@@ -59,6 +45,150 @@ def _payload_day(payload_json: str | None) -> str | None:
         return json.loads(payload_json).get('day')
     except json.JSONDecodeError:
         return None
+
+
+def _upsert_day_notification(
+    db: Session,
+    user_id: int,
+    *,
+    notif_type: str,
+    day_key: str,
+    title: str,
+    body: str,
+    payload: str,
+) -> Notification:
+    existing = (
+        db.query(Notification)
+        .filter(
+            Notification.user_id == user_id,
+            Notification.notif_type == notif_type,
+        )
+        .order_by(Notification.created_at.desc())
+        .all()
+    )
+    for row in existing:
+        if _payload_day(row.payload_json) == day_key:
+            row.title = title
+            row.body = body
+            row.payload_json = payload
+            db.commit()
+            db.refresh(row)
+            record_advice_event(
+                db,
+                user_id,
+                event_date=day_key,
+                advice_type=notif_type,
+                payload_json=payload,
+                was_actionable=True,
+            )
+            return row
+
+    notif = Notification(
+        user_id=user_id,
+        notif_type=notif_type,
+        title=title,
+        body=body,
+        payload_json=payload,
+        created_at=datetime.utcnow(),
+    )
+    db.add(notif)
+    db.commit()
+    db.refresh(notif)
+    record_advice_event(
+        db,
+        user_id,
+        event_date=day_key,
+        advice_type=notif_type,
+        payload_json=payload,
+        was_actionable=True,
+    )
+    return notif
+
+
+def maybe_upsert_cheap_window(
+    db: Session,
+    user_id: int,
+    context: SuggestionContext = 'morning',
+) -> Notification | None:
+    """Sugestia G12w: najbliższe okno + skrót planu dziś/jutro (zawsze 1×/dzień)."""
+    try:
+        from src.optimization.battery_advisor import (
+            evaluate_below_reserve_wait_cheap,
+            get_battery_snapshot,
+            get_day_pv_forecast_sum,
+            next_cheap_window_label,
+            seasonal_soc_reserve,
+        )
+        from src.optimization.g12w_tariff import is_cheap_zone, tariff_summary
+    except Exception:
+        return None
+
+    as_of = datetime.now()
+    day_key = as_of.date().isoformat()
+    tomorrow_s = (as_of.date() + timedelta(days=1)).isoformat()
+    snap = get_battery_snapshot()
+    reserve = seasonal_soc_reserve(as_of.date())
+    wait = evaluate_below_reserve_wait_cheap(
+        soc_percent=snap.soc_percent,
+        as_of=as_of,
+        reserve_percent=reserve,
+    )
+    tomorrow_pv = get_day_pv_forecast_sum(tomorrow_s, as_of=as_of)
+    today_pv = get_day_pv_forecast_sum(day_key, as_of=as_of)
+    nxt = next_cheap_window_label(as_of)
+    in_cheap = is_cheap_zone(as_of)
+
+    if wait.triggered:
+        title = wait.title
+        body = wait.body
+    elif context == 'morning':
+        title = 'Sugestia: tania strefa G12w (rano)'
+        body = (
+            f'Sugestia doradcza — {tariff_summary()} '
+            f'Najbliższe tanie okno: {nxt}. '
+            f'PV dziś ~{today_pv:.0f} kWh, jutro ~{tomorrow_pv:.0f} kWh. '
+            f'Rozważ ładowanie magazynu w taniej strefie — bez automatyki.'
+        )
+    elif context == 'pre_cheap':
+        title = 'Sugestia: zbliża się okno 13:00–15:00'
+        body = (
+            f'Sugestia doradcza — za chwilę tania G12w 13–15 (pn–pt). '
+            f'Najbliższe okno: {nxt}. '
+            f'PV dziś ~{today_pv:.0f} kWh. '
+            f'Jeśli SoC niski, rozważ doładowanie w tanim oknie — decyzja należy do Ciebie.'
+        )
+    else:
+        title = 'Sugestia: szczyt wieczorny — plan na noc'
+        body = (
+            f'Sugestia doradcza — droga G12w do 22:00. '
+            f'Trzymaj rezerwę; tanie ładowanie nocne od 22:00 ({nxt}). '
+            f'PV jutro ~{tomorrow_pv:.0f} kWh. System tylko doradza.'
+        )
+
+    payload = json.dumps(
+        {
+            'rule': NOTIF_TYPE_CHEAP_WINDOW,
+            'day': day_key,
+            'context': context,
+            'next_cheap_window': nxt,
+            'in_cheap_zone': in_cheap,
+            'soc_percent': snap.soc_percent,
+            'reserve_percent': reserve,
+            'today_pv_kwh': today_pv,
+            'tomorrow_pv_kwh': tomorrow_pv,
+            'wait_for_cheap': wait.triggered,
+        },
+        ensure_ascii=False,
+    )
+    return _upsert_day_notification(
+        db,
+        user_id,
+        notif_type=NOTIF_TYPE_CHEAP_WINDOW,
+        day_key=day_key,
+        title=title,
+        body=body,
+        payload=payload,
+    )
 
 
 def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notification | None:
@@ -103,53 +233,15 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
         },
         ensure_ascii=False,
     )
-
-    existing = (
-        db.query(Notification)
-        .filter(
-            Notification.user_id == user_id,
-            Notification.notif_type == NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY,
-        )
-        .order_by(Notification.created_at.desc())
-        .all()
-    )
-    for row in existing:
-        if _payload_day(row.payload_json) == day_key:
-            row.title = rule.title
-            row.body = rule.body
-            row.payload_json = payload
-            db.commit()
-            db.refresh(row)
-            record_advice_event(
-                db,
-                user_id,
-                event_date=day_key,
-                advice_type=NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY,
-                payload_json=payload,
-                was_actionable=True,
-            )
-            return row
-
-    notif = Notification(
-        user_id=user_id,
-        notif_type=NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY,
-        title=rule.title,
-        body=rule.body,
-        payload_json=payload,
-        created_at=datetime.utcnow(),
-    )
-    db.add(notif)
-    db.commit()
-    db.refresh(notif)
-    record_advice_event(
+    return _upsert_day_notification(
         db,
         user_id,
-        event_date=day_key,
-        advice_type=NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY,
-        payload_json=payload,
-        was_actionable=True,
+        notif_type=NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY,
+        day_key=day_key,
+        title=rule.title,
+        body=rule.body,
+        payload=payload,
     )
-    return notif
 
 
 def maybe_upsert_soc16_reserve(db: Session, user_id: int) -> Notification | None:
@@ -193,59 +285,56 @@ def maybe_upsert_soc16_reserve(db: Session, user_id: int) -> Notification | None
         },
         ensure_ascii=False,
     )
-
-    existing = (
-        db.query(Notification)
-        .filter(
-            Notification.user_id == user_id,
-            Notification.notif_type == NOTIF_TYPE_SOC16_RESERVE,
-        )
-        .order_by(Notification.created_at.desc())
-        .all()
-    )
-    for row in existing:
-        if _payload_day(row.payload_json) == day_key:
-            row.title = rule.title
-            row.body = rule.body
-            row.payload_json = payload
-            db.commit()
-            db.refresh(row)
-            record_advice_event(
-                db,
-                user_id,
-                event_date=day_key,
-                advice_type=NOTIF_TYPE_SOC16_RESERVE,
-                payload_json=payload,
-                was_actionable=True,
-            )
-            return row
-
-    notif = Notification(
-        user_id=user_id,
-        notif_type=NOTIF_TYPE_SOC16_RESERVE,
-        title=rule.title,
-        body=rule.body,
-        payload_json=payload,
-        created_at=datetime.utcnow(),
-    )
-    db.add(notif)
-    db.commit()
-    db.refresh(notif)
-    record_advice_event(
+    return _upsert_day_notification(
         db,
         user_id,
-        event_date=day_key,
-        advice_type=NOTIF_TYPE_SOC16_RESERVE,
-        payload_json=payload,
-        was_actionable=True,
+        notif_type=NOTIF_TYPE_SOC16_RESERVE,
+        day_key=day_key,
+        title=rule.title,
+        body=rule.body,
+        payload=payload,
     )
-    return notif
+
+
+def generate_suggestions_for_user(
+    db: Session,
+    user_id: int,
+    context: SuggestionContext | None = None,
+) -> dict:
+    """T4.20: jeden przebieg generatora dla użytkownika (cron lub GET)."""
+    ctx = context or suggestion_context_for_hour()
+    return {
+        'context': ctx,
+        'cheap_window': maybe_upsert_cheap_window(db, user_id, ctx),
+        'charge_tonight_cloudy': maybe_upsert_charge_tonight_cloudy(db, user_id),
+        'soc_reserve': maybe_upsert_soc16_reserve(db, user_id),
+    }
+
+
+def generate_suggestions_for_all_users(
+    db: Session,
+    context: SuggestionContext | None = None,
+) -> dict:
+    """Cron: upsert sugestii dla wszystkich aktywnych użytkowników appki."""
+    ctx = context or suggestion_context_for_hour()
+    users = db.query(AppUser).filter(AppUser.is_active.is_(True)).all()
+    summary = {
+        'context': ctx,
+        'users': len(users),
+        'cheap_window': 0,
+        'charge_tonight_cloudy': 0,
+        'soc_reserve': 0,
+    }
+    for user in users:
+        result = generate_suggestions_for_user(db, user.id, ctx)
+        for key in ('cheap_window', 'charge_tonight_cloudy', 'soc_reserve'):
+            if result.get(key) is not None:
+                summary[key] += 1
+    return summary
 
 
 def list_notifications(db: Session, user_id: int) -> list[Notification]:
-    ensure_seed_notification(db, user_id)
-    maybe_upsert_charge_tonight_cloudy(db, user_id)
-    maybe_upsert_soc16_reserve(db, user_id)
+    generate_suggestions_for_user(db, user_id)
     return (
         db.query(Notification)
         .filter(Notification.user_id == user_id)

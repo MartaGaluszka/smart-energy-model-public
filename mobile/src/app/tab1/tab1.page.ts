@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ViewWillEnter } from '@ionic/angular';
-import { Observable, Subscription } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { ApiService, BatterySuggestionResponse } from '../services/api.service';
 import { HomeDataService, HomeKpi, SyncStatus, Suggestion } from '../services/home-data.service';
 import { todayIsoLocal } from '../utils/date-utils';
@@ -23,6 +23,8 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
   shadowLoading = false;
   private batterySub?: Subscription;
   private shadowSub?: Subscription;
+  private suggestionsSub?: Subscription;
+  private readonly suggestionsSubject = new BehaviorSubject<Suggestion[]>([]);
 
   constructor(
     private readonly homeData: HomeDataService,
@@ -32,21 +34,24 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
   ngOnInit() {
     this.kpi$ = this.homeData.getKpi();
     this.sync$ = this.homeData.getSyncStatus();
-    this.suggestions$ = this.homeData.getSuggestions();
+    this.suggestions$ = this.suggestionsSubject.asObservable();
     this.battery$ = this.homeData.getBatterySuggestion();
     this.batterySub = this.battery$.subscribe((row) => {
       this.socReserve = row?.soc_reserve_percent ?? 20;
     });
+    this.reloadSuggestions();
   }
 
   ngOnDestroy() {
     this.batterySub?.unsubscribe();
     this.shadowSub?.unsubscribe();
+    this.suggestionsSub?.unsubscribe();
   }
 
   ionViewWillEnter() {
     this.homeData.refreshBatterySuggestion();
     this.reloadShadowMonth();
+    this.reloadSuggestions();
   }
 
   formatPln(value: number | null): string {
@@ -69,6 +74,14 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
         this.shadowMonthPln = null;
         this.shadowLoading = false;
       },
+    });
+  }
+
+  private reloadSuggestions(): void {
+    this.suggestionsSub?.unsubscribe();
+    this.suggestionsSub = this.homeData.getSuggestions().subscribe({
+      next: (rows) => this.suggestionsSubject.next(rows),
+      error: () => this.suggestionsSubject.next([]),
     });
   }
 
