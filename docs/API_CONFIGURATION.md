@@ -10,6 +10,12 @@ Postępuj zgodnie z instrukcją w `docs/API_ACCESS_REQUEST.md`:
 - Wygeneruj klucz API
 - Skopiuj klucz (będzie długi!)
 
+**Nowa platforma (2026):** zarządzanie kluczami i dokumentacja migrują do
+[FoxCloud OpenPlatform (EU)](https://developer-eu.foxesscloud.com/apidoc).
+Istniejące klucze z V1 **nadal działają** — nowy portal potrzebny dopiero przy
+generowaniu nowego klucza / nowej dokumentacji (Scheduler V3, Kafka 1‑min itd.).
+Stara dokumentacja Open API: https://www.foxesscloud.com/public/i18n/en/OpenApiDocument.html
+
 ### 2. Skonfiguruj plik .env
 
 Skopiuj `.env.example` do `.env`:

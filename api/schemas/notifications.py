@@ -19,3 +19,14 @@ class PushTokenRequest(BaseModel):
 
 class PushTokenResponse(BaseModel):
     status: str
+
+
+class AdviceEventResponse(BaseModel):
+    """T4.17 — wiersz audytu sugestii (walidacja roczna)."""
+
+    id: int
+    event_date: str
+    advice_type: str
+    was_actionable: bool
+    payload_json: str | None = None
+    created_at: str

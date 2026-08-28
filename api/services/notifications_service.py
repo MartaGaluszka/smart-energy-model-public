@@ -3,7 +3,8 @@
 Pełny generator (worker/cron analizujący plan G12w + prognozę PV codziennie,
 T4.20) to zakres Fazy 4. Tutaj:
 - seed „cheap_window” dla pustego feedu (happy-path testów),
-- reguła **charge_tonight_cloudy** (B2): T jutro + PV jutro → FC od 22:00 (albo pomiń vs cykl).
+- reguła **charge_tonight_cloudy** (B2): T jutro + PV jutro → FC od 22:00 (albo pomiń vs cykl),
+- T4.17: każdy upsert sugestii → `advice_events` (1×/dzień/typ, audit pod rok testów).
 
 Wszystkie treści są doradcze — nigdy "wykonano automatycznie" (§9.6, T4.24).
 """
@@ -16,7 +17,9 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from api.models import Notification
+from api.services.advice_events import record_advice_event
 
+NOTIF_TYPE_CHEAP_WINDOW = 'cheap_window'
 NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY = 'charge_tonight_cloudy'
 NOTIF_TYPE_SOC16_RESERVE = 'soc_reserve'
 
@@ -28,16 +31,25 @@ def ensure_seed_notification(db: Session, user_id: int) -> None:
 
     from src.optimization.g12w_tariff import tariff_summary
 
+    day_key = datetime.utcnow().date().isoformat()
     notif = Notification(
         user_id=user_id,
-        notif_type='cheap_window',
+        notif_type=NOTIF_TYPE_CHEAP_WINDOW,
         title='Sugestia: tania strefa G12w',
         body=f'Sugestia doradcza — {tariff_summary()} Rozważ ładowanie magazynu w taniej strefie.',
-        payload_json=None,
+        payload_json=json.dumps({'day': day_key, 'rule': NOTIF_TYPE_CHEAP_WINDOW}, ensure_ascii=False),
         created_at=datetime.utcnow(),
     )
     db.add(notif)
     db.commit()
+    record_advice_event(
+        db,
+        user_id,
+        event_date=day_key,
+        advice_type=NOTIF_TYPE_CHEAP_WINDOW,
+        payload_json=notif.payload_json,
+        was_actionable=True,
+    )
 
 
 def _payload_day(payload_json: str | None) -> str | None:
@@ -108,6 +120,14 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
             row.payload_json = payload
             db.commit()
             db.refresh(row)
+            record_advice_event(
+                db,
+                user_id,
+                event_date=day_key,
+                advice_type=NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY,
+                payload_json=payload,
+                was_actionable=True,
+            )
             return row
 
     notif = Notification(
@@ -121,6 +141,14 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
     db.add(notif)
     db.commit()
     db.refresh(notif)
+    record_advice_event(
+        db,
+        user_id,
+        event_date=day_key,
+        advice_type=NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY,
+        payload_json=payload,
+        was_actionable=True,
+    )
     return notif
 
 
@@ -182,6 +210,14 @@ def maybe_upsert_soc16_reserve(db: Session, user_id: int) -> Notification | None
             row.payload_json = payload
             db.commit()
             db.refresh(row)
+            record_advice_event(
+                db,
+                user_id,
+                event_date=day_key,
+                advice_type=NOTIF_TYPE_SOC16_RESERVE,
+                payload_json=payload,
+                was_actionable=True,
+            )
             return row
 
     notif = Notification(
@@ -195,6 +231,14 @@ def maybe_upsert_soc16_reserve(db: Session, user_id: int) -> Notification | None
     db.add(notif)
     db.commit()
     db.refresh(notif)
+    record_advice_event(
+        db,
+        user_id,
+        event_date=day_key,
+        advice_type=NOTIF_TYPE_SOC16_RESERVE,
+        payload_json=payload,
+        was_actionable=True,
+    )
     return notif
 
 
