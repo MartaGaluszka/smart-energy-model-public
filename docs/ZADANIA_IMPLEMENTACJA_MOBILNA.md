@@ -296,7 +296,7 @@ Aktualizuj status w tej tabeli przy domknięciu fazy:
 | 1 Shell + sync + prognoza | `[x]` | 2026-07-28 | P0 zamknięte: Ionic Solar Graphite, 4 taby, Home KPI + sync Fox + banner §9.6 + sugestie, Prognoza z wykresem Chart.js + porównaniem błędu % vs rzeczywistość (T1.14, patrz wyżej). Screenshoty: `mobile/docs/screenshots/`. **Korekta 2026-07-28:** T1.13 był błędnie oznaczony jako gotowy 2026-07-27 — ekran Prognoza był w rzeczywistości placeholderem; dobudowany teraz razem z T1.14. Otwarte P1: T1.6 splash, T1.10 Fox 40402. P2: T1.11 pull-refresh, T1.15 cache prognoz (świadomie odłożone). |
 | 2 Symulator | `[~]` | 2026-07-29 | Backend (T2.1–T2.3) + **UI P0** (T2.4 formularz stawek, T2.5 wykres słupkowy) + **P1** (T2.6 mini tabela kWh, T2.7 netto/brutto VAT, T2.10 przebudowa UX + polski `ion-datetime`) na `/tabs/simulator`. Otwarte P2: T2.8 depozyt, T2.9 prefill z tauron_bills. |
 | 3 ROI | `[~]` | 2026-07-27 | **Backend gotowy** (T3.1–T3.2, TA.7). **Brakuje UI mobilnego** (T3.3–T3.4 P0). Zależność: wynik symulatora (Faza 2). |
-| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-08-27 | Backend + ekran Bateria + T4.16 + **BAT.4 backtest IX–II** `[x]`. Brak: pełny cron T4.20, FCM. |
+| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-08-28 | Backend + ekran Bateria + T4.16 + BAT.4 + **T4.17 advice_events** `[x]`. Brak: pełny cron T4.20, FCM. |
 | 5 ML advice (bez control) | `[ ]` | | |
 | 6 Sterowanie Fox (po ~roku) | `[ ]` | | poza MVP |
 
