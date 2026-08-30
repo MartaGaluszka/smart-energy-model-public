@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
 **Stan na:** 2026-08-30  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 30.08**) · `forecast_validation.csv` (closeouty predicte do **24.08**; live 25–30 w notatkach dnia) · [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md)
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 30.08**) · `forecast_validation.csv` (closeouty do **29.08**; **30.08** EOD w toku) · [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -34,16 +34,16 @@ Gate vs weekly **23.08** (0.658): Δ **+0.010** ≤ +0.02 → **ACCEPT**.
 
 | Okres | n | MAPE raw 5:00 | MAPE raw 12:00 |
 |-------|--:|-------------:|---------------:|
-| Era dual **27.07–24.08** | 29 | **11,0%** | **10,0%** |
-| Całość **14.07–24.08** | 42 | 15,4% | 13,5% |
+| Era dual **27.07–29.08** | 34 | **15,7%** | **15,9%** |
+| Całość **14.07–29.08** | 47 | 18,3% | 17,4% |
 
-*(Wykresy nadal do **24.08**. Live po 24: **29.08** actual **21,1** · CS4 pick **+2%**; **30.08** jasny · PV **≥25,9** @15 przy daily ~27 — pełny EOD w toku.)*
+*(Wykresy odświeżone **30.08** do **29.08**. Skok MAPE vs 24.08 głównie przez **25.08** mokry (actual 4,5 · |APE|~150%) i **26.08** clearing undershoot. **30.08** EOD w toku — PV **≥25,9** @15 · daily ~27.)*
 
-CS4 daily (era dual, n=29): MAPE **~11,4%** — lekko powyżej RF; lepszy na pochmurnych; na jasnych gorzej.
+CS4: na pochmurnych / mix często bliżej faktu (np. **29.08** pick **21,5** vs **21,1**); na jasnych RF bywa lepszy.
 
-Ostatnie closeouty: **24.08** **35,1** · **29.08** **21,1** (CS4 ✓) · **30.08** w toku (jasny, SoC 100% od południa).
+Ostatnie closeouty: **27.08** **35,9** · **28.08** **34,2** · **29.08** **21,1** (CS4 ✓) · **30.08** w toku.
 
-Wykresy (do **24.08**, odświeżone **25.08**): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) · opis: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
+Wykresy (do **29.08**, odświeżone **30.08**): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) · opis błędów: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
 
 ---
 
