@@ -34,9 +34,9 @@
 | Dzień | Cloud fcst | Regime | Pick | App | ICON | Ensemble | CS4 | **Routing** | Błąd ICON | Błąd Routing |
 |-------|------------|--------|------|-----|------|----------|-----|-------------|-----------|--------------|
 | **28.08** | ICON cloud **49,8%** · Accu **21%** | routing **pochmurny** / Accu **jasny** | routing→**CS4** · Accu→RF | ? | **31,8** | **31,8** | **31,8** | =CS4 | ? | ? |
-| **29.08** | ICON **56,7%** · MB deszcz AM | pochmurny | **CS4** | ? | **20,7** | **20,3** | **21,5** | =CS4 | ? | ? |
-| **30.08** | ICON **62,6%** · Accu 30% | pochmurny (ICON) / Accu jasny | routing→**CS4** · Accu→RF | ? | **23,6** | **30,7** | 24,8 | =CS4 | ? | ? |
-| **31.08** | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| **29.08** | ICON **67%** · Accu **33%** · **okno: burza→deszcz do 08; clearing 11:50+** | pochmurny | **CS4** ✓ | **21,1** | **20,7** | **20,3** | **21,5** | **=CS4 21,5** | **−2%** | **+2%** |
+| **30.08** | ICON **54%** · Accu **23%** · **okno 15:08: 0 cloud** · PV **25,9 @15:02** | pochmurny (ICON) / Accu+okno **jasny** | routing→**CS4** · Accu→**RF** ✓ | *(w toku)* | **27,1** | **27,9** | 27,7 | =CS4 | ? | ? |
+| **31.08** | ICON **86%** · Accu **70%** / 0,8 mm P85% | pochmurny | **CS4** | ? | **22,7** | **23,3** | **23,0** | =CS4 | ? | ? |
 
 **Uwaga 28.08 ~17:35:** shadow ensemble **WŁĄCZONY** (`mlops/forecast_ensemble_shadow.sh` w daily/midday/peak).  
 CSV: `pv_forecast_ensemble.csv`. Primary ICON nienaruszony (osobny `data_source`).  
