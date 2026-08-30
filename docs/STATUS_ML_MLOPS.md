@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-08-25  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 23.08**) · `forecast_validation.csv` (closeouty predicte do **24.08**) · [`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md)
+**Stan na:** 2026-08-30  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 30.08**) · `forecast_validation.csv` (closeouty predicte do **24.08**; live 25–30 w notatkach dnia) · [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -21,14 +21,14 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 
 | Metryka | Wartość |
 |---------|---------|
-| Okno | 2025-06-01 → **2026-08-22** |
-| Test MAE | **0.658** kWh/h |
-| Gap train–test | **0.069** |
-| Daily MAE | **3.67** kWh/d |
-| Daily R² | **0.829** |
+| Okno | 2025-06-01 → **2026-08-29** |
+| Test MAE | **0.668** kWh/h |
+| Gap train–test | **0.072** |
+| Daily MAE | **3.46** kWh/d |
+| Daily R² | **0.847** |
 | Werdykt | nie przeuczony |
 
-Gate vs weekly **16.08** (0.643): Δ **+0.015** ≤ +0.02 → **ACCEPT**.
+Gate vs weekly **23.08** (0.658): Δ **+0.010** ≤ +0.02 → **ACCEPT**.
 
 ### Live (closeout vs app)
 
@@ -37,11 +37,11 @@ Gate vs weekly **16.08** (0.643): Δ **+0.015** ≤ +0.02 → **ACCEPT**.
 | Era dual **27.07–24.08** | 29 | **11,0%** | **10,0%** |
 | Całość **14.07–24.08** | 42 | 15,4% | 13,5% |
 
-*(Całość wciąga burzowy tydzień przed dual — do narracji używaj ery dual. **23–24.08** jasne undershoot (actual ~35 vs daily ~28,6 / ~26,6) podbiły MAPE dual z **10,2/9,4** → **11,0/10,0**.)*
+*(Wykresy nadal do **24.08**. Live po 24: **29.08** actual **21,1** · CS4 pick **+2%**; **30.08** jasny · PV **≥25,9** @15 przy daily ~27 — pełny EOD w toku.)*
 
-CS4 daily (era dual, n=29): MAPE **~11,4%** — lekko powyżej RF; lepszy **9/29** (m.in. **16–18**, **20–21.08**); na jasnych gorzej (**19**, **23–24.08**); **22.08** RF bliżej daily niż CS4.
+CS4 daily (era dual, n=29): MAPE **~11,4%** — lekko powyżej RF; lepszy na pochmurnych; na jasnych gorzej.
 
-Ostatnie closeouty: **22.08** **25,1** (best `midday_xgb_ts`) · **23.08** **35,2** (daily RF −6,7 / −19%; best peak) · **24.08** **35,1** (daily RF −8,5 / −24%; best `peak_xgb_ts` ~28).
+Ostatnie closeouty: **24.08** **35,1** · **29.08** **21,1** (CS4 ✓) · **30.08** w toku (jasny, SoC 100% od południa).
 
 Wykresy (do **24.08**, odświeżone **25.08**): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) · opis: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
 
@@ -73,6 +73,7 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
 | Pogoda 15.08–1.09 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) |
+| Weekly **30.08** | [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md) |
 | Weekly **23.08** | [`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md) |
 | Weekly 16.08 | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
 | Dzień 19–30.08 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · [`NOTATKA_2026-08-20.md`](NOTATKA_2026-08-20.md) · [`NOTATKA_2026-08-21.md`](NOTATKA_2026-08-21.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md) · [`NOTATKA_2026-08-23.md`](NOTATKA_2026-08-23.md) · [`NOTATKA_2026-08-24.md`](NOTATKA_2026-08-24.md) · [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md) · [`NOTATKA_2026-08-27.md`](NOTATKA_2026-08-27.md) · [`NOTATKA_2026-08-28.md`](NOTATKA_2026-08-28.md) · [`NOTATKA_2026-08-29.md`](NOTATKA_2026-08-29.md) · [`NOTATKA_2026-08-30.md`](NOTATKA_2026-08-30.md) |
