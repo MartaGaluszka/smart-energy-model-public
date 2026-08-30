@@ -64,7 +64,7 @@ Oneshot 29–30 (archive RF×ICON/UKMO): UKMO≈fakt na 29; UKMO zawyża na 30 �
 2. Closeout **30.08** EOD + **31.08** (CS4 / deszcz PM).  
 3. Gate routing ens/CS4: **01.09**.  
 4. Kolejny weekly: **niedziela 06.09 ~04:30**.  
-5. Wykresy walidacji: nadal do **24.08** — odświeżyć po serii closeoutów 25–31.
+5. Wykresy walidacji: odświeżone **30.08** do **29.08** — [`july_validation_summary.md`](images/ml/july_validation_summary.md); po closeoucie **30–31** zaktualizować ponownie.
 
 ---
 

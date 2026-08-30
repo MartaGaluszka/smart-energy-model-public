@@ -54,6 +54,7 @@ MILESTONES = [
     {'date': '2026-08-09', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-08-16', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-08-23', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-08-30', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
 ]
 
 
