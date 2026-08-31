@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
 **Stan na:** 2026-08-30  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 30.08**) · `forecast_validation.csv` (closeouty do **29.08**; **30.08** EOD w toku) · [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md)
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 30.08**) · `forecast_validation.csv` (closeouty do **30.08**; **31.08** w toku) · [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -37,11 +37,11 @@ Gate vs weekly **23.08** (0.658): Δ **+0.010** ≤ +0.02 → **ACCEPT**.
 | Era dual **27.07–29.08** | 34 | **15,7%** | **15,9%** |
 | Całość **14.07–29.08** | 47 | 18,3% | 17,4% |
 
-*(Wykresy odświeżone **30.08** do **29.08**. Skok MAPE vs 24.08 głównie przez **25.08** mokry (actual 4,5 · |APE|~150%) i **26.08** clearing undershoot. **30.08** EOD w toku — PV **≥25,9** @15 · daily ~27.)*
+*(Wykresy odświeżone **30.08** do **29.08** — odświeżyć po 30–31. **30.08** actual **33,2** · RF −15% undershoot · ens −6%.)*
 
-CS4: na pochmurnych / mix często bliżej faktu (np. **29.08** pick **21,5** vs **21,1**); na jasnych RF bywa lepszy.
+CS4: na pochmurnych / mix często bliżej faktu (np. **29.08** pick **21,5** vs **21,1**); na jasnych RF bywa lepszy, ale **30.08** ens wyprzedził RF.
 
-Ostatnie closeouty: **27.08** **35,9** · **28.08** **34,2** · **29.08** **21,1** (CS4 ✓) · **30.08** w toku.
+Ostatnie closeouty: **28.08** **34,2** · **29.08** **21,1** (CS4 ✓) · **30.08** **33,2** · **31.08** w toku (Accu→CS4).
 
 Wykresy (do **29.08**, odświeżone **30.08**): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) · opis błędów: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
 
@@ -76,7 +76,7 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Weekly **30.08** | [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md) |
 | Weekly **23.08** | [`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md) |
 | Weekly 16.08 | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
-| Dzień 19–30.08 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · [`NOTATKA_2026-08-20.md`](NOTATKA_2026-08-20.md) · [`NOTATKA_2026-08-21.md`](NOTATKA_2026-08-21.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md) · [`NOTATKA_2026-08-23.md`](NOTATKA_2026-08-23.md) · [`NOTATKA_2026-08-24.md`](NOTATKA_2026-08-24.md) · [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md) · [`NOTATKA_2026-08-27.md`](NOTATKA_2026-08-27.md) · [`NOTATKA_2026-08-28.md`](NOTATKA_2026-08-28.md) · [`NOTATKA_2026-08-29.md`](NOTATKA_2026-08-29.md) · [`NOTATKA_2026-08-30.md`](NOTATKA_2026-08-30.md) |
+| Dzień 19–31.08 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · [`NOTATKA_2026-08-20.md`](NOTATKA_2026-08-20.md) · [`NOTATKA_2026-08-21.md`](NOTATKA_2026-08-21.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md) · [`NOTATKA_2026-08-23.md`](NOTATKA_2026-08-23.md) · [`NOTATKA_2026-08-24.md`](NOTATKA_2026-08-24.md) · [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md) · [`NOTATKA_2026-08-27.md`](NOTATKA_2026-08-27.md) · [`NOTATKA_2026-08-28.md`](NOTATKA_2026-08-28.md) · [`NOTATKA_2026-08-29.md`](NOTATKA_2026-08-29.md) · [`NOTATKA_2026-08-30.md`](NOTATKA_2026-08-30.md) · [`NOTATKA_2026-08-31.md`](NOTATKA_2026-08-31.md) |
 | Oneshot shadow | [`NOTATKA_ONESHOT_2026-08-17.md`](NOTATKA_ONESHOT_2026-08-17.md) |
 | Paper-trade Accu→RF/CS4 | paper-trade Accu (tylko repo prywatne) |
 | Routing test 28–31.08 | [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md) · plan [`PLAN_ENSEMBLE_NWP_2026.md`](PLAN_ENSEMBLE_NWP_2026.md) E1.6 |
