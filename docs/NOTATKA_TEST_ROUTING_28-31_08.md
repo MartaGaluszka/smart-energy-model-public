@@ -36,7 +36,7 @@
 | **28.08** | ICON cloud **49,8%** · Accu **21%** | routing **pochmurny** / Accu **jasny** | routing→**CS4** · Accu→RF | **34,2** | **30,0** | **31,8** | **30,8** | =CS4 | **−12%** | **−10%** |
 | **29.08** | ICON **67%** · Accu **33%** · **okno: burza→deszcz do 08; clearing 11:50+** | pochmurny | **CS4** ✓ | **21,1** | **20,7** | **20,3** | **21,5** | **=CS4 21,5** | **−2%** | **+2%** |
 | **30.08** | ICON **~53%** · Accu **23%** · okno **0 cloud** | pochmurny (ICON) / Accu+okno **jasny** | routing→**CS4** · Accu→**RF** | **33,2** | **28,2** | **31,1** | **29,7** | =CS4 | **−15%** | **−11%** |
-| **31.08** | ICON **~94%** · Accu **4/61%/0,3** P80% + burze 15–00 | pochmurny | **CS4** | ? | **19,8** | **26,2** | **20,4** | =CS4 | ? | ? |
+| **31.08** | ICON **~90%** · Accu **4/61%/0,3** P80% + burza ~15:15 | pochmurny | **CS4** | **24,6** | **19,8** | **26,2** | **20,4** | =CS4 | **−20%** | **−17%** |
 
 *(30: oneshot UKMO **32,2 (−3%)** ≫ ICON **26,1**; ens launchd ≈ kompromis. Routing CS4 lepszy niż RF, gorszy niż ens/UKMO. 31 oneshot I/U **20,8 / 25,3**.)*
 
@@ -72,42 +72,80 @@ cat data/processed/routing_pick.csv | grep 2026-08-28
 
 ---
 
-## Gate 01.09 (pon, 1h)
+## Gate 01.09 (pon, 1h) — **DECYZJA**
 
-### **Metryki**
+### Metryki (28–31.08, n=4)
 
-| Metryka | Baseline ICON | Routing (ensemble/CS4) | Target |
-|---------|---------------|------------------------|--------|
-| MAPE (4 dni) | ? | ? | Routing ≤ ICON |
-| Błędy >20% | ? | ? | 0/4 (vs 3/29 baseline) |
-| Średni błąd | ? | ? | Routing < ICON |
+| Strategia | MAPE | Błędy >15% | Co wybiera |
+|-----------|-----:|:----------:|------------|
+| zawsze RF (ICON) | **10,9%** | 2/4 (30, 31) | — |
+| zawsze CS4 | **9,9%** | 1/4 (31) | — |
+| **ICON cloud ≥30% → CS4** (hipoteza testu) | **9,9%** | 1/4 | **zawsze CS4** (28–31 ICON cloud 50–90%) — **ensemble nigdy** |
+| ICON cloud ≥55% → CS4 else ENS | **8,1%** | 1/4 (31) | 28+30 ENS · 29+31 CS4 |
+| Accu mokry→CS4 else ENS | **8,1%** | 1/4 (31) | 28+30 ENS · 29+31 CS4 |
+| **zawsze Ensemble** | **5,9%** | **0/4** | — |
+| Accu RF/CS4 (paper) | 10,3% | 2/4 | bez ens |
 
-### **Decyzja**
+| Dzień | Act | RF | CS4 | ENS | ½ oneshot | ICON cloud | Accu | Best |
+|-------|----:|---:|----:|----:|----------:|-----------:|------|------|
+| **28** | 34,2 | 31,8 (−7%) | 30,8 (−10%) | **31,8 (−7%)** | — | **50%** | jasny | RF≈ENS |
+| **29** | 21,1 | 20,7 (−2%) | **21,5 (+2%)** | 20,3 (−4%) | 18,4 | **67%** | mokry AM | **CS4** |
+| **30** | 33,2 | 28,2 (−15%) | 29,7 (−11%) | **31,1 (−6%)** | 29,1 / UKMO 32,2 | **53%** | jasny/okno 0 | **ENS** |
+| **31** | 24,6 | 19,8 (−20%) | 20,4 (−17%) | 26,2 (+7%) | **25,5 (−3%)** | **90%** | pochmurny+burza | **½ / ENS** |
 
-- **ACCEPT:** Routing ≤ ICON + błędy >20% spadły → wdrożenie 02.09
-- **REVIEW:** Routing ≈ ICON → zbierać więcej danych (IX)
-- **REJECT:** Routing > ICON → zostać przy ICON
+### Werdykt gate
+
+| Opcja | Status | Uzasadnienie |
+|-------|--------|--------------|
+| Hipoteza **ICON cloud ≥30% → CS4** | **REJECT** | Próg za niski: ICON jest systematycznie za chmurny na jasne dni → routing **nigdy nie bierze ensemble**. MAPE = always CS4. |
+| **Zawsze Ensemble (ICON+UKMO)** jako daily primary | **ACCEPT (rekomendacja)** | MAPE **5,9%**, 0 błędów >15% na 28–31. Nawet na 31 (burza) ENS lepszy niż CS4. |
+| CS4 | **zostaje shadow** | Wygrywa wąsko tylko na **29** (mokry AM). Nie jako default. |
+| RF ICON solo | **baseline / backup** | Undershoot na jasnych (30: −15%). |
+
+### Reguły do wdrożenia (propozycja operacyjna)
+
+```text
+1) DAILY PRIMARY (od 02.09, jeśli akceptujesz):
+   → Ensemble ICON+UKMO   (pv_forecast_ensemble / ten sam RF16)
+
+2) CS4 — tylko shadow + alert, NIE primary, dopóki n≥10 mokrych closeoutów
+   Wyjątek ręczny / paper: Accu pochmurny (jasność≤4 LUB cloud≥70 LUB opad≥2 LUB burze≥40%)
+   LUB potwierdzony mokry AM (okno/MB) → wtedy wolno wybrać CS4 w paper/UI
+   Ale launchd: nadal ensemble (31 pokazał CS4 −17% vs ENS +7%).
+
+3) NIE wdrażać progu ICON cloud ≥30% (ani 40%).
+   Jeśli kiedyś wrócimy do progu ICON-only: start od ≥55–70% + Accu mokry (nie sam cloud).
+
+4) UKMO oneshot: pilnować broken radiation na forecast D+2 (3.09) — nie ufać ślepo.
+```
+
+### Decyzja formalna (potwierdzona 01.09)
+
+- [x] **REJECT** routing ICON≥30%→CS4  
+- [x] **ACCEPT** ensemble jako primary daily  
+- [x] CS4 + RF/ICON zostają w shadow / porównaniu closeout  
+- [x] Paper Accu RF↔CS4 kontynuować (osobna ścieżka UI), bez zmiany że ensemble wygrywa kWh na jasnych
+
+**Backup planu (plan E1):** próg 40–50% był lepszy niż 30%, ale **always ENS** bije oba na tej próbce.
 
 ---
 
-## Wdrożenie 02.09 (wt, 30 min) — jeśli ACCEPT
+## Gate 01.09 — metryki (szablon oryginalny, wypełniony)
 
-1. Dodaj flag w `.env`:
-   ```bash
-   ROUTING_ENABLE=1
-   ROUTING_CLEAR_CLOUD_MAX=30
-   ```
+| Metryka | Baseline ICON | Routing ICON≥30%→CS4 | Ensemble always | Target |
+|---------|---------------|----------------------|-----------------|--------|
+| MAPE (4 dni) | **10,9%** | **9,9%** | **5,9%** | Routing ≤ ICON → ENS spełnia |
+| Błędy >20% | **1/4** (31) | **0/4** (>20%); 31 CS4 −17% | **0/4** | spadły przy ENS |
+| Średni \|błąd\| | wyższy | ≈CS4 | **najniższy** | ENS |
 
-2. Podmień launchd na routing:
-   ```bash
-   # mlops/launchd_daily_forecast.sh
-   if [ "$ROUTING_ENABLE" = "1" ]; then
-       python scripts/analysis/routing_decision.py --date tomorrow
-       # ... użyj routing_pick.csv do wyboru modelu
-   fi
-   ```
+---
 
-3. Monitor closeoutów (3–7 dni) — czy poprawa się utrzymuje
+## Wdrożenie 01–02.09 — ensemble primary ✅
+
+1. Flagi w `.env`: `ENSEMBLE_PRIMARY=1` (bez `ROUTING_CLEAR_CLOUD_MAX=30`).
+2. `mlops/_ensemble_primary.sh` + daily/midday/peak: ensemble → `pv_forecast.csv`; ICON → `pv_forecast_icon.csv`.
+3. CS4 + ICON solo: nadal shadow CSV; routing_decision = porównanie shadow.
+4. Monitor 3–7 dni (w tym 1–3.09) — MAPE; UKMO rad broken = skip dnia w oneshot.
 
 ---
 
