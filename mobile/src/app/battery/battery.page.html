@@ -51,11 +51,17 @@
 
           <div class="se-battery-page__season">
             <span class="se-battery-page__label">Sezon</span>
-            <ion-segment [value]="season" (ionChange)="onSeasonChange($any($event.detail).value)">
-              <ion-segment-button *ngFor="let opt of seasonOptions" [value]="opt.value">
-                <ion-label>{{ opt.label }}</ion-label>
-              </ion-segment-button>
-            </ion-segment>
+            <div class="se-chips" role="radiogroup" aria-label="Sezon">
+              <button
+                type="button"
+                class="se-chip"
+                *ngFor="let opt of seasonOptions"
+                [class.se-chip--on]="season === opt.value"
+                (click)="onSeasonChange(opt.value)"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
             <p class="se-battery-page__resolved" *ngIf="season === 'auto'">
               Dziś: <strong>{{ seasonLabel(seasonResolved) }}</strong>
               · rezerwa {{ socReservePercent | number:'1.0-0' }}%
@@ -68,40 +74,42 @@
             </p>
           </div>
 
-          <ion-item lines="none" class="se-battery-page__slider">
-            <ion-label position="stacked">
+          <div class="se-slider">
+            <label class="se-slider__label" for="soc-min">
               Rezerwa SoC (zalecana) — {{ socMinPercent | number:'1.0-0' }}%
-            </ion-label>
-            <ion-range
-              [min]="10"
-              [max]="50"
-              [step]="1"
-              [snaps]="true"
+            </label>
+            <input
+              id="soc-min"
+              class="se-slider__input"
+              type="range"
+              min="10"
+              max="50"
+              step="1"
               [(ngModel)]="socMinPercent"
-              (ionChange)="socReservePercent = socMinPercent"
-              color="secondary"
-            ></ion-range>
+              (ngModelChange)="socReservePercent = socMinPercent"
+            />
             <p class="se-battery-page__slider-note">
               Po wyborze sezonu suwak ustawia zalecenie (20 / 22 / 40). Przy Auto backend i tak bierze rezerwę z kalendarza (BAT.5).
             </p>
-          </ion-item>
+          </div>
 
-          <ion-item lines="none" class="se-battery-page__slider">
-            <ion-label position="stacked">
+          <div class="se-slider">
+            <label class="se-slider__label" for="soc-target">
               Cel SoC (doradczy) — {{ socTargetPercent | number:'1.0-0' }}%
-            </ion-label>
-            <ion-range
-              [min]="50"
-              [max]="100"
-              [step]="1"
-              [snaps]="true"
+            </label>
+            <input
+              id="soc-target"
+              class="se-slider__input se-slider__input--solar"
+              type="range"
+              min="50"
+              max="100"
+              step="1"
               [(ngModel)]="socTargetPercent"
-              color="primary"
-            ></ion-range>
+            />
             <p class="se-battery-page__slider-note">
               Służy do wyliczenia długości bloku doładowania w planie SE — nie jest limitem sprzętowym.
             </p>
-          </ion-item>
+          </div>
 
           <div class="se-battery-page__window">
             <span class="se-battery-page__label">Kalkulacja okna FC — nie zmienia ładowania</span>
@@ -112,46 +120,46 @@
             <p class="se-battery-page__slider-note">
               Tylko wyliczenie: {{ fcNightStartHour | number:'2.0-0' }}:00–{{ fcWindowEndLabel() }}.
               Lato/wiosna trzymaj krótko (~15 min) — nie pełnić baterii „na zapas”.
-              Żeby użyć w planie: wstaw poniżej i włącz toggle bloku.
+              Żeby użyć w planie: wstaw poniżej i włącz przełącznik bloku.
             </p>
           </div>
 
-          <ion-item lines="none" class="se-battery-page__slider">
-            <ion-label position="stacked">
+          <div class="se-slider">
+            <label class="se-slider__label" for="fc-start">
               Od której godziny — {{ fcNightStartHour | number:'2.0-0' }}:00
-            </ion-label>
-            <ion-range
-              [min]="21"
-              [max]="23"
-              [step]="1"
-              [snaps]="true"
-              [pin]="true"
+            </label>
+            <input
+              id="fc-start"
+              class="se-slider__input"
+              type="range"
+              min="21"
+              max="23"
+              step="1"
               [(ngModel)]="fcNightStartHour"
-              color="tertiary"
-            ></ion-range>
+            />
             <p class="se-battery-page__slider-note">
               Start taniej strefy G12w zwykle 22:00 (pn–pt). Suwaki nie włączają FC.
             </p>
-          </ion-item>
+          </div>
 
-          <ion-item lines="none" class="se-battery-page__slider">
-            <ion-label position="stacked">
+          <div class="se-slider">
+            <label class="se-slider__label" for="fc-max">
               Do której — {{ fcWindowEndLabel() }}
               ({{ fcMaxMinutes | number:'1.0-0' }} min ≈ +{{ estimatedDeltaSoc() }} pp)
-            </ion-label>
-            <ion-range
-              [min]="5"
-              [max]="120"
-              [step]="5"
-              [snaps]="true"
-              [pin]="true"
+            </label>
+            <input
+              id="fc-max"
+              class="se-slider__input se-slider__input--warn"
+              type="range"
+              min="5"
+              max="120"
+              step="5"
               [(ngModel)]="fcMaxMinutes"
-              color="warning"
-            ></ion-range>
+            />
             <p class="se-battery-page__slider-note">
               Lato/wiosna ~15 min; jesień ~45; zima do ~90 (zalecenie: {{ recommendedFcMaxMinutes | number:'1.0-0' }} min).
             </p>
-          </ion-item>
+          </div>
 
           <div class="se-battery-page__schedule">
             <span class="se-battery-page__label">
@@ -164,14 +172,17 @@
             </p>
 
             <span class="se-battery-page__label">Szablon startowy (opcjonalnie)</span>
-            <ion-segment
-              [value]="schedulePreset === 'custom' ? '' : schedulePreset"
-              (ionChange)="applyTariffPreset($any($event.detail).value)"
-            >
-              <ion-segment-button *ngFor="let p of tariffPresets" [value]="p.value">
-                <ion-label>{{ p.label }}</ion-label>
-              </ion-segment-button>
-            </ion-segment>
+            <div class="se-chips" role="radiogroup" aria-label="Szablon taryfy">
+              <button
+                type="button"
+                class="se-chip"
+                *ngFor="let p of tariffPresets"
+                [class.se-chip--on]="schedulePreset === p.value"
+                (click)="applyTariffPreset(p.value)"
+              >
+                {{ p.label }}
+              </button>
+            </div>
             <p class="se-battery-page__slider-note" *ngIf="schedulePreset === 'custom'">
               Tryb własny — lista zmieniona ręcznie.
             </p>
@@ -189,8 +200,16 @@
             <div class="se-schedule-row" *ngFor="let w of scheduleWindows; let i = index">
               <div class="se-schedule-row__head">
                 <span>Blok {{ i + 1 }}</span>
+                <label class="se-switch">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="w.enabled"
+                    (ngModelChange)="schedulePreset = 'custom'"
+                    [attr.aria-label]="'Blok ' + (i + 1)"
+                  />
+                  <span class="se-switch__track" aria-hidden="true"></span>
+                </label>
                 <span class="se-schedule-row__toggle-label">{{ w.enabled ? 'w planie' : 'wyłączony' }}</span>
-                <ion-toggle [(ngModel)]="w.enabled" (ionChange)="schedulePreset = 'custom'"></ion-toggle>
                 <ion-button fill="clear" size="small" color="medium" (click)="removeWindow(i)">
                   Usuń
                 </ion-button>
@@ -205,14 +224,17 @@
                   <input type="time" [(ngModel)]="w.end" (change)="schedulePreset = 'custom'" />
                 </label>
               </div>
-              <ion-segment
-                [value]="w.mode"
-                (ionChange)="w.mode = $any($event.detail).value; schedulePreset = 'custom'"
-              >
-                <ion-segment-button *ngFor="let m of scheduleModes" [value]="m.value">
-                  <ion-label>{{ m.label }}</ion-label>
-                </ion-segment-button>
-              </ion-segment>
+              <div class="se-chips se-chips--wrap" role="radiogroup" [attr.aria-label]="'Tryb bloku ' + (i + 1)">
+                <button
+                  type="button"
+                  class="se-chip se-chip--sm"
+                  *ngFor="let m of scheduleModes"
+                  [class.se-chip--on]="w.mode === m.value"
+                  (click)="w.mode = m.value; schedulePreset = 'custom'"
+                >
+                  {{ m.label }}
+                </button>
+              </div>
             </div>
 
             <div class="se-schedule-actions">

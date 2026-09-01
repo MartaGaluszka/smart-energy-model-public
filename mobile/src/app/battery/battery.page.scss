@@ -47,26 +47,111 @@
   color: var(--text);
 }
 
-.se-battery-page ion-segment {
-  --background: var(--bg);
+.se-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: 100%;
 }
 
-.se-battery-page ion-segment-button {
-  --padding-start: 4px;
-  --padding-end: 4px;
+.se-chips--wrap {
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.se-chip {
+  flex: 1 1 0;
   min-width: 0;
-  font-size: 11px;
-  text-transform: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.2;
 }
 
-.se-battery-page__slider {
-  --padding-start: 0;
-  --inner-padding-end: 0;
-  margin: 4px 0 10px;
+.se-chip--sm {
+  flex: 1 1 auto;
+  padding: 7px 8px;
+  font-size: 11px;
+}
+
+.se-chip--on {
+  background: var(--grid);
+  border-color: var(--grid);
+  color: #fafaf8;
+}
+
+.se-slider {
+  margin: 10px 0 14px;
+}
+
+.se-slider__label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.se-slider__input {
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+}
+
+.se-slider__input:focus {
+  outline: none;
+}
+
+.se-slider__input::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #d8d4cb;
+}
+
+.se-slider__input::-webkit-slider-thumb {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--grid);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.se-slider__input--solar::-webkit-slider-thumb {
+  background: var(--solar);
+}
+
+.se-slider__input--warn::-webkit-slider-thumb {
+  background: var(--cost);
+}
+
+.se-slider__input::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #d8d4cb;
+}
+
+.se-slider__input::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--grid);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .se-battery-page__slider-note {
-  margin: 0;
+  margin: 6px 0 0;
   font-size: 11px;
   color: var(--text-muted);
   line-height: 1.35;
@@ -127,36 +212,62 @@
   font-size: 11px;
   font-weight: 500;
   color: var(--text-muted, #6b7280);
-  margin-left: 4px;
+  min-width: 4.5em;
 }
 
-.se-schedule-row__head ion-toggle {
+.se-switch {
+  position: relative;
+  display: inline-flex;
   flex-shrink: 0;
-  width: 36px;
+  align-items: center;
+  width: 34px;
   height: 20px;
-  min-height: 20px;
-  padding: 0;
   margin: 0;
-  --handle-width: 16px;
-  --handle-height: 16px;
-  --track-width: 36px;
-  --track-height: 18px;
-  --handle-spacing: 1px;
-  // Kompromis: czytelny, nie domyślny „duży” Ionic
-  transform: scale(0.88);
-  transform-origin: left center;
+  cursor: pointer;
 }
 
-.se-schedule-row__head ion-toggle::part(track) {
-  width: 36px;
-  height: 18px;
+.se-switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.se-switch__track {
+  display: block;
+  width: 34px;
+  height: 20px;
   border-radius: 999px;
+  background: #c8ccd2;
+  transition: background 0.15s ease;
+  pointer-events: none;
 }
 
-.se-schedule-row__head ion-toggle::part(handle) {
+.se-switch__track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
   width: 16px;
   height: 16px;
   border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+  transition: transform 0.15s ease;
+}
+
+.se-switch input:checked + .se-switch__track {
+  background: var(--solar);
+}
+
+.se-switch input:checked + .se-switch__track::after {
+  transform: translateX(14px);
+}
+
+.se-switch input:focus-visible + .se-switch__track {
+  outline: 2px solid var(--solar);
+  outline-offset: 1px;
 }
 
 .se-schedule-row__head ion-button {
@@ -196,18 +307,6 @@
   color: var(--text);
   -webkit-appearance: none;
   appearance: none;
-}
-
-.se-schedule-row ion-segment {
-  --background: var(--card, #fff);
-}
-
-.se-schedule-row ion-segment-button {
-  --padding-start: 2px;
-  --padding-end: 2px;
-  min-width: 0;
-  font-size: 10px;
-  text-transform: none;
 }
 
 .se-schedule-actions {

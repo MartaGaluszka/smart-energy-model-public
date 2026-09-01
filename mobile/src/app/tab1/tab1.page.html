@@ -208,6 +208,8 @@
       <p *ngIf="!suggestions.length" class="se-demo-note">Brak nowych sugestii.</p>
     </ng-container>
 
-    <p class="se-demo-note">Dane demonstracyjne — integracja z API FoxESS w toku.</p>
+    <p *ngIf="(sync$ | async)?.offline" class="se-demo-note">
+      Dane demonstracyjne — API niedostępne (offline).
+    </p>
   </div>
 </ion-content>
