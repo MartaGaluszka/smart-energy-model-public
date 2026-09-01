@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Shadow: RF16 + pogoda ensemble ICON+UKMO (E1.6 live closeouty).
+# Ensemble ICON+UKMO → pv_forecast_ensemble.csv (shadow gdy ENSEMBLE_PRIMARY≠1).
 #
 # 1) Zapisuje prognozę ensemble do weather_data (osobny data_source)
 # 2) Prognoza PV → data/processed/pv_forecast_ensemble.csv
 #
-# NIE zmienia primary ICON (OpenMeteo-forecast).
+# Gdy ENSEMBLE_PRIMARY=1, daily/midday/peak używają mlops/_ensemble_primary.sh
+# (ensemble → pv_forecast.csv); ten skrypt zostaje dla trybu ICON-primary / ręcznego.
 # Wyłączenie: FORECAST_ENSEMBLE_SHADOW=0
 
 set -euo pipefail

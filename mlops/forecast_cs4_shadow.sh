@@ -38,7 +38,9 @@ OUT_CSV="data/processed/pv_forecast_cs4.csv"
 echo ""
 echo "=== CS4 PRODUKCJA (dual) | ${RUN_LABEL} | ${CS4_MODEL} ==="
 
+# Zawsze ICON (OpenMeteo-forecast) — nawet gdy ENSEMBLE_PRIMARY=1.
 PV_HOURLY_MODEL_PATH="${CS4_MODEL}" \
+WEATHER_FORECAST_SOURCE_LIKE='OpenMeteo-forecast' \
   "$PYTHON" "${PROJECT_ROOT}/mlops/forecast_pv.py" \
     --days 3 --top 5 \
     --run-label "${RUN_LABEL}" \
