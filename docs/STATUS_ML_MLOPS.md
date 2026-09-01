@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-08-30  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 30.08**) · `forecast_validation.csv` (closeouty do **30.08**; **31.08** w toku) · [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md)
+**Stan na:** 2026-09-01  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 30.08**) · `forecast_validation.csv` (closeouty do **31.08**) · [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -13,9 +13,9 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 |--|--|
 | Model | Random Forest · **16 cech** |
 | Target | Δ`PVEnergyTotal` (PVE = skala app FoxESS) |
-| Pogoda | Open-Meteo **ICON** · GPS dach |
+| Pogoda | Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, od **01.09**) · GPS dach |
 | Artefakt | `models/pv_hourly_model.joblib` |
-| Shadow | CS4 (19) + XGB+TS + **ICON+UKMO** (`pv_forecast_ensemble.csv`, LIVE od 28.08) — **nie** primary |
+| Shadow | ICON solo + CS4 (19) + XGB+TS (+ kopia `pv_forecast_ensemble.csv`) — closeouty / routing porównanie |
 
 ### Offline (80/20 po dniach, expanding)
 
@@ -41,7 +41,8 @@ Gate vs weekly **23.08** (0.658): Δ **+0.010** ≤ +0.02 → **ACCEPT**.
 
 CS4: na pochmurnych / mix często bliżej faktu (np. **29.08** pick **21,5** vs **21,1**); na jasnych RF bywa lepszy, ale **30.08** ens wyprzedził RF.
 
-Ostatnie closeouty: **28.08** **34,2** · **29.08** **21,1** (CS4 ✓) · **30.08** **33,2** · **31.08** w toku (Accu→CS4).
+Ostatnie closeouty: **28.08** **34,2** · **29.08** **21,1** (CS4 ✓) · **30.08** **33,2** · **31.08** **24,6** (Accu→CS4; CS4 −17%, ens +7%) · **1.09** w toku (Accu→RF).  
+**Gate routing 01.09:** **REJECT** ICON≥30%→CS4 · **ACCEPT** **ensemble ICON+UKMO** jako primary daily ([`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)) — wdrożone `ENSEMBLE_PRIMARY=1` + `mlops/_ensemble_primary.sh`.
 
 Wykresy (do **29.08**, odświeżone **30.08**): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) · opis błędów: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
 
@@ -51,13 +52,13 @@ Wykresy (do **29.08**, odświeżone **30.08**): [`images/ml/july_validation_plot
 
 | Kiedy | Job |
 |-------|-----|
-| 05:00 | daily sync + prognoza (+ shadow CS4/XGB + ensemble) |
-| 12:00 | midday (+ ensemble) |
-| 16:00 | peak (+ ensemble) |
+| 05:00 | daily sync + prognoza (**ensemble primary** + shadow ICON/CS4/XGB) |
+| 12:00 | midday (j.w.) |
+| 16:00 | peak (j.w.) |
 | wieczór | evening closeout → walidacja |
 | niedziela **04:30** | `train_dual_weekly.sh` (16 + CS4 + XGB) |
 
-Szczegóły komend: [`mlops/README.md`](../mlops/README.md).
+Szczegóły komend: [`mlops/README.md`](../mlops/README.md). Flaga: `ENSEMBLE_PRIMARY=1` (`.env`).
 
 Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 
@@ -72,11 +73,11 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Decyzje (PVE, ICON, 16 cech) | [`03_ZALOZENIA_I_DECYZJE.md`](03_ZALOZENIA_I_DECYZJE.md) |
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
-| Pogoda 15.08–1.09 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) |
+| Pogoda 15.08–3.09 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · dzień [`NOTATKA_2026-09-01.md`](NOTATKA_2026-09-01.md) |
 | Weekly **30.08** | [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md) |
 | Weekly **23.08** | [`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md) |
 | Weekly 16.08 | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
-| Dzień 19–31.08 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · [`NOTATKA_2026-08-20.md`](NOTATKA_2026-08-20.md) · [`NOTATKA_2026-08-21.md`](NOTATKA_2026-08-21.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md) · [`NOTATKA_2026-08-23.md`](NOTATKA_2026-08-23.md) · [`NOTATKA_2026-08-24.md`](NOTATKA_2026-08-24.md) · [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · [`NOTATKA_2026-08-26.md`](NOTATKA_2026-08-26.md) · [`NOTATKA_2026-08-27.md`](NOTATKA_2026-08-27.md) · [`NOTATKA_2026-08-28.md`](NOTATKA_2026-08-28.md) · [`NOTATKA_2026-08-29.md`](NOTATKA_2026-08-29.md) · [`NOTATKA_2026-08-30.md`](NOTATKA_2026-08-30.md) · [`NOTATKA_2026-08-31.md`](NOTATKA_2026-08-31.md) |
+| Dzień 19.08–1.09 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · … · [`NOTATKA_2026-08-31.md`](NOTATKA_2026-08-31.md) · [`NOTATKA_2026-09-01.md`](NOTATKA_2026-09-01.md) |
 | Oneshot shadow | [`NOTATKA_ONESHOT_2026-08-17.md`](NOTATKA_ONESHOT_2026-08-17.md) |
 | Paper-trade Accu→RF/CS4 | paper-trade Accu (tylko repo prywatne) |
 | Routing test 28–31.08 | [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md) · plan [`PLAN_ENSEMBLE_NWP_2026.md`](PLAN_ENSEMBLE_NWP_2026.md) E1.6 |
