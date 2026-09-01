@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Zapisuje prognozę ensemble ICON+UKMO do weather_data (osobny data_source).
 
-Nie nadpisuje OpenMeteo-forecast (ICON primary). Używane przez
+Nie nadpisuje OpenMeteo-forecast (ICON). Używane przez shadow i przez ENSEMBLE_PRIMARY.
 mlops/forecast_ensemble_shadow.sh przed prognozą PV shadow.
 """
 

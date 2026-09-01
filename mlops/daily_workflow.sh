@@ -36,6 +36,8 @@ echo "======================================================================"
 
 # shellcheck source=/dev/null
 source "${PROJECT_ROOT}/mlops/_venv.sh"
+# shellcheck source=/dev/null
+source "${PROJECT_ROOT}/mlops/_ensemble_primary.sh"
 echo "✓ Python: ${PYTHON}"
 
 run_step() {
@@ -63,21 +65,7 @@ else
   echo "⚠️  Synchronizacja FoxESS nie powiodła się (kod ${sync_code}) — kontynuuję z danymi pogodowymi / cache FoxESS" >&2
 fi
 
-run_step "Prognoza PV + harmonogram urządzeń (dziś + 2 dni)" \
-  "$PYTHON" "${PROJECT_ROOT}/mlops/forecast_pv.py" --days 3 --top 5 --run-label daily
-
-# Shadow: CS4 + XGB+TS (produkcja nadal RF 16)
-run_step "Prognoza CS4 (shadow)" \
-  bash "${PROJECT_ROOT}/mlops/forecast_cs4_shadow.sh" daily
-
-run_step "Prognoza XGB+TS (shadow)" \
-  bash "${PROJECT_ROOT}/mlops/forecast_xgb_ts_shadow.sh" daily
-
-run_step "Prognoza ensemble ICON+UKMO (shadow)" \
-  bash "${PROJECT_ROOT}/mlops/forecast_ensemble_shadow.sh" daily
-
-run_step "Routing pick (ensemble vs CS4)" \
-  "$PYTHON" "${PROJECT_ROOT}/scripts/analysis/routing_decision.py" --date today --also-next 2
+run_pv_forecast_stack daily
 
 run_step "Bateria — poranek (tanio do 6:00 / prognoza PV)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/battery_advisor_report.py" --context morning
@@ -91,5 +79,10 @@ run_step "Bateria — plan sterowania (dry-run)" \
 echo ""
 echo "======================================================================"
 echo "✅ Workflow zakończony pomyślnie | $(date '+%Y-%m-%d %H:%M:%S')"
-echo "   Prognoza: ${PROJECT_ROOT}/data/processed/pv_forecast.csv"
+if _ensemble_primary_enabled; then
+  echo "   Primary: ENSEMBLE ICON+UKMO → ${PROJECT_ROOT}/data/processed/pv_forecast.csv"
+  echo "   Shadow ICON: ${PROJECT_ROOT}/data/processed/pv_forecast_icon.csv"
+else
+  echo "   Prognoza: ${PROJECT_ROOT}/data/processed/pv_forecast.csv"
+fi
 echo "======================================================================"

@@ -197,6 +197,24 @@ def load_weather_hourly(
     return df
 
 
+def forecast_weather_source_like() -> str:
+    """Który `data_source` z weather_data brać do prognozy PV.
+
+    - Domyślnie: `OpenMeteo-forecast` (ICON / historyczny primary).
+    - `ENSEMBLE_PRIMARY=1` (gate 01.09): ICON+UKMO ensemble jako primary.
+    - `WEATHER_FORECAST_SOURCE_LIKE` — jawny override (shadow skrypty).
+    """
+    import os
+
+    explicit = os.getenv('WEATHER_FORECAST_SOURCE_LIKE', '').strip()
+    if explicit:
+        return explicit
+    flag = os.getenv('ENSEMBLE_PRIMARY', '').strip().lower()
+    if flag in ('1', 'true', 'yes'):
+        return '%ensemble%'
+    return 'OpenMeteo-forecast'
+
+
 def load_forecast_weather_hourly(
     db_path: str,
     start_date: str,
@@ -205,13 +223,11 @@ def load_forecast_weather_hourly(
 ) -> pd.DataFrame:
     """Godzinowa prognoza pogody z weather_data.
 
-    Domyślnie tylko `OpenMeteo-forecast` (ICON / primary) — **bez** ensemble,
-    żeby shadow ICON+UKMO nie mieszał się w AVG z produkcją.
-    Shadow: ustaw `WEATHER_FORECAST_SOURCE_LIKE=%ensemble%`.
-    """
-    import os
+    Źródło: patrz `forecast_weather_source_like()` — ICON albo ensemble primary.
+    Shadow CS4/XGB/ICON wymuszają `WEATHER_FORECAST_SOURCE_LIKE=OpenMeteo-forecast`.
 
-    like = os.getenv('WEATHER_FORECAST_SOURCE_LIKE', '').strip() or 'OpenMeteo-forecast'
+    """
+    like = forecast_weather_source_like()
     return load_weather_hourly(
         db_path, start_date, end_date, location, data_source_like=like,
     )

@@ -36,7 +36,9 @@ OUT_CSV="data/processed/pv_forecast_xgb_ts.csv"
 echo ""
 echo "=== XGB+TS SHADOW | ${RUN_LABEL} | ${XGB_MODEL} ==="
 
+# Zawsze ICON (OpenMeteo-forecast) — nawet gdy ENSEMBLE_PRIMARY=1.
 PV_HOURLY_MODEL_PATH="${XGB_MODEL}" \
+WEATHER_FORECAST_SOURCE_LIKE='OpenMeteo-forecast' \
   "$PYTHON" "${PROJECT_ROOT}/mlops/forecast_pv.py" \
     --days 3 --top 5 \
     --run-label "${RUN_LABEL}" \
