@@ -45,7 +45,13 @@ class Settings(BaseSettings):
     # Brak w env -> wygenerowany efemerycznie przy starcie procesu (patrz get_settings()).
     SECRETS_ENCRYPTION_KEY: str = ''
 
-    CORS_ORIGINS: str = 'http://localhost:8100,http://localhost,capacitor://localhost,ionic://localhost'
+    # 127.0.0.1 ≠ localhost dla przeglądarki/WebView (Origin) — live-reload skryptu
+    # run-ios-simulator.sh serwuje na 127.0.0.1:8100, więc bez tego wpisu CORS → offline/demo.
+    CORS_ORIGINS: str = (
+        'http://localhost:8100,http://127.0.0.1:8100,'
+        'http://localhost,http://127.0.0.1,'
+        'capacitor://localhost,ionic://localhost'
+    )
 
     PV_HOURLY_MODEL_PATH: str = os.getenv('PV_HOURLY_MODEL_PATH', 'models/pv_hourly_model.joblib')
 
