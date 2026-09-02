@@ -28,12 +28,8 @@ run_pv_forecast_stack() {
 
   if _ensemble_primary_enabled; then
     echo "★ ENSEMBLE_PRIMARY=1 — ICON+UKMO = primary, ICON = shadow"
-    # Jawne OpenMeteo-forecast — bez tego ENSEMBLE_PRIMARY=1 zaciągnąłby ensemble do shadow ICON.
     run_step "Prognoza ICON (shadow)" \
-      env WEATHER_FORECAST_SOURCE_LIKE='OpenMeteo-forecast' \
-      "$python_bin" "${root}/mlops/forecast_pv.py" --days 3 --top 5 \
-        --run-label "${label}_icon" \
-        --out data/processed/pv_forecast_icon.csv
+      bash "${root}/mlops/forecast_icon_shadow.sh" "${label}"
 
     run_step "Prognoza CS4 (shadow)" \
       bash "${root}/mlops/forecast_cs4_shadow.sh" "${label}"

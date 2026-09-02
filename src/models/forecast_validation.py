@@ -628,6 +628,17 @@ def record_evening_closeout(
     if predicted_peak_cs4 is None:
         predicted_peak_cs4 = _raw('peak_cs4')
 
+    # ICON solo shadow (gdy ENSEMBLE_PRIMARY — daily = ens, daily_icon = ICON)
+    predicted_daily_icon = _adj('daily_icon')
+    predicted_midday_icon = _adj('midday_icon')
+    predicted_peak_icon = _adj('peak_icon')
+    if predicted_daily_icon is None:
+        predicted_daily_icon = _raw('daily_icon')
+    if predicted_midday_icon is None:
+        predicted_midday_icon = _raw('midday_icon')
+    if predicted_peak_icon is None:
+        predicted_peak_icon = _raw('peak_icon')
+
     candidates = {
         k: v['adjusted'] for k, v in preds_detail.items()
         if k != 'evening' and v.get('adjusted') is not None
@@ -697,6 +708,21 @@ def record_evening_closeout(
         ),
         'error_vs_midday_cs4_kwh': (
             round(ref_actual - predicted_midday_cs4, 2) if predicted_midday_cs4 is not None else None
+        ),
+        'predicted_daily_icon': (
+            round(predicted_daily_icon, 2) if predicted_daily_icon is not None else None
+        ),
+        'predicted_midday_icon': (
+            round(predicted_midday_icon, 2) if predicted_midday_icon is not None else None
+        ),
+        'predicted_peak_icon': (
+            round(predicted_peak_icon, 2) if predicted_peak_icon is not None else None
+        ),
+        'error_vs_daily_icon_kwh': (
+            round(ref_actual - predicted_daily_icon, 2) if predicted_daily_icon is not None else None
+        ),
+        'error_vs_midday_icon_kwh': (
+            round(ref_actual - predicted_midday_icon, 2) if predicted_midday_icon is not None else None
         ),
         'error_vs_reference_kwh': round(error_kwh, 2) if error_kwh is not None else None,
         'error_vs_reference_pct': round(error_pct, 1) if error_pct is not None else None,

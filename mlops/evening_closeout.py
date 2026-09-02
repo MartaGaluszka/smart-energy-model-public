@@ -200,6 +200,16 @@ def main() -> None:
         err_s = f'{err_c:+.2f}' if err_c is not None else '?'
         print(f'   Prognoza midday CS4:    {row["predicted_midday_cs4"]:.2f} kWh  '
               f'(błąd vs app {err_s} kWh)')
+    if row.get('predicted_daily_icon') is not None:
+        err_i = row.get('error_vs_daily_icon_kwh')
+        err_s = f'{err_i:+.2f}' if err_i is not None else '?'
+        print(f'   Prognoza daily ICON:    {row["predicted_daily_icon"]:.2f} kWh  '
+              f'(błąd vs app {err_s} kWh)  [shadow]')
+    if row.get('predicted_midday_icon') is not None:
+        err_i = row.get('error_vs_midday_icon_kwh')
+        err_s = f'{err_i:+.2f}' if err_i is not None else '?'
+        print(f'   Prognoza midday ICON:   {row["predicted_midday_icon"]:.2f} kWh  '
+              f'(błąd vs app {err_s} kWh)  [shadow]')
     if row['predicted_manual'] is not None:
         print(f'   Prognoza manual:    {row["predicted_manual"]:.2f} kWh')
     if row['best_snapshot_label']:
