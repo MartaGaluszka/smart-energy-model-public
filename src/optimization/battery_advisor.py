@@ -717,8 +717,13 @@ def get_day_pv_forecast_sum(
     *,
     as_of: datetime | None = None,
     db_path: str | None = None,
+    until_hour: int | None = None,
 ) -> float | None:
-    """Suma prognozy RF (raw) na cały dzień — pod regułę pochmurno."""
+    """Suma prognozy RF (raw) na dzień — pod regułę pochmurno / sugestie.
+
+    until_hour: jeśli podane (np. 13), suma tylko godzin ``hour < until_hour``
+    (prognoza „do 13:00”, bez godziny 13).
+    """
     as_of = as_of or datetime.now()
     db_path = db_path or _db_path()
     try:
@@ -737,6 +742,10 @@ def get_day_pv_forecast_sum(
         day_df = pred[pred['day'] == target_day] if not pred.empty else pred
         if day_df.empty:
             return None
+        if until_hour is not None:
+            day_df = day_df[day_df['hour'].astype(int) < int(until_hour)]
+            if day_df.empty:
+                return 0.0
         return round(float(day_df['predicted_kwh'].sum()), 2)
     except Exception:
         return None
@@ -1182,16 +1191,16 @@ def format_evening_battery_plan_note(
     if tomorrow_pv_kwh is not None:
         if tomorrow_pv_kwh >= 18:
             parts.append(
-                f'Model PV jutro ~{tomorrow_pv_kwh:.0f} kWh — przy suchym dniu dach zwykle pokryje zużycie; '
+                f'Prognoza PV na jutro ~{tomorrow_pv_kwh:.0f} kWh — przy suchym dniu dach zwykle pokryje zużycie; '
                 f'jeśli Accu/MB zapowiadają deszcz, licz na mniej i nie rozładowuj rezerwy wieczorem.'
             )
         elif tomorrow_pv_kwh < 12:
             parts.append(
-                f'PV jutro tylko ~{tomorrow_pv_kwh:.0f} kWh — słaby dzień; FC nocny bardziej uzasadniony.'
+                f'Prognoza PV na jutro tylko ~{tomorrow_pv_kwh:.0f} kWh — słaby dzień; FC nocny bardziej uzasadniony.'
             )
         else:
             parts.append(
-                f'PV jutro ~{tomorrow_pv_kwh:.0f} kWh — dzień mieszany; trzymaj rezerwę na szczyt.'
+                f'Prognoza PV na jutro ~{tomorrow_pv_kwh:.0f} kWh — dzień mieszany; trzymaj rezerwę na szczyt.'
             )
 
     return ' '.join(parts)
