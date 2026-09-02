@@ -137,6 +137,10 @@ def maybe_upsert_cheap_window(
     )
     tomorrow_pv = get_day_pv_forecast_sum(tomorrow_s, as_of=as_of) or 0.0
     today_pv = get_day_pv_forecast_sum(day_key, as_of=as_of) or 0.0
+    # Prognoza modelu do startu okna 13–15 (godziny < 13), nie fakt dotychczas.
+    today_pv_until_13 = get_day_pv_forecast_sum(day_key, as_of=as_of, until_hour=13)
+    if today_pv_until_13 is None:
+        today_pv_until_13 = today_pv
     today_actual = get_today_pv_observed_kwh(day_key)
     nxt = next_cheap_window_label(as_of)
     in_cheap = is_cheap_zone(as_of)
@@ -157,7 +161,7 @@ def maybe_upsert_cheap_window(
         body = (
             f'Sugestia doradcza — {tariff_summary()} '
             f'Najbliższe tanie okno: {nxt}. '
-            f'PV dziś ~{today_pv:.0f} kWh, jutro ~{tomorrow_pv:.0f} kWh. '
+            f'Prognoza PV dziś ~{today_pv:.0f} kWh, jutro ~{tomorrow_pv:.0f} kWh. '
             f'Rozważ ładowanie magazynu w taniej strefie — bez automatyki.'
         )
     elif context == 'pre_cheap':
@@ -165,7 +169,8 @@ def maybe_upsert_cheap_window(
         body = (
             f'Sugestia doradcza — za chwilę tania G12w 13–15 (pn–pt). '
             f'Najbliższe okno: {nxt}. '
-            f'PV dziś ~{(today_actual if today_actual is not None else today_pv):.0f} kWh. '
+            f'Prognoza PV dziś do 13:00 ~{today_pv_until_13:.0f} kWh '
+            f'(cały dzień ~{today_pv:.0f} kWh). '
             f'Jeśli SoC niski, rozważ doładowanie w tanim oknie — decyzja należy do Ciebie.'
         )
     else:
@@ -173,6 +178,7 @@ def maybe_upsert_cheap_window(
         body = (
             f'Sugestia doradcza — droga G12w do 22:00. '
             f'Trzymaj rezerwę; tanie ładowanie nocne od 22:00 ({nxt}). '
+            f'Prognoza PV dziś ~{today_pv:.0f} kWh; jutro ~{tomorrow_pv:.0f} kWh. '
             f'{evening_note} '
             f'System tylko doradza.'
         ).strip()
@@ -187,6 +193,7 @@ def maybe_upsert_cheap_window(
             'soc_percent': snap.soc_percent,
             'reserve_percent': reserve,
             'today_pv_kwh': today_pv,
+            'today_pv_until_13_kwh': today_pv_until_13,
             'today_pv_actual_kwh': today_actual,
             'tomorrow_pv_kwh': tomorrow_pv,
             'wait_for_cheap': wait.triggered,
