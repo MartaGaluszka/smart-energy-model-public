@@ -1,12 +1,16 @@
-# Notatka pogoda — 16.08–3.09.2026
+# Notatka pogoda — 16.08–4.09.2026
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
-**Produkcja ML:** Open-Meteo **ICON** (`icon_seamless`)  
-**UKMO / Accu / MB:** tylko obserwacja ręczna — **nie** w prod  
-**Shadow ensemble ICON+UKMO:** LIVE od 28.08 (~17:35)
+**Produkcja ML:** Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, od **02.09**) · RF16  
+**ICON solo / CS4 / Accu / MB:** shadow / obserwacja — nie primary  
+**Shadow ICON+UKMO CSV:** od 28.08; primary od 02.09
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-02 ~10:43** | **Oneshot** RF ICON vs UKMO · **1.09** ½=**30,4** vs **32,4** (U 31,4) · **2.09** ½=**27,4**≈ENS **27,5** · **3.09** ½=**22,0**≈ENS · **4.09** UKMO rad ~48 ✗ / ICON **13,8** |
+| **2026-09-02 ~10:25** | **MB** MultiModel + ensemble + meteogram · **2.09** sucho / cloud dip dzień · **3.09** deszcz AM + gęste chmury → clearing PM · **4.09** cloud↑ + opad wieczór (spread) + porywy ~50 · vs Accu: 2 RF ✓ · 3 CS4 ✓ · 4 MB mokrzejszy niż Accu 0 mm |
+| **2026-09-02 ~10:21** | AccuWeather outlook **3.09** **4**/79%/**1,3** P62% → **CS4** · **4.09** **2**/86%/0 P25% → **CS4** (ciemny mimo 0 mm) · drift 3.09: wczoraj mix RF → dziś pochmurny |
+| **2026-09-02 ~10:20** | AccuWeather dziś-na-dziś (**2.09**) · **8** / **41%** / **0** · P8% / burze 0% → **mix→RF** · *rosnące zachmurzenie* · susza Accu · ENS daily **27,5** · closeout **1.09** Fox **32,4** (ens −3%) |
 | **2026-09-01 ~15:17** | **Oneshot** RF ICON vs UKMO · **31** ½=**25,5≈24,6** (I 20,3 / U 30,6) · **1.09** I/U **29,4/32,1** ½=30,8 · **3.09** UKMO rad broken |
 | **2026-09-01 ~15:13** | **MB** MultiModel + meteogram + ensemble · **1.09** sucho/słońce (9 h) · ICON MM słońce+chmura · UKMO ~słońce · **2.09** sucho 9 h · **3.09** deszcz AM + cloud · okno≈MB/UKMO |
 | **2026-09-01 ~15:09** | **Obserwacja:** niebieskie niebo, pojedyncze białe chmury, słonecznie · Solar **3,51 kW** — jaśniej niż Accu „mix” 39% |
@@ -88,33 +92,62 @@ Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletnoś�
 
 ---
 
-## AccuWeather — 1.09 ~14:50 (obecny run)
+## AccuWeather — 2.09 ~10:20–10:21 (obecny run)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
 |-------|------:|--------:|------:|------:|------------------|----------------|--------------|
-| **1.09** wt. (dziś) | **24°C** (RF **23°** / Shade **22°**) | **8** jasne | **39%** | **0 mm** | **2%** / **0%** | W **22** / **52** | **mix** — chłodniej |
-| **2.09** śr. | **24°C** (RF **25°** / Shade **22°**) | **8** jasne | **41%** | **0 mm** | **25%** / 2% | W 11 / **33** | **mix** — częściowo słonecznie |
-| **3.09** czw. | **23°C** (RF **24°** / Shade **21°**) | **6** średnie | **57%** | **0,5 mm** | **60%** / 12% | W 13 / **30** | **mix** — przelotne |
+| **2.09** śr. (dziś) | **24°C** (RF **25°** / Shade **22°**) | **8** jasne | **41%** | **0,0 mm** | **8%** / **0%** | W **9** / **32** | **mix** — rosnące zachmurzenie |
+| **3.09** czw. | **23°C** (RF **24°** / Shade **21°**) | **4** przyćm. | **79%** | **1,3 mm** · 1 h | **62%** / **12%** | WSW **11** / **33** | **pochmurny** — przelotne |
+| **4.09** pt. | **24°C** (RF **23°** / Shade **22°**) | **2** ciemny | **86%** | **0,0 mm** | **25%** / **0%** | WSW **24** / **48** | **pochmurny** — zachmurzenie zmienne |
 
-UV 5 wszystkie dni. AccuLumen: 1–2.09 = **8**, 3.09 = **6**.
+UV: 2.09 = **5** · 3.09 = **4** · 4.09 = **2**. AccuLumen: **8** / **4** / **2**.
 
-### Alarmy Accu (1.09)
+### Alarmy Accu (2.09)
 
 | Alarm | Okno |
 |-------|------|
 | Ostrzeżenie Accu — **susza** | tło (×3 w UI) |
 
-### Drift vs Accu 31.08 ~11:57
+### Drift vs Accu 1.09 ~14:50
 
-| | Accu 31.08 | **Accu 1.09** | Uwaga |
-|--|------------|---------------|-------|
-| **1.09** | 9/30%/0 jasny | **8/39%/0** mix | cloud↑; pick nadal **RF** |
-| **2.09** | 8/45%/0,6 P65% | **8/41%/0** P25% | suchsza |
-| **3.09** | — | **6/57%/0,5** P60% | nowy; nadal **RF** (nie CS4) |
+| | Accu 1.09 | **Accu 2.09 run** | Uwaga |
+|--|-----------|-------------------|-------|
+| **2.09** | 8/41%/0 · P25% | **8/41%/0** · P8% | flat → **RF** |
+| **3.09** | 6/57%/0,5 P60% → mix **RF** | **4/79%/1,3** P62% → **CS4** | **pogorszenie** |
+| **4.09** | — | **2/86%/0** P25% → **CS4** | ciemny mimo 0 mm |
 
-**Wniosek:** **1–3.09** = Accu **RF** (mix). Routing ICON (cloud≥30%) → **CS4** — rozjazd jak wcześniej. Closeout **31** = **24,6**. Dzień: [`NOTATKA_2026-09-01.md`](NOTATKA_2026-09-01.md).
+**Wniosek:** **2.09** = Accu **RF** · ENS primary **27,5**. **3–4.09** = Accu **CS4** (paper); primary nadal ENS (**22,9** / **15,4**) — closeouty porównają CS4 shadow vs ENS. Dzień: [`NOTATKA_2026-09-02.md`](NOTATKA_2026-09-02.md).
 
-### MB 1.09 ~15:04–15:13 — vs Accu / okno
+### MB 2.09 ~10:25 — vs Accu
+
+| Dzień | Accu | MB (MultiModel / ens / meteogram) | Pick |
+|-------|------|-----------------------------------|------|
+| **2.09** | mix→**RF** | sucho · cloud dip dzień · MM słońce (ICON-7 czysto) | **RF** ✓ |
+| **3.09** | pochmurny→**CS4** | deszcz AM ~0,7 mm/h · gęste chmury do ~12 → clearing | **CS4** ✓ |
+| **4.09** | pochmurny→**CS4** (0 mm) | cloud↑ dzień · opad wieczór (spread) · porywy ~50 | **CS4** ✓; MB mokrzejszy niż Accu |
+
+**Wniosek MB:** potwierdza Accu na **2–3.09**; na **4.09** Accu „suche 0 mm” vs MB front wieczorny — paper CS4 OK, ENS primary warto porównać przy closeoucie.
+
+### Wnioski oneshot 2.09 ~10:43
+
+- **ENS primary OK** (≈ oneshot ½ na 1–3.09; fakt **1.09** 32,4).  
+- **3.09** UKMO mokry → ½≈ENS **22–23**; ICON solo za jasny.  
+- **4.09** UKMO rad ~48 — skip; ICON/ENS.  
+- Paper: 2 RF · 3–4 CS4 · primary bez zmian.
+
+---
+
+## AccuWeather — 1.09 ~14:50 (archiwum)
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
+|-------|------:|--------:|------:|------:|------------------|----------------|--------------|
+| **1.09** wt. | **24°C** (RF **23°** / Shade **22°**) | **8** jasne | **39%** | **0 mm** | **2%** / **0%** | W **22** / **52** | **mix** — chłodniej |
+| **2.09** śr. | **24°C** (RF **25°** / Shade **22°**) | **8** jasne | **41%** | **0 mm** | **25%** / 2% | W 11 / **33** | **mix** — częściowo słonecznie |
+| **3.09** czw. | **23°C** (RF **24°** / Shade **21°**) | **6** średnie | **57%** | **0,5 mm** | **60%** / 12% | W 13 / **30** | **mix** — przelotne |
+
+UV 5. AccuLumen: 1–2.09 = **8**, 3.09 = **6**. Susza Accu. Closeout **1.09:** Fox **32,4** · ens −3% · ICON/CS4 −10%.
+
+### MB 1.09 ~15:04–15:13 — vs Accu / okno (archiwum)
 
 | Dzień | Accu | MB | Okno / MultiModel |
 |-------|------|-----|-------------------|
