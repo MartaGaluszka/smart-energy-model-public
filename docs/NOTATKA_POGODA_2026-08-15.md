@@ -7,6 +7,7 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-03 closeout** | Fox **27,4** · Accu RF ✓ · ENS daily **24,3 (−11%)** · ICON **−23%** · CS4 **−24%** · peak ENS **26,2 (−4%)** · EOD w szacunku 25–28 |
 | **2026-09-03 ~14:27** | **Obserwacja:** cloud **80–90%** szare/ciemne · Solar **1,36 kW** · Fox **22,8 kWh** — PM dogonił ICON/ENS; rano było UKMO |
 | **2026-09-03 ~13:59** | Accu kalendarz **wrzesień** · 8.09 pełne słońce 28° · kępy deszcz **9–12**, **14–15**, **20–23** · 24–30 mix · vs 2025-09 Fox **578 kWh** / śr. **19,3** (10 dni <10 kWh) · 2026 1–3 już **przód** (32,4+31+~22,8 w toku vs 31,6+27,9+14,8) |
 | **2026-09-03 ~11:51** | **Obserwacja:** niebieskie niebo, pojedyncze białe chmury, słonecznie · Solar **4,12 kW** — jaśniej niż Accu „mix” 5/62% |
@@ -69,7 +70,7 @@
 | **2026-08-20 ~16:24** | **MB MultiModel + meteogram + ensemble** (czw.–sob.) |
 | **2026-08-17** | **Alert RCB** — burze / silny wiatr / intensywne opady **17.08**; możliwe przerwy w prądzie |
 | **2026-08-20 ~16:45** | **Alert RCB** — burze / silny wiatr / intensywne opady **20–21.08**; możliwe przerwy w prądzie |
-| **2026-08-20 ~17:00** | Archiwum RCB uzupełnione: **19.07**, **01.08**, **06/07.08** → archiwum RCB (tylko repo prywatne) |
+| **2026-08-20 ~17:00** | Archiwum RCB uzupełnione: **19.07**, **01.08**, **06/07.08** → [`NOTATKA_RCB_ALERTS.md`](NOTATKA_RCB_ALERTS.md) |
 | **2026-08-21 ~09:05** | AccuWeather dziś-na-dziś (21) / jutro (22) / +2 (23) |
 | **2026-08-21 ~09:12** | **MB MultiModel + meteogram + ensemble** (pt.–nd.+) |
 | **2026-08-22 ~18:04** | AccuWeather dziś-na-dziś (22) / jutro (23) / +2 (24) |
@@ -77,7 +78,7 @@
 
 ---
 
-## Alerty RCB (skrót; pełne SMS → archiwum RCB (tylko repo prywatne))
+## Alerty RCB (skrót; pełne SMS → [`NOTATKA_RCB_ALERTS.md`](NOTATKA_RCB_ALERTS.md))
 
 | Data | Okno | Skrót | Kontekst lokalny |
 |------|------|-------|------------------|
@@ -91,7 +92,7 @@
 | **20–21.08** | 20/21.08 | Burze + wiatr + intensywne opady; blackout | DB `#131` `#132` · Accu pomarańcz 17:00→03:00 · lokalnie 20.08 front ~17:09 |
 | **31.08** | **31.08 11:00–23:59** | Burze + wiatr + intensywne opady; blackout | DB `#148` · Accu żółte burze 15–00 · CS4 · [`NOTATKA_2026-08-31.md`](NOTATKA_2026-08-31.md) |
 
-Pełne SMS + id wierszy: archiwum RCB (tylko repo prywatne).  
+Pełne SMS + id wierszy: [`NOTATKA_RCB_ALERTS.md`](NOTATKA_RCB_ALERTS.md).  
 Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletność serii.
 
 ---
@@ -120,7 +121,7 @@ UV: 3.09 = **4** · 4.09 = **2** · 5.09 = **5**. AccuLumen: **5** / **1** / **8
 | **4.09** | 2/86%/0 P25% → **CS4** | **1/95%/0** P13% → **CS4** | ciemniej (Lumen↓ cloud↑) |
 | **5.09** | — | **8/34%/0,4** P55% → **RF** | jasny indeks, cloud mix |
 
-**Wniosek:** **3.09** = Accu **RF** · Fox **22,8 @14:27** / **1,36 kW** · 80–90% szare · EOD ~**25–28**. Rano ≈ UKMO; PM ≈ ICON. **4.09** = paper **CS4** ≈ MB ICON. **5.09** = oper. **CS4**. Dzień: [`NOTATKA_2026-09-03.md`](NOTATKA_2026-09-03.md).
+**Wniosek:** **3.09** = Accu **RF** ✓ · Fox **27,4** · ENS **−11%** (jak 2.09) · ICON/CS4 −23/−24% · peak **−4%**. Rano ≈ UKMO; PM ≈ ICON (bez deszczu). **4.09** = paper **CS4** ≈ MB ICON. **5.09** = oper. **CS4**. Dzień: [`NOTATKA_2026-09-03.md`](NOTATKA_2026-09-03.md).
 
 ### MB 3.09 ~11:42 — vs Accu · ICON vs UKMO
 
