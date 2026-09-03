@@ -14,6 +14,29 @@ from api.config import get_settings
 from api.errors import ApiError
 
 
+def _archived_hourly_predictions(target_day: str) -> pd.DataFrame:
+    """Pełny dzień z archiwum 05:00 (daily). Midday/peak trzymają tylko godziny po runie
+    (hybryda wycina rano jako foxess_actual) — na wykresie dawały 12–19 / 17–19."""
+    from src.models.forecast_validation import load_forecast_snapshot
+
+    best = pd.DataFrame()
+    for label in ('daily', 'midday', 'peak', 'manual'):
+        fc, _ = load_forecast_snapshot(label, target_day)
+        if fc.empty or 'hour' not in fc.columns or 'predicted_kwh' not in fc.columns:
+            continue
+        fc = fc.copy()
+        fc['hour'] = fc['hour'].astype(int)
+        fc['day'] = fc['day'].astype(str) if 'day' in fc.columns else target_day
+        if 'prediction_source' not in fc.columns:
+            fc['prediction_source'] = 'archive'
+        n = int(fc['hour'].nunique())
+        if label == 'daily' and n >= 10:
+            return fc
+        if best.empty or n > int(best['hour'].nunique()):
+            best = fc
+    return best
+
+
 def get_hourly_forecast(predictor, day: str | None = None) -> dict:
     target_day = day or date.today().isoformat()
 
@@ -22,24 +45,30 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
         from datetime import datetime
 
         base_date = date_cls.fromisoformat(target_day)
-        # hybrid_today=False (celowo, inaczej niż domyślne True) — ten endpoint zasila
-        # WYŁĄCZNIE zakładkę "Prognoza" (wykres godzinowy + "Suma prognozy"), której celem
-        # jest walidacja modelu NWP+RF ("prognoza vs rzeczywistość"). Domyślny tryb hybrydowy
-        # podmienia predicted_kwh na rzeczywisty pomiar dla godzin, które już minęły — to
-        # ukrywa błędy modelu (np. godz. 12:00 z realną awarią produkcji ~0,4 kWh nadpisywała
-        # oryginalną prognozę ~3,9 kWh, więc na wykresie "błąd" po prostu znikał) i sprawiało,
-        # że "Suma prognozy" zmieniała się w ciągu dnia niezależnie od zarchiwizowanych runów
-        # 05:00/12:00/16:00. Z hybrid_today=False linia "Prognoza" to zawsze CZYSTY wynik
-        # modelu (na bazie prognozy pogody, nie archiwum obserwacji) — "Rzeczywistość" nadal
-        # pokazywana jest osobno (actual_by_hour niżej), więc obie linie mogą się różnić i
-        # dopiero to pokazuje prawdziwą jakość prognozy. Inne konsumenty predict_days
-        # (rekomendacje na Home, mlops/forecast_pv.py archiwizujący 05:00/12:00/16:00) mają
-        # OSOBNE wywołania i nie są tym dotknięte.
-        predictions = predictor.predict_days(days_ahead=1, from_date=base_date, hybrid_today=False)
+        predictions = pd.DataFrame()
+        # Dni zamknięte: najpierw poranny snapshot (pełne 6–19), nie dziurawy ensemble
+        # z midday/peak ani leftover NWP. Dziś/jutro: żywa inferencja.
+        if base_date < date.today():
+            predictions = _archived_hourly_predictions(target_day)
+        if predictions.empty:
+            # hybrid_today=False (celowo, inaczej niż domyślne True) — ten endpoint zasila
+            # WYŁĄCZNIE zakładkę "Prognoza" (wykres godzinowy + "Suma prognozy"), której celem
+            # jest walidacja modelu NWP+RF ("prognoza vs rzeczywistość"). Domyślny tryb hybrydowy
+            # podmienia predicted_kwh na rzeczywisty pomiar dla godzin, które już minęły — to
+            # ukrywa błędy modelu (np. godz. 12:00 z realną awarią produkcji ~0,4 kWh nadpisywała
+            # oryginalną prognozę ~3,9 kWh, więc na wykresie "błąd" po prostu znikał) i sprawiało,
+            # że "Suma prognozy" zmieniała się w ciągu dnia niezależnie od zarchiwizowanych runów
+            # 05:00/12:00/16:00. Z hybrid_today=False linia "Prognoza" to zawsze CZYSTY wynik
+            # modelu (na bazie prognozy pogody, nie archiwum obserwacji) — "Rzeczywistość" nadal
+            # pokazywana jest osobno (actual_by_hour niżej), więc obie linie mogą się różnić i
+            # dopiero to pokazuje prawdziwą jakość prognozy. Inne konsumenty predict_days
+            # (rekomendacje na Home, mlops/forecast_pv.py archiwizujący 05:00/12:00/16:00) mają
+            # OSOBNE wywołania i nie są tym dotknięte.
+            predictions = predictor.predict_days(days_ahead=1, from_date=base_date, hybrid_today=False)
     except (ValueError, KeyError) as exc:
         raise ApiError(422, 'FORECAST_NO_WEATHER_DATA', f'Brak danych pogodowych dla {target_day}: {exc}') from exc
 
-    day_frame = predictions[predictions['day'] == target_day]
+    day_frame = predictions[predictions['day'].astype(str) == target_day].sort_values('hour')
     if day_frame.empty:
         raise ApiError(422, 'FORECAST_NO_WEATHER_DATA', f'Brak prognozy dla dnia {target_day} (brak cech pogodowych)')
 
@@ -66,7 +95,7 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
         hours.append({
             'hour': hour,
             'predicted_kwh': round(predicted, 3),
-            'prediction_source': str(row.prediction_source),
+            'prediction_source': str(getattr(row, 'prediction_source', 'model')),
             'actual_kwh': round(actual, 3) if actual is not None else None,
             'error_pct': error_pct,
         })

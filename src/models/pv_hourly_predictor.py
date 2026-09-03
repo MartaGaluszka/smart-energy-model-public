@@ -197,6 +197,9 @@ def load_weather_hourly(
     return df
 
 
+ICON_FORECAST_SOURCE = 'OpenMeteo-forecast'
+
+
 def forecast_weather_source_like() -> str:
     """Który `data_source` z weather_data brać do prognozy PV.
 
@@ -212,7 +215,34 @@ def forecast_weather_source_like() -> str:
     flag = os.getenv('ENSEMBLE_PRIMARY', '').strip().lower()
     if flag in ('1', 'true', 'yes'):
         return '%ensemble%'
-    return 'OpenMeteo-forecast'
+    return ICON_FORECAST_SOURCE
+
+
+def _coalesce_hourly_weather(primary: pd.DataFrame, fallback: pd.DataFrame) -> pd.DataFrame:
+    """Preferuj wiersze `primary` (np. ensemble); brakujące godziny/dni uzupełnij z `fallback` (ICON)."""
+    if primary is None or primary.empty:
+        return fallback if fallback is not None else pd.DataFrame()
+    if fallback is None or fallback.empty:
+        return primary
+    keys = ['day', 'hour']
+    merged = fallback.merge(primary, on=keys, how='outer', suffixes=('_fb', '_pr'))
+    out = merged[keys].copy()
+    value_cols = sorted(
+        {
+            c[: -3]
+            for c in merged.columns
+            if c.endswith('_pr') or c.endswith('_fb')
+        }
+    )
+    for col in value_cols:
+        pr, fb = f'{col}_pr', f'{col}_fb'
+        if pr in merged.columns and fb in merged.columns:
+            out[col] = merged[pr].combine_first(merged[fb])
+        elif pr in merged.columns:
+            out[col] = merged[pr]
+        else:
+            out[col] = merged[fb]
+    return out.sort_values(keys).reset_index(drop=True)
 
 
 def load_forecast_weather_hourly(
@@ -226,11 +256,20 @@ def load_forecast_weather_hourly(
     Źródło: patrz `forecast_weather_source_like()` — ICON albo ensemble primary.
     Shadow CS4/XGB/ICON wymuszają `WEATHER_FORECAST_SOURCE_LIKE=OpenMeteo-forecast`.
 
+    Gdy ENSEMBLE_PRIMARY=1, ensemble w bazie zaczyna się ~27.08.2026 — dni wcześniejsze
+    (i dziury godzinowe) uzupełniamy ICON (`OpenMeteo-forecast`), inaczej wykres
+    Prognozy pada komunikatem „brak pogody” mimo pełnego archiwum ICON.
     """
     like = forecast_weather_source_like()
-    return load_weather_hourly(
+    primary = load_weather_hourly(
         db_path, start_date, end_date, location, data_source_like=like,
     )
+    if like in (ICON_FORECAST_SOURCE, '%forecast%'):
+        return primary
+    icon = load_weather_hourly(
+        db_path, start_date, end_date, location, data_source_like=ICON_FORECAST_SOURCE,
+    )
+    return _coalesce_hourly_weather(primary, icon)
 
 
 def load_archive_weather_hourly(
@@ -404,7 +443,12 @@ def build_forecast_feature_frame(
         weather = load_hybrid_weather_hourly(db_path, start, end, location, as_of=as_of)
     else:
         weather = load_forecast_weather_hourly(db_path, start, end, location)
-        weather['weather_source'] = 'forecast'
+        if weather.empty:
+            # Dni sprzed okna NWP / przed gate ensemble — archiwum Open-Meteo.
+            weather = load_archive_weather_hourly(db_path, start, end, location)
+            weather['weather_source'] = 'archive'
+        else:
+            weather['weather_source'] = 'forecast'
 
     if weather.empty:
         raise ValueError(
