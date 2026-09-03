@@ -4,14 +4,53 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="se-placeholder-content">
-  <div class="se-placeholder">
-    <ion-icon name="cloud-download-outline"></ion-icon>
-    <h2 class="font-serif">Synchronizacja FoxESS</h2>
-    <p>
-      Tu trafi historia zakresów dat, status ostatniego sync (<code>foxess_device_meta.fetched_at</code>)
-      oraz obsługa limitu API Fox (40402). Endpoint docelowy: <code>POST /api/v1/foxess/sync</code>.
+<ion-content [fullscreen]="true">
+  <div class="se-page" *ngIf="sync$ | async as sync">
+
+    <ion-card class="se-card se-sync-card">
+      <ion-card-content>
+        <ion-badge *ngIf="sync.offline" class="se-offline-badge">Offline — dane demo</ion-badge>
+        <div class="se-sync-row">
+          <div class="se-sync-info">
+            <span class="se-sync-label">Ostatnia synchronizacja Fox</span>
+            <span class="se-sync-value">{{ minutesAgo(sync.lastSyncedAt) }}</span>
+          </div>
+          <ion-button
+            class="se-sync-btn"
+            [disabled]="sync.syncing"
+            (click)="onSync()"
+          >
+            <ion-icon *ngIf="!sync.syncing" slot="start" name="cloud-download-outline"></ion-icon>
+            <ion-spinner *ngIf="sync.syncing" slot="start" name="crescent"></ion-spinner>
+            {{ sync.syncing ? 'Synchronizuję…' : 'Pobierz dane Fox' }}
+          </ion-button>
+        </div>
+        <p
+          *ngIf="sync.message && !sync.rateLimited"
+          class="se-sync-message"
+          [ngClass]="{ 'se-sync-message--info': sync.messageKind === 'info' }"
+        >{{ sync.message }}</p>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card class="se-card se-rate-limit" *ngIf="sync.rateLimited">
+      <ion-card-content>
+        <div class="se-rate-limit__row">
+          <ion-icon name="time-outline" class="se-rate-limit__icon"></ion-icon>
+          <div>
+            <h2 class="font-serif se-rate-limit__title">Limit API FoxESS (40402)</h2>
+            <p class="se-rate-limit__body">{{ sync.message }}</p>
+            <p class="se-rate-limit__hint">
+              Nie uruchamiaj sync w pętli — Fox resetuje limit zwykle po 30–60 min
+              (czasem dopiero następnego dnia). KPI z ostatniego udanego sync zostają na Home.
+            </p>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <p class="se-demo-note">
+      Sync woła <code>POST /api/v1/foxess/sync</code> — backend dobiera brakujący zakres i cooldown.
     </p>
-    <ion-badge class="se-badge">W przygotowaniu — Faza 1 (T1.7–T1.11)</ion-badge>
   </div>
 </ion-content>

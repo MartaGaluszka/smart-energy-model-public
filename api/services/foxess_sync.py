@@ -18,11 +18,32 @@ from api.errors import ApiError
 SYNC_COOLDOWN_MINUTES = 3
 # Gdy w bazie nie ma jeszcze żadnych danych FoxESS, ile dni wstecz pobrać na start.
 DEFAULT_LOOKBACK_DAYS = 5
+# T1.10 — komunikat + retry hint; mobile pokazuje to bez crasha (cached KPI zostają).
+FOXESS_RATE_LIMIT_CODE = 'FOXESS_RATE_LIMIT'
+FOXESS_RATE_LIMIT_HINT = (
+    'Limit API FoxESS (40402). Odczekaj 30–60 min i spróbuj ponownie. '
+    'Dane z ostatniego udanego sync zostają w aplikacji.'
+)
+
+
+def is_fox_rate_limit(exc: BaseException) -> bool:
+    """True gdy FoxESS Cloud odrzucił zapytanie limitem 40402 (albo równoznaczny tekst)."""
+    text = str(exc).lower()
+    return '40402' in text or 'limit zapytań' in text or 'limit api fox' in text
 
 
 def sync_range(start: str, end: str) -> dict:
     """Wywołuje `src.data.foxess_fetch_all.fetch_all()` (upsert = idempotentne, §12.1)."""
     from src.data.foxess_fetch_all import fetch_all
+
+    if os.getenv('FOXESS_SYNC_DISABLED', '').strip().lower() in ('1', 'true', 'yes'):
+        return {
+            'status': 'skipped',
+            'start': start,
+            'end': end,
+            'days': 0,
+            'message': 'Sync Fox wyłączony (FOXESS_SYNC_DISABLED) — odczekaj reset limitu 40402.',
+        }
 
     settings = get_settings()
     try:
@@ -33,7 +54,10 @@ def sync_range(start: str, end: str) -> dict:
             save_csv=False,
         )
     except RuntimeError as exc:
-        # Najczęściej: brak FOXESS_API_KEY, limit 40402, lub brak urządzenia.
+        # T1.10: 40402 → 429 + FOXESS_RATE_LIMIT (komunikat + retry hint), nie 502.
+        if is_fox_rate_limit(exc):
+            raise ApiError(429, FOXESS_RATE_LIMIT_CODE, FOXESS_RATE_LIMIT_HINT) from exc
+        # Najczęściej: brak FOXESS_API_KEY lub brak urządzenia.
         raise ApiError(502, 'FOXESS_SYNC_FAILED', str(exc)) from exc
 
     days = (datetime.fromisoformat(end).date() - datetime.fromisoformat(start).date()).days + 1
