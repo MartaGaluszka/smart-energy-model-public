@@ -9,6 +9,7 @@ Nie importuje ani nie woła `src/data/foxess_control.py` / `mlops/foxess_control
 from __future__ import annotations
 
 import json
+import os
 from datetime import date, datetime, time, timedelta
 
 from api.config import get_settings
@@ -21,6 +22,13 @@ _FACTORY_SOC_MIN = 20.0
 # budujemy spod G12w/Tauron + reguł sezonowych, nie jako klon UI producenta.
 SCHEDULE_MAX_WINDOWS = 8
 SCHEDULE_MODES = frozenset({'ForceCharge', 'SelfUse', 'ForceDischarge'})
+
+# T4.5: kalendarz włącza kartę AC; typy z §10.1 + klimatyzacja/upał.
+AC_EVENT_TYPES = frozenset({'klimatyzacja', 'upal', 'upał', 'ac'})
+DEFAULT_AC_POWER_KW = 1.2
+# Od tej godziny PV zwykle nie pokrywa AC+dom — liczymy noc z baterii (bez GPS).
+AC_BATTERY_NIGHT_START_HOUR = 18
+AC_MORNING_HOUR = 6
 
 BATTERY_POLICY_TITLE = 'System tylko doradza — automatyka wyłączona (MVP)'
 
@@ -575,27 +583,123 @@ def get_shadow_savings(period_from: str, period_to: str) -> dict:
     }
 
 
-def calculate_ac_runtime(ac_power_kw: float, settings_row) -> dict:
-    """§10.4: energia_dostępna = (SoC_now - SoC_min_morning)/100 * pojemność * sprawność."""
-    from src.optimization.battery_advisor import get_battery_snapshot
+def is_ac_event_type(event_type: str | None) -> bool:
+    return (event_type or '').strip().lower() in AC_EVENT_TYPES
 
-    snap = get_battery_snapshot()
+
+def resolve_ac_power_kw(settings_row, override: float | None = None) -> float:
+    if override is not None and override > 0:
+        return float(override)
+    if settings_row and settings_row.ac_power_kw and settings_row.ac_power_kw > 0:
+        return float(settings_row.ac_power_kw)
+    return float(os.getenv('BATTERY_AC_POWER_KW', str(DEFAULT_AC_POWER_KW)))
+
+
+def today_is_ac_day(db, user_id: int, day: date | None = None) -> bool:
+    """True gdy w kalendarzu jest dziś klimatyzacja/upał — tylko wtedy karta na Home."""
+    from api.models import HouseholdEvent
+
+    try:
+        target = (day or date.today()).isoformat()
+        rows = (
+            db.query(HouseholdEvent.event_type)
+            .filter(HouseholdEvent.user_id == user_id, HouseholdEvent.event_date == target)
+            .all()
+        )
+        return any(is_ac_event_type(r.event_type) for r in rows)
+    except Exception:
+        return False
+
+
+def _ac_night_window(as_of: datetime) -> tuple[datetime, datetime, float]:
+    """Start rozliczania baterii (18:00 lub teraz, jeśli później) → najbliższe 6:00."""
+    night_hour = int(os.getenv('BATTERY_AC_NIGHT_START_HOUR', str(AC_BATTERY_NIGHT_START_HOUR)))
+    cover_start = as_of.replace(hour=night_hour, minute=0, second=0, microsecond=0)
+    if as_of >= cover_start:
+        cover_start = as_of.replace(second=0, microsecond=0)
+    morning = cover_start.replace(hour=AC_MORNING_HOUR, minute=0, second=0, microsecond=0)
+    if cover_start >= morning:
+        morning = morning + timedelta(days=1)
+    hours_night = max(0.0, (morning - cover_start).total_seconds() / 3600.0)
+    return cover_start, morning, hours_night
+
+
+def calculate_ac_runtime(
+    ac_power_kw: float,
+    settings_row,
+    *,
+    as_of: datetime | None = None,
+    ac_day: bool = False,
+    snapshot=None,
+    night_load_kw: float | None = None,
+) -> dict:
+    """T4.5: godzina wyłączenia AC, żeby SoC starczyło do 6:00 przy nocnym domu.
+
+    Do 18:00 zakładamy, że PV jeszcze pokrywa bazę; od 18:00 (albo od „teraz”,
+    jeśli później) bateria płaci za AC + load nocny. Kalendarz (`ac_day`) tylko
+    steruje `show_card` — nie zmienia wzoru.
+    """
+    from src.optimization.battery_advisor import _evening_planning_load_kw, get_battery_snapshot
+
+    as_of = as_of or datetime.now()
+    snap = snapshot if snapshot is not None else get_battery_snapshot()
     soc_now = snap.soc_percent
 
-    soc_min_morning = effective_soc_min(settings_row)
-    capacity_kwh = (settings_row.battery_capacity_kwh if settings_row and settings_row.battery_capacity_kwh else None) or 10.36
+    soc_min_morning = effective_soc_min(settings_row, as_of.date())
+    capacity_kwh = (
+        settings_row.battery_capacity_kwh if settings_row and settings_row.battery_capacity_kwh else None
+    ) or 10.36
     efficiency = (settings_row.efficiency_pct if settings_row else 93.0) / 100.0
+    power = max(0.01, float(ac_power_kw) if ac_power_kw and ac_power_kw > 0 else DEFAULT_AC_POWER_KW)
+    load_kw = float(night_load_kw) if night_load_kw is not None else _evening_planning_load_kw()
+
+    cover_start, morning, hours_night = _ac_night_window(as_of)
+    night_house_kwh = round(load_kw * hours_night, 2)
+    suggested_off_at: str | None = None
+    hours_safe = 0.0
+    available_kwh = 0.0
 
     if soc_now is None:
-        hours_safe = 0.0
-        note = 'Brak świeżego odczytu SoC z FoxESS — zwrócono 0h (bezpieczny fallback).'
+        note = 'Brak świeżego odczytu SoC z FoxESS — nie liczę godziny wyłączenia.'
     else:
         available_kwh = max(0.0, (soc_now - soc_min_morning) / 100.0 * capacity_kwh * efficiency)
-        hours_safe = round(available_kwh / ac_power_kw, 2) if ac_power_kw > 0 else 0.0
-        note = f'Bezpiecznie możesz odpalić klimatyzację ~{hours_safe:.1f} h bez dokupowania w szczycie.'
+        ac_budget = available_kwh - night_house_kwh
+        if ac_budget <= 0:
+            hours_safe = 0.0
+            suggested_off_at = cover_start.strftime('%H:%M')
+            note = (
+                f'Wyłącz klimatyzację najpóźniej o {suggested_off_at} — '
+                f'nocny dom (~{night_house_kwh:.1f} kWh do 6:00) zje rezerwę SoC. '
+                'Sugestia — nie wyłączamy AC za Ciebie.'
+            )
+        else:
+            hours_ac = ac_budget / power
+            off_at = cover_start + timedelta(hours=hours_ac)
+            if off_at >= morning:
+                hours_safe = round(hours_night, 2)
+                suggested_off_at = morning.strftime('%H:%M')
+                note = (
+                    f'Możesz trzymać klimatyzację do rana ({suggested_off_at}) — '
+                    f'rezerwa {soc_min_morning:.0f}% powinna starczyć. Pomieszczenia zostają schłodzone.'
+                )
+            else:
+                hours_safe = round(hours_ac, 2)
+                suggested_off_at = off_at.strftime('%H:%M')
+                note = (
+                    f'Wyłącz klimatyzację ok. {suggested_off_at} — starczy do 6:00 '
+                    f'bez importu w szczycie (noc ~{load_kw:.2f} kW). Pomieszczenia zostają schłodzone.'
+                )
 
     return {
         'hours_safe': hours_safe,
+        'suggested_off_at': suggested_off_at,
+        'night_load_kw': round(load_kw, 2),
+        'night_house_kwh': night_house_kwh,
+        'hours_until_morning': round(hours_night, 2),
+        'battery_covers_from': cover_start.strftime('%H:%M'),
+        'ac_power_kw': round(power, 2),
+        'show_card': bool(ac_day),
+        'ac_day': bool(ac_day),
         'soc_now_percent': soc_now,
         'soc_min_morning_percent': soc_min_morning,
         'battery_capacity_kwh': capacity_kwh,

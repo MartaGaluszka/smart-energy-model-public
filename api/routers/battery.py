@@ -98,14 +98,35 @@ def suggestion(
     return BatterySuggestionResponse(**payload)
 
 
-@router.post('/ac-runtime', response_model=AcRuntimeResponse, summary='Formuła czasu bezpiecznej pracy klimatyzacji (§10.4)')
+@router.get(
+    '/ac-runtime',
+    response_model=AcRuntimeResponse,
+    summary='Godzina wyłączenia AC vs rezerwa do rana (T4.5; karta gdy kalendarz = klimatyzacja)',
+)
+def get_ac_runtime(
+    current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AcRuntimeResponse:
+    settings_row = _get_or_create_settings(db, current_user.id)
+    ac_power = battery_planner.resolve_ac_power_kw(settings_row)
+    ac_day = battery_planner.today_is_ac_day(db, current_user.id)
+    return AcRuntimeResponse(
+        **battery_planner.calculate_ac_runtime(ac_power, settings_row, ac_day=ac_day)
+    )
+
+
+@router.post('/ac-runtime', response_model=AcRuntimeResponse, summary='Formuła czasu klimatyzacji (§10.4 / T4.5)')
 def ac_runtime(
     body: AcRuntimeRequest,
     current_user: AppUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> AcRuntimeResponse:
     settings_row = _get_or_create_settings(db, current_user.id)
-    return AcRuntimeResponse(**battery_planner.calculate_ac_runtime(body.ac_power_kw, settings_row))
+    ac_power = battery_planner.resolve_ac_power_kw(settings_row, body.ac_power_kw)
+    ac_day = battery_planner.today_is_ac_day(db, current_user.id)
+    return AcRuntimeResponse(
+        **battery_planner.calculate_ac_runtime(ac_power, settings_row, ac_day=ac_day)
+    )
 
 # Celowo NIE ISTNIEJE: POST /api/v1/battery/control — patrz §9.6 / §14 PROJEKT_APLIKACJA_MOBILNA.md
 # ("Celowo nie istnieje w MVP"). Nie dodawaj tego endpointu bez osobnej decyzji produktowej (T6.*).

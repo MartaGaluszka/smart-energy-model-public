@@ -8,6 +8,7 @@ import {
   BatteryPlanHour,
   BatteryScheduleMode,
   BatteryScheduleWindow,
+  AcRuntimeResponse,
   BatterySettingsResponse,
   BatterySettingsUpdate,
   BatterySuggestionResponse,
@@ -68,6 +69,11 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
   ];
 
   suggestion: BatterySuggestionResponse | null = null;
+  acPowerKw = 1.2;
+  acRuntime: AcRuntimeResponse | null = null;
+  acDay = false;
+  acEventId: number | null = null;
+  acToggling = false;
 
   planDate = todayIsoLocal();
   planSeason = '';
@@ -278,7 +284,7 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
       price_zone2: null,
       season: this.season,
       battery_capacity_kwh: this.capacityKwh,
-      ac_power_kw: null,
+      ac_power_kw: this.acPowerKw,
       fc_max_minutes: this.fcMaxMinutes,
       fc_night_start_hour: this.fcNightStartHour,
       schedule_windows: this.scheduleWindows,
@@ -294,6 +300,7 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
         this.saveMessage = 'Zapisano ustawienia.';
         this.reloadPlan();
         this.reloadSuggestion();
+        this.reloadAc();
       },
       error: () => {
         this.saving = false;
@@ -312,6 +319,7 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
         this.reloadPlan();
         this.reloadShadow();
         this.reloadSuggestion();
+        this.reloadAc();
       },
       error: () => {
         this.loading = false;
@@ -337,6 +345,70 @@ export class BatteryPage implements AfterViewInit, OnDestroy, ViewWillEnter {
     this.scheduleWindows = (row.schedule_windows ?? []).map((w) => ({ ...w, enabled: false }));
     const preset = (row.schedule_preset || 'g12w') as 'g11' | 'g12w' | 'g13' | 'custom';
     this.schedulePreset = ['g11', 'g12w', 'g13', 'custom'].includes(preset) ? preset : 'custom';
+    this.acPowerKw = row.ac_power_kw && row.ac_power_kw > 0 ? row.ac_power_kw : 1.2;
+  }
+
+  private isAcEventType(type: string): boolean {
+    const t = (type || '').trim().toLowerCase();
+    return t === 'klimatyzacja' || t === 'upal' || t === 'upał' || t === 'ac';
+  }
+
+  private reloadAc(): void {
+    const day = todayIsoLocal();
+    this.api.getHouseholdEvents(day, day).subscribe({
+      next: (rows) => {
+        const hit = rows.find((r) => this.isAcEventType(r.event_type));
+        this.acDay = !!hit;
+        this.acEventId = hit?.id ?? null;
+        this.api.getAcRuntime().subscribe({
+          next: (row) => {
+            this.acRuntime = row;
+            this.acDay = row.ac_day;
+          },
+          error: () => {
+            this.acRuntime = null;
+          },
+        });
+      },
+      error: () => {
+        this.acDay = false;
+        this.acEventId = null;
+        this.acRuntime = null;
+      },
+    });
+  }
+
+  toggleAcDay(): void {
+    if (this.acToggling) return;
+    this.acToggling = true;
+    if (this.acDay && this.acEventId != null) {
+      this.api.deleteHouseholdEvent(this.acEventId).subscribe({
+        next: () => {
+          this.acToggling = false;
+          this.reloadAc();
+        },
+        error: () => {
+          this.acToggling = false;
+        },
+      });
+      return;
+    }
+    this.api
+      .createHouseholdEvent({
+        event_date: todayIsoLocal(),
+        event_type: 'klimatyzacja',
+        impact: 'up',
+        note: 'upał / klimatyzacja',
+      })
+      .subscribe({
+        next: () => {
+          this.acToggling = false;
+          this.reloadAc();
+        },
+        error: () => {
+          this.acToggling = false;
+        },
+      });
   }
 
   private reloadSuggestion(): void {

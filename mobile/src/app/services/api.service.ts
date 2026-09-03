@@ -144,6 +144,32 @@ export interface ShadowSavingsResponse {
   is_hypothetical: boolean;
 }
 
+/** GET /battery/ac-runtime — T4.5: wyłącz AC o HH:MM (karta gdy kalendarz = klimatyzacja). */
+export interface AcRuntimeResponse {
+  hours_safe: number;
+  suggested_off_at: string | null;
+  night_load_kw: number;
+  night_house_kwh: number;
+  hours_until_morning: number;
+  battery_covers_from: string;
+  ac_power_kw: number;
+  show_card: boolean;
+  ac_day: boolean;
+  soc_now_percent: number | null;
+  soc_min_morning_percent: number;
+  battery_capacity_kwh: number;
+  efficiency_pct: number;
+  note: string;
+}
+
+export interface HouseholdEventDto {
+  id: number;
+  event_date: string;
+  event_type: string;
+  impact: string;
+  note: string | null;
+}
+
 export interface HourlyForecastResponse {
   day: string;
   hours: {
@@ -359,6 +385,44 @@ export class ApiService {
         `${this.baseUrl}/api/v1/battery/plan?date=${encodeURIComponent(date)}`,
         { headers: { Authorization: `Bearer ${token}` } },
       ),
+    );
+  }
+
+  getAcRuntime(): Observable<AcRuntimeResponse> {
+    return this.authed((token) =>
+      this.http.get<AcRuntimeResponse>(`${this.baseUrl}/api/v1/battery/ac-runtime`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  getHouseholdEvents(from: string, to: string): Observable<HouseholdEventDto[]> {
+    const q = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    return this.authed((token) =>
+      this.http.get<HouseholdEventDto[]>(`${this.baseUrl}/api/v1/household/events?${q}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  createHouseholdEvent(body: {
+    event_date: string;
+    event_type: string;
+    impact?: string;
+    note?: string;
+  }): Observable<HouseholdEventDto> {
+    return this.authed((token) =>
+      this.http.post<HouseholdEventDto>(`${this.baseUrl}/api/v1/household/events`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  deleteHouseholdEvent(id: number): Observable<void> {
+    return this.authed((token) =>
+      this.http.delete<void>(`${this.baseUrl}/api/v1/household/events/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     );
   }
 

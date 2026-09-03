@@ -162,6 +162,25 @@
       </ion-card-content>
     </ion-card>
 
+    <!-- T4.5: karta AC tylko gdy kalendarz = klimatyzacja/upał -->
+    <ion-card class="se-card se-ac-home" *ngIf="acRuntime as ac">
+      <ion-card-content>
+        <div class="se-ac-home__row">
+          <ion-icon name="thermometer-outline" class="se-ac-home__icon"></ion-icon>
+          <div>
+            <span class="se-ac-home__kicker">Klimatyzacja — sugestia</span>
+            <span class="se-ac-home__time" *ngIf="ac.suggested_off_at">Wyłącz AC o {{ ac.suggested_off_at }}</span>
+            <span class="se-ac-home__time" *ngIf="!ac.suggested_off_at">Brak świeżego SoC</span>
+            <p class="se-ac-home__body">{{ ac.note }}</p>
+          </div>
+        </div>
+        <ion-button fill="clear" size="small" class="se-battery__link" routerLink="/tabs/battery">
+          Bateria i klimatyzacja
+          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
     <!-- T4.16: skrót shadow (pełna karta dzień/miesiąc/YTD na Baterii) -->
     <ion-card class="se-card se-shadow-teaser" button routerLink="/tabs/battery">
       <ion-card-content>

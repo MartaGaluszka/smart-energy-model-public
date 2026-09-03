@@ -525,3 +525,34 @@
 .se-charge-suggest__list li + li {
   margin-top: 6px;
 }
+
+.se-ac-power {
+  width: 88px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.se-chip--ac {
+  flex: 0 1 auto;
+  margin: 4px 0 12px;
+}
+
+.se-ac-card__time {
+  margin: 8px 0 10px;
+  font-size: 22px;
+  font-weight: 650;
+  font-family: var(--ion-font-family, inherit);
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.se-ac-card__time--muted {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+}

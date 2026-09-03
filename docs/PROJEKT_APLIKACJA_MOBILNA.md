@@ -311,16 +311,20 @@ Suwaki G12w + plan ładowania nocą / rozładowania w szczycie; decyzja „czy �
 - Push (faza 2): „Włącz tryb Ferie” / „Standby przed wyjazdem”
 - Wszystkie alerty są **doradcze**; nie zmieniają WorkMode falownika (patrz §9.6)
 
-### 10.4 Formuła klimatyzacji
+### 10.4 Formuła klimatyzacji (T4.5)
 
-Parametry użytkownika: moc AC [kW], SoC_now, SoC_min_morning, pojemność baterii [kWh], sprawność.
+Parametry: moc AC [kW], SoC_now, SoC_min_morning, pojemność, sprawność, **nocny load domu** (domyślnie 0,55 kW).
+
+Do **18:00** zakładamy, że PV jeszcze pokrywa bazę. Od 18:00 (albo od „teraz”, jeśli później) bateria płaci za resztę nocy do **6:00**:
 
 ```
 energia_dostępna = (SoC_now − SoC_min_morning)/100 × pojemność × sprawność
-czas_AC_h = energia_dostępna / moc_AC
+energia_dom_noc = load_noc × godziny_do_6:00
+czas_AC_h = max(0, energia_dostępna − energia_dom_noc) / moc_AC
+wyłącz_o = start_nocy_baterii + czas_AC_h   # nie później niż 6:00
 ```
 
-UI pokazuje: „Bezpiecznie możesz odpalić klimatyzację ~X h bez dokupowania w szczycie”.
+UI (karta **tylko** gdy kalendarz ma dziś `klimatyzacja` / `upał`): **„Wyłącz AC o HH:MM”** — starczy do rana, pomieszczenia zostają schłodzone. Apka nie gasi klimatyzacji (§9.6).
 
 ---
 
@@ -460,7 +464,8 @@ api/
 | `GET` | `/api/v1/battery/night-charge-advice` | tak | Sugestia ładowania nocnego + uzasadnienie PL |
 | `GET` | `/api/v1/battery/shadow-savings` | tak | Query: `from=`, `to=` → `shadow_savings_pln` (kontrfakt: gdyby wykonano plan) |
 | `GET` | `/api/v1/battery/policy` | tak | Stały tekst / kod polityki advise-only (§9.6) |
-| `POST` | `/api/v1/battery/ac-runtime` | tak | Body: moc AC → `hours_safe` (formuła klimatyzacji) |
+| `GET` | `/api/v1/battery/ac-runtime` | tak | `suggested_off_at`, nocny kWh, `show_card` (kalendarz klimatyzacja) |
+| `POST` | `/api/v1/battery/ac-runtime` | tak | Body: opcjonalna moc AC → to samo co GET |
 | `GET` | `/api/v1/notifications` | tak | Lista sugestii (in-app feed na dashboard) |
 | `POST` | `/api/v1/notifications/push-token` | tak | Rejestracja FCM/APNs token |
 | — | ~~`POST /battery/control`~~ | — | **Celowo nie istnieje w MVP** |

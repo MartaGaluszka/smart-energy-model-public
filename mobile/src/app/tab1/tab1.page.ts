@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ViewWillEnter } from '@ionic/angular';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
-import { ApiService, BatterySuggestionResponse } from '../services/api.service';
+import { ApiService, AcRuntimeResponse, BatterySuggestionResponse } from '../services/api.service';
 import { HomeDataService, HomeKpi, SyncStatus, Suggestion } from '../services/home-data.service';
 import { todayIsoLocal } from '../utils/date-utils';
 
@@ -21,6 +21,8 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
   /** T4.16: skrót shadow miesiąc (pełna karta na /tabs/battery). */
   shadowMonthPln: number | null = null;
   shadowLoading = false;
+  acRuntime: AcRuntimeResponse | null = null;
+  private acSub?: Subscription;
   private batterySub?: Subscription;
   private shadowSub?: Subscription;
   private suggestionsSub?: Subscription;
@@ -46,12 +48,14 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
     this.batterySub?.unsubscribe();
     this.shadowSub?.unsubscribe();
     this.suggestionsSub?.unsubscribe();
+    this.acSub?.unsubscribe();
   }
 
   ionViewWillEnter() {
     this.homeData.refreshBatterySuggestion();
     this.reloadShadowMonth();
     this.reloadSuggestions();
+    this.reloadAc();
   }
 
   formatPln(value: number | null): string {
@@ -73,6 +77,18 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
       error: () => {
         this.shadowMonthPln = null;
         this.shadowLoading = false;
+      },
+    });
+  }
+
+  private reloadAc(): void {
+    this.acSub?.unsubscribe();
+    this.acSub = this.api.getAcRuntime().subscribe({
+      next: (row) => {
+        this.acRuntime = row.show_card ? row : null;
+      },
+      error: () => {
+        this.acRuntime = null;
       },
     });
   }
