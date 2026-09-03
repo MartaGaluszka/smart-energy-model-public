@@ -95,7 +95,7 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | T1.7 | P0 | `[x]` `POST /api/v1/foxess/sync` (zakres opcjonalny, domyślnie: brakujący odcinek od ostatniego dnia do dziś) wywołuje logikę z `foxess_fetch_all` | Dane w DB; SN w DB = REDACTED, API używa vault/env. Zmiana 2026-07-26: `foxess_sync.sync_incremental()` — bez podanego zakresu liczy go automatycznie (nie ciągnie całej historii) + cooldown (domyślnie 10 min), który pomija wywołanie FoxESS jeśli dane z dziś już są świeże. Patrz `docs/UPDATE_2026-07-26_foxess-incremental-sync.md`. |
 | T1.8 | P0 | `[x]` `GET /api/v1/foxess/overview?day=` — KPI: PV dziś, SoC, import/export | JSON zgodny z kontraktem §12.4; mobile konsumuje z datą dnia |
 | T1.9 | P0 | `[x]` UI Home: karty KPI + przycisk „Pobierz dane Fox” | Status `last_synced_at` widoczny („Ostatnia synchronizacja Fox … min temu”) |
-| T1.10 | P1 | `[ ]` Obsługa limitu API Fox (40402): komunikat + retry hint | Nie crashuje appki |
+| T1.10 | P1 | `[x]` Obsługa limitu API Fox (40402): komunikat + retry hint | 2026-09-03: `foxess_sync` mapuje 40402 → HTTP 429 `FOXESS_RATE_LIMIT` (hint 30–60 min). Mobile: `home-data.service` nie crashuje (catchError + timeout); tab2 karta limitu + retry hint. KPI z ostatniego sync zostają. |
 | T1.11 | P2 | `[ ]` Pull-to-refresh na Home | Sync krótkiego zakresu |
 
 ### 1.3 Prognoza PV (ML)
@@ -168,7 +168,7 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | T4.2 | P0 | `[x]` Tabela `battery_strategy_settings` (SoC min, sprawność, ceny z1/z2, sezon) | CRUD API; GET zwraca `soc_min_percent` efektywne + `soc_reserve_percent` (BAT.5) |
 | T4.3 | P0 | `[x]` UI suwaki + sezon + **plan dnia SE** (bloki G12w; 30 min≈+50%) + sugestia | `/tabs/battery` + Home; własna logika doradcza (nie klon UI producenta) (2026-08-27) |
 | T4.4 | P0 | `[x]` Wykres liniowy/słupkowy 24h: strefa G12w, SoC plan, PV forecast | Chart.js; etykieta „plan doradczy”; tło = tania strefa |
-| T4.5 | P1 | Formuła czasu klimatyzacji (`POST .../ac-runtime`) | Wynik w godzinach na karcie |
+| T4.5 | P1 | `[x]` Formuła klimatyzacji: **wyłącz AC o HH:MM** + nocny dom (`GET/POST .../ac-runtime`) | 2026-09-03: nie sama liczba godzin. Energia = (SoC−rezerwa)×pojemność×η **minus** load nocny do 6:00 (domyślnie 0,55 kW od 18:00). UI: karta na Baterii + Home. **Kalendarz włącza kartę** (typ `klimatyzacja`/`upał`) — chip „Dziś klimatyzacja”. Advise-only. |
 | T4.6 | P2 | Eksport planu jako rekomendacja tekstowa / PDF | Bez komend do falownika |
 
 ### 4.2 Polityka advise-only + shadow savings (MVP)
@@ -200,9 +200,9 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 
 | ID | Pri | Zadanie | DoD |
 |----|-----|---------|-----|
-| T4.7 | P2 | Tabela `household_events` + API CRUD | Typy: wakacje, urodziny, przetwory, ferie |
+| T4.7 | P2 | `[~]` Tabela `household_events` + API CRUD | Typy: wakacje, urodziny, przetwory, ferie, **`klimatyzacja` / `upał`** (T4.5). API `[x]`; UI kalendarza = T4.8 |
 | T4.8 | P2 | UI kalendarz miesięczny + dodawanie wydarzenia | Ikony własne |
-| T4.9 | P2 | Wpływ wydarzenia na treść sugestii | Prosta reguła ↑/↓ |
+| T4.9 | P2 | `[~]` Wpływ wydarzenia na treść sugestii | `klimatyzacja`/`upał` → karta „wyłącz AC o HH:MM” (T4.5). Reszta ↑/↓ load — później |
 | T4.10 | P2 | Tryby sezonowe (lato AC / zima ciepło + Wi‑Fi standby) | Linked z T4.3 |
 
 ---
@@ -294,10 +294,10 @@ Aktualizuj status w tej tabeli przy domknięciu fazy:
 | 0 Fundament (Docker) | `[x]` | 2026-07-26 | Zweryfikowano end-to-end: `colima` + `docker compose up -d db api` — `db` (Postgres 16) healthy, `api` startuje, 26 tabel utworzonych z `db/init/*.sql` (10 FoxESS/weather/tauron istniejących + 8 nowych z §13 + reszta). Po drodze naprawiono niedopięcie wersji `scikit-learn` (patrz wiersz niżej) i lokalny brak `docker`/`colima` na maszynie deweloperskiej (zainstalowane przez Homebrew). |
 | 0.2 / TA.* FastAPI HTTP | `[x]` | 2026-07-26 | Kontrakt §12 — pakiet `api/` kompletny (P0 w całości, większość P1 też), `uvicorn api.main:app` zweryfikowany lokalnie (Python 3.9 venv, SQLite) **i w kontenerze Docker (Python 3.11, Postgres)**: `/health`, `/ready`, `/docs` = 200; `POST /auth/register` → `/auth/login` → JWT → `GET /battery/policy` (automation_enabled=false), `GET /foxess/overview` (dane realne z projektu: 35.23 kWh, SoC 79.9%), `GET /forecast/hourly` (predykcje RF, 31.51 kWh/dzień), `GET /notifications` (auto-seed sugestii) — wszystko 200 z realnym JWT. 13/13 testów `pytest tests/test_api_contract.py` zielonych. **Naprawiono bug:** `scikit-learn>=1.3.0` (bez górnej granicy) w kontenerze instalował 1.9.0, niekompatybilny z modelem `.joblib` wytrenowanym na 1.6.1 (`AttributeError: SimpleImputer._fill_dtype`) → przypięto `scikit-learn==1.6.1` w `requirements.txt`, przebudowano obraz, potwierdzono zgodność. Auth spike: `docs/UPDATE_2026-07-26_fastapi-oauth-spike.md`. Stubbed/pominięte: `/auth/fox/callback` (TA.2, brak OAuth po stronie Fox), TA.11 (weather-notes, P2), TA.13 (rate limiting, P2), T0.17 (PKCE Ionic, P2), opis błędów per-endpoint w OpenAPI niepełny (TA.12). |
 | T1.7 Sync inkrementalny + migracja PG | `[x]` | 2026-07-26 | Patrz `docs/UPDATE_2026-07-26_foxess-incremental-sync.md` — migracja historii SQLite→Postgres + `POST /foxess/sync` liczy brakujący odcinek automatycznie, z cooldownem. |
-| 1 Shell + sync + prognoza | `[x]` | 2026-07-28 | P0 zamknięte: Ionic Solar Graphite, 4 taby, Home KPI + sync Fox + banner §9.6 + sugestie, Prognoza z wykresem Chart.js + porównaniem błędu % vs rzeczywistość (T1.14, patrz wyżej). Screenshoty: `mobile/docs/screenshots/`. **Korekta 2026-07-28:** T1.13 był błędnie oznaczony jako gotowy 2026-07-27 — ekran Prognoza był w rzeczywistości placeholderem; dobudowany teraz razem z T1.14. Otwarte P1: T1.6 splash, T1.10 Fox 40402. P2: T1.11 pull-refresh, T1.15 cache prognoz (świadomie odłożone). |
+| 1 Shell + sync + prognoza | `[x]` | 2026-07-28 | P0 zamknięte: Ionic Solar Graphite, 4 taby, Home KPI + sync Fox + banner §9.6 + sugestie, Prognoza z wykresem Chart.js + porównaniem błędu % vs rzeczywistość (T1.14, patrz wyżej). Screenshoty: `mobile/docs/screenshots/`. **Korekta 2026-07-28:** T1.13 był błędnie oznaczony jako gotowy 2026-07-27 — ekran Prognoza był w rzeczywistości placeholderem; dobudowany teraz razem z T1.14. **T1.10** `[x]` 2026-09-03 (40402 → 429 + karta na tab2). Otwarte P1: T1.6 splash. P2: T1.11 pull-refresh, T1.15 cache prognoz (świadomie odłożone). |
 | 2 Symulator | `[~]` | 2026-07-29 | Backend (T2.1–T2.3) + **UI P0** (T2.4 formularz stawek, T2.5 wykres słupkowy) + **P1** (T2.6 mini tabela kWh, T2.7 netto/brutto VAT, T2.10 przebudowa UX + polski `ion-datetime`) na `/tabs/simulator`. Otwarte P2: T2.8 depozyt, T2.9 prefill z tauron_bills. |
 | 3 ROI | `[~]` | 2026-07-27 | **Backend gotowy** (T3.1–T3.2, TA.7). **Brakuje UI mobilnego** (T3.3–T3.4 P0). Zależność: wynik symulatora (Faza 2). |
-| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-08-28 | Backend + ekran Bateria + T4.16 + BAT.4 + T4.17 + **T4.20 cron sugestii** `[x]`. Brak: FCM (T4.22). |
+| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-09-03 | Backend + ekran Bateria + T4.16 + BAT.4 + T4.17 + T4.20 + **T4.5 AC HH:MM** `[x]`. Brak: FCM (T4.22); kalendarz UI (T4.8). |
 | 5 ML advice (bez control) | `[ ]` | | |
 | 6 Sterowanie Fox (po ~roku) | `[ ]` | | poza MVP |
 
