@@ -46,6 +46,28 @@
       </ion-button>
     </div>
 
+    <!-- Plan vs rzeczywistość: suma modelu + produkcja dotychczas, układ 1×2 -->
+    <div class="se-kpi-pair" *ngIf="!state.error">
+      <ion-card class="se-card se-kpi">
+        <ion-card-content>
+          <ion-icon name="sunny-outline" class="se-kpi__icon se-kpi__icon--solar"></ion-icon>
+          <span class="se-kpi__value">{{ state.totalKwh !== null ? (state.totalKwh | number: '1.1-2') : '—' }} <small>kWh</small></span>
+          <span class="se-kpi__label">Suma prognozy modelu na {{ selectedIsToday ? 'dziś' : formatDay(state.day) }}</span>
+        </ion-card-content>
+      </ion-card>
+      <!-- Produkcja FoxESS: dziś = dotychczas (w trakcie); dni przeszłe = ostateczna suma. -->
+      <ion-card class="se-card se-kpi se-kpi--so-far" *ngIf="state.actualSoFarKwh !== null">
+        <ion-card-content>
+          <div class="se-daily-row__top">
+            <ion-icon name="flash-outline" class="se-kpi__icon se-kpi__icon--moss"></ion-icon>
+            <span class="se-error-badge se-error-badge--pending" *ngIf="!state.isComplete">w trakcie</span>
+          </div>
+          <span class="se-kpi__value">{{ state.actualSoFarKwh | number: '1.1-2' }} <small>kWh</small></span>
+          <span class="se-kpi__label">{{ state.isComplete ? 'Produkcja dzienna' : 'Produkcja dotychczas' }}</span>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
     <!-- Wykres godzinowy -->
     <ion-card class="se-card se-chart-card">
       <ion-card-content>
@@ -56,15 +78,6 @@
           </div>
         </div>
         <p class="se-chart-error" *ngIf="!state.loading && state.error">{{ state.error }}</p>
-      </ion-card-content>
-    </ion-card>
-
-    <!-- Suma dnia -->
-    <ion-card class="se-card se-kpi" *ngIf="!state.error">
-      <ion-card-content>
-        <ion-icon name="sunny-outline" class="se-kpi__icon se-kpi__icon--solar"></ion-icon>
-        <span class="se-kpi__value">{{ state.totalKwh !== null ? (state.totalKwh | number: '1.1-2') : '—' }} <small>kWh</small></span>
-        <span class="se-kpi__label">Suma prognozy modelu na {{ selectedIsToday ? 'dziś' : formatDay(state.day) }}</span>
       </ion-card-content>
     </ion-card>
 
@@ -118,18 +131,7 @@
       </ion-card>
     </ng-container>
 
-    <!-- Produkcja dotychczas (dziś, w trakcie dnia) — jak "Dzienna produkcja" w apce FoxESS.
-         Jedna wartość dla całego dnia (nie per run_label), więc osobna karta NAD listą
-         "Prognoza vs rzeczywistość" zamiast powtarzania jej w każdej karcie run_label. -->
-    <ion-card class="se-card se-kpi se-kpi--so-far" *ngIf="!state.isComplete && state.actualSoFarKwh !== null">
-      <ion-card-content>
-        <ion-icon name="flash-outline" class="se-kpi__icon se-kpi__icon--moss"></ion-icon>
-        <span class="se-kpi__value">{{ state.actualSoFarKwh | number: '1.1-2' }} <small>kWh</small></span>
-        <span class="se-kpi__label">Produkcja dotychczas — ostateczna suma i błąd po zachodzie słońca</span>
-      </ion-card-content>
-    </ion-card>
-
-    <!-- Porównanie prognoza vs rzeczywistość (suma dobowa) -->
+    <!-- Sekcja analityczna: okna modelu (zakładki) + szczegóły godzinowe wybranej zakładki -->
     <div class="se-section-title">
       <ion-icon name="git-compare-outline"></ion-icon>
       <span>Prognoza vs rzeczywistość</span>
@@ -141,38 +143,52 @@
       </ion-card-content>
     </ion-card>
 
-    <ion-card class="se-card se-daily-row" *ngFor="let d of state.daily; trackBy: trackByRunLabel">
-      <ion-card-content>
-        <div class="se-daily-row__top">
-          <span class="se-daily-row__label">{{ runLabelName(d.run_label) }}</span>
-          <span
-            class="se-error-badge"
-            [ngClass]="errorClass(d.error_pct)"
-            *ngIf="d.error_pct !== null; else pendingBadge"
-          >{{ formatPct(d.error_pct) }}</span>
-          <ng-template #pendingBadge>
-            <span class="se-error-badge se-error-badge--pending">w trakcie</span>
-          </ng-template>
-        </div>
-        <div class="se-daily-row__values">
-          <span>Prognoza: <strong>{{ formatKwh(d.predicted_total_kwh) }}</strong>
-            <small class="se-daily-row__outlook" *ngIf="d.outlook_mode === 'model_raw'"> (model)</small>
-          </span>
-          <span>Rzeczywistość: <strong>{{ formatKwh(d.actual_total_kwh) }}</strong></span>
-        </div>
-      </ion-card-content>
-    </ion-card>
+    <ng-container *ngIf="state.daily.length">
+      <ion-segment
+        class="se-run-seg"
+        [value]="selectedRunLabel"
+        (ionChange)="onRunTabChange($event.detail.value)"
+      >
+        <ion-segment-button *ngFor="let tab of runTabs" [value]="tab.value">
+          <ion-label>
+            {{ tab.name }}
+            <span class="se-run-seg__time">{{ tab.time }}</span>
+          </ion-label>
+        </ion-segment-button>
+      </ion-segment>
 
-    <!-- Top godziny: prognoza vs rzeczywistość -->
-    <ng-container *ngIf="hourlyByLabel().length">
-      <div class="se-section-title">
-        <ion-icon name="time-outline"></ion-icon>
-        <span>Godziny szczytu — szczegóły</span>
-      </div>
-
-      <ion-card class="se-card" *ngFor="let group of hourlyByLabel(); trackBy: trackByLabel">
+      <ion-card class="se-card se-daily-row" *ngIf="selectedDaily as d; else missingRun">
         <ion-card-content>
-          <p class="se-hourly-group__title">{{ runLabelName(group.label) }}</p>
+          <div class="se-daily-row__top">
+            <span class="se-daily-row__label">{{ runLabelName(d.run_label) }}</span>
+            <span
+              class="se-error-badge"
+              [ngClass]="errorClass(d.error_pct)"
+              *ngIf="d.error_pct !== null; else pendingBadge"
+            >{{ formatPct(d.error_pct) }}</span>
+            <ng-template #pendingBadge>
+              <span class="se-error-badge se-error-badge--pending">w trakcie</span>
+            </ng-template>
+          </div>
+          <div class="se-daily-row__values">
+            <span>Prognoza: <strong>{{ formatKwh(d.predicted_total_kwh) }}</strong>
+              <small class="se-daily-row__outlook" *ngIf="d.outlook_mode === 'model_raw'"> (model)</small>
+            </span>
+            <span>Rzeczywistość: <strong>{{ formatKwh(d.actual_total_kwh) }}</strong></span>
+          </div>
+        </ion-card-content>
+      </ion-card>
+      <ng-template #missingRun>
+        <ion-card class="se-card">
+          <ion-card-content>
+            <p class="se-demo-note">Brak zarchiwizowanej prognozy dla okna {{ runLabelName(selectedRunLabel) }}.</p>
+          </ion-card-content>
+        </ion-card>
+      </ng-template>
+
+      <ion-card class="se-card" *ngIf="selectedHourlyRows.length">
+        <ion-card-content>
+          <p class="se-hourly-group__title">{{ runLabelName(selectedRunLabel) }}</p>
           <table class="se-hourly-table">
             <thead>
               <tr>
@@ -183,7 +199,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let row of group.rows; trackBy: trackByRank">
+              <tr *ngFor="let row of selectedHourlyRows; trackBy: trackByRank">
                 <td>{{ row.predicted_hour }}:00</td>
                 <td>{{ row.predicted_kwh | number: '1.1-2' }}</td>
                 <td>{{ row.actual_pv_ml_kwh !== null ? (row.actual_pv_ml_kwh | number: '1.1-2') : '—' }}</td>

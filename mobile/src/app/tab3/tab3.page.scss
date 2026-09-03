@@ -52,6 +52,54 @@
   margin: 8px 0 4px;
 }
 
+/* Plan vs rzeczywistość — dwa kafelki KPI w jednej linii; klasy kart bez zmian. */
+.se-kpi-pair {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+
+  > .se-kpi {
+    flex: 1 1 0px;
+    min-width: 0;
+  }
+
+  .se-daily-row__top .se-kpi__icon {
+    margin-bottom: 0;
+  }
+}
+
+.se-run-seg {
+  display: flex;
+  width: 100%;
+  margin: 4px 0 8px;
+
+  ion-segment-button {
+    flex: 1 1 0px;
+    min-width: 0;
+    --padding-start: 4px;
+    --padding-end: 4px;
+    min-height: 44px;
+
+    ion-label {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: none;
+      line-height: 1.2;
+    }
+  }
+}
+
+.se-run-seg__time {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .se-daily-row__top {
   display: flex;
   align-items: center;

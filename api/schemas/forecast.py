@@ -85,7 +85,7 @@ class ForecastValidationResponse(BaseModel):
     # True = dzień zamknięty (przeszły LUB dziś po zachodzie słońca + margines) — wartości
     # actual_total_kwh/error_* w `daily` są już ostateczne. False = dzień jeszcze trwa.
     is_complete: bool = True
-    # Produkcja DOTYCHCZASOWA (do bieżącej godziny), niezależna od run_label — jak "Dzienna
-    # produkcja" w apce FoxESS. Wypełnione tylko gdy is_complete=False; potem znika (dzień
-    # ma już ostateczną wartość w `daily[].actual_total_kwh`).
+    # Produkcja dnia z FoxESS (Δ PVEnergyTotal), niezależna od run_label — jak „Dzienna
+    # produkcja” w apce. Dla dnia w toku = dotychczas; po zamknięciu / dni przeszłe =
+    # ostateczna suma (tożsama z `daily[].actual_total_kwh`).
     actual_so_far_kwh: float | None = None

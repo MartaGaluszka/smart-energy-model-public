@@ -238,7 +238,7 @@ export interface ForecastValidationResponse {
   note: string | null;
   /** false = dzień jeszcze trwa (przed zachodem słońca + margines / wieczorną synchronizacją). */
   is_complete: boolean;
-  /** Produkcja dotychczasowa (jak "Dzienna produkcja" w apce FoxESS), tylko gdy is_complete=false. */
+  /** Produkcja dnia z FoxESS (jak „Dzienna produkcja”): dotychczas gdy dzień trwa, ostateczna suma po zamknięciu. */
   actual_so_far_kwh: number | null;
 }
 
