@@ -9,6 +9,14 @@ import { MAX_FUTURE_DAYS } from '../services/forecast-data.service';
 
 Chart.register(...registerables);
 
+/** Poranna < 12:00, południowa 12:00–16:00, popołudniowa od 16:00. */
+export function defaultRunLabelForHour(now: Date = new Date()): string {
+  const hour = now.getHours();
+  if (hour < 12) return 'daily';
+  if (hour < 16) return 'midday';
+  return 'peak';
+}
+
 @Component({
   selector: 'app-tab3',
   templateUrl: 'tab3.page.html',
@@ -40,6 +48,15 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
   /** Pierwsze wejście dostaje dane już pobrane przez konstruktor serwisu (singleton) —
    *  unikamy zbędnego podwójnego zapytania przy starcie apki. */
   private hasEnteredBefore = false;
+
+  readonly runTabs: { value: string; name: string; time: string }[] = [
+    { value: 'daily', name: 'Poranna', time: '05:00' },
+    { value: 'midday', name: 'Południowa', time: '12:00' },
+    { value: 'peak', name: 'Popołudniowa', time: '16:00' },
+  ];
+
+  /** Domyślnie wg godziny zegara; użytkownik może przełączyć ręcznie. */
+  selectedRunLabel: string = defaultRunLabelForHour();
 
   constructor(private readonly forecastData: ForecastDataService) {}
 
@@ -126,17 +143,21 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
     return `${day}.${month}`;
   }
 
-  /** Wiersze walidacji godzinowej pogrupowane per run_label (daily/midday/manual), posortowane po rank. */
-  hourlyByLabel(): { label: string; rows: ForecastValidationHourlyRow[] }[] {
-    const groups = new Map<string, ForecastValidationHourlyRow[]>();
-    for (const row of this.state.hourlyValidation) {
-      if (!groups.has(row.run_label)) groups.set(row.run_label, []);
-      groups.get(row.run_label)!.push(row);
+  onRunTabChange(value: string | number | undefined): void {
+    if (typeof value === 'string' && value) {
+      this.selectedRunLabel = value;
     }
-    return Array.from(groups.entries()).map(([label, rows]) => ({
-      label,
-      rows: rows.slice().sort((a, b) => a.rank - b.rank),
-    }));
+  }
+
+  get selectedDaily(): ForecastValidationDailyRow | null {
+    return this.state.daily.find((d) => d.run_label === this.selectedRunLabel) ?? null;
+  }
+
+  get selectedHourlyRows(): ForecastValidationHourlyRow[] {
+    return this.state.hourlyValidation
+      .filter((row) => row.run_label === this.selectedRunLabel)
+      .slice()
+      .sort((a, b) => a.rank - b.rank);
   }
 
   runLabelName(label: string): string {
@@ -196,16 +217,8 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
     return `${sign}${err.toFixed(2)} kWh`;
   }
 
-  trackByLabel(_i: number, item: { label: string }): string {
-    return item.label;
-  }
-
   trackByRank(_i: number, item: ForecastValidationHourlyRow): string {
     return `${item.run_label}-${item.rank}`;
-  }
-
-  trackByRunLabel(_i: number, item: ForecastValidationDailyRow): string {
-    return item.run_label;
   }
 
   private renderChart(state: ForecastState): void {

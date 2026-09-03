@@ -47,7 +47,7 @@ export interface ForecastState {
   /** false = dzień jeszcze trwa — patrz `actualSoFarKwh`; `daily[].actual_total_kwh`/error_*
    *  są wtedy null (pojawią się dopiero po wieczornej synchronizacji, T1.17/T1.18). */
   isComplete: boolean;
-  /** Produkcja dotychczasowa (jak "Dzienna produkcja" w apce FoxESS) — tylko gdy !isComplete. */
+  /** Produkcja dnia z FoxESS — dotychczas gdy !isComplete, ostateczna suma po zamknięciu. */
   actualSoFarKwh: number | null;
   /** T1.20 — kiedy włączyć AGD. */
   applianceTips: ApplianceTip[];
@@ -205,7 +205,10 @@ export class ForecastDataService {
           canGoPrev: day > FIRST_DAY_WITH_DATA,
           canGoNext: day < maxFutureDayIso(),
           isComplete: validation.is_complete,
-          actualSoFarKwh: validation.actual_so_far_kwh,
+          actualSoFarKwh:
+            validation.actual_so_far_kwh
+            ?? validation.daily.find((d) => d.actual_total_kwh !== null)?.actual_total_kwh
+            ?? null,
           applianceTips: (hourly.appliance_tips ?? []).map((t) => ({
             hour: t.hour,
             predictedKwh: t.predicted_kwh,

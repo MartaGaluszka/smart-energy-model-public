@@ -145,11 +145,12 @@ def get_forecast_validation(day: str) -> dict:
     daily_df = build_daily_forecast_summary(day, db_path=settings.DATABASE_PATH)
 
     is_complete = target_day_is_complete(day)
+    # Ta sama „Dzienna produkcja” co w FoxESS: w trakcie dnia = dotychczas,
+    # po zamknięciu / dla dni przeszłych = ostateczna suma.
     actual_so_far_kwh = None
-    if not is_complete:
-        so_far = get_actual_pv_ml(day, db_path=settings.DATABASE_PATH)
-        if so_far is not None and so_far > 0:
-            actual_so_far_kwh = round(so_far, 2)
+    so_far = get_actual_pv_ml(day, db_path=settings.DATABASE_PATH)
+    if so_far is not None and so_far > 0:
+        actual_so_far_kwh = round(so_far, 2)
 
     note = None
     if hourly_df.empty and peaks_df.empty and daily_df.empty:
