@@ -28,7 +28,7 @@ Pogoda → `NOTATKA_YYYY-MM-DD.md`; reguła push → notatka reguły.
 
 SoC **100%** od ~10:00 · PV EOD **31,0** · eksport po pełnej baterii. Accu mix RF. FC nocy **pomiń**.
 
-### 2026-09-03 — DZIEŃ (w toku ~14:27)
+### 2026-09-03 — DZIEŃ (closeout)
 
 | Moment | SoC | PV / uwagi |
 |--------|----:|------------|
@@ -36,8 +36,9 @@ SoC **100%** od ~10:00 · PV EOD **31,0** · eksport po pełnej baterii. Accu mi
 | **~13:40** | **100%** | PV **20,2** · Solar **4,55 kW** · dołek 13 **nie** |
 | **~13:52** | **100%** | PV **21,2** · eksport 13,0 · mix 12–14 |
 | **~14:27** | **100%** | PV **22,8** · Solar **1,36 kW** · cloud **80–90%** szare |
+| **EOD** | **100%** | PV **27,4** · Accu RF · ENS −11% · FC **pomiń** |
 
-**Werdykt na teraz:** pełna od ~10. PM zasłona — eksport spada z PV. FC 22:00 **pomiń**. Push **piątek 22:00** przed **5.09** deszcz AM.
+**Werdykt:** pełna od ~10; PM zasłona bez deszczu. EOD **27,4** w szacunku 25–28. Push **piątek 22:00** przed **5.09** deszcz AM.
 
 ---
 
