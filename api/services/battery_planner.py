@@ -182,13 +182,15 @@ def schedule_windows_from_settings(settings_row) -> list[dict]:
 
 
 def apply_settings_update(row, body_dump: dict) -> None:
-    """Mapuje PUT body → ORM (schedule_windows → JSON)."""
-    windows = normalize_schedule_windows(body_dump.pop('schedule_windows', None))
-    preset = body_dump.pop('schedule_preset', None)
-    for field, value in body_dump.items():
+    """Mapuje PUT body → ORM. Tylko pola obecne w dumpie (partial OK, np. sam ac_power_kw)."""
+    body = dict(body_dump)
+    if 'schedule_windows' in body:
+        windows = normalize_schedule_windows(body.pop('schedule_windows'))
+        row.schedule_windows_json = json.dumps(windows, ensure_ascii=False)
+    preset = body.pop('schedule_preset', None)
+    for field, value in body.items():
         if hasattr(row, field):
             setattr(row, field, value)
-    row.schedule_windows_json = json.dumps(windows, ensure_ascii=False)
     if preset is not None and hasattr(row, 'schedule_preset'):
         p = str(preset).strip().lower()
         row.schedule_preset = p if p in ('g11', 'g12w', 'g13', 'custom') else 'custom'
@@ -347,6 +349,85 @@ def _zone_label(zone: int) -> str:
     return cheap_zone_label(zone)  # type: ignore[arg-type]
 
 
+def _hourly_pv_for_plan(target_date: str, request=None) -> list[float]:
+    """24h PV do symulacji planu — ten sam sygnał co wykres Home (archiwum → predictor).
+
+    Bez tego request bez `app.state.pv_predictor` daje same zera → lato mylnie włącza
+    ForceCharge we wszystkich oknach G12w (wykres: płaski 80% + skok o 22:00).
+    """
+    import logging
+
+    pv = [0.0] * 24
+
+    try:
+        from api.services.forecast_ml import _archived_hourly_predictions
+
+        arch = _archived_hourly_predictions(target_date)
+        if not arch.empty:
+            for _, row in arch.iterrows():
+                h = int(row['hour'])
+                if 0 <= h < 24:
+                    pv[h] = float(row['predicted_kwh'])
+    except Exception as exc:
+        logging.warning('Plan 24h: archiwum PV niedostępne: %s', exc)
+
+    if sum(pv) >= 1.0:
+        return pv
+
+    predictor = None
+    if request is not None:
+        predictor = getattr(getattr(request, 'app', None), 'state', None)
+        predictor = getattr(predictor, 'pv_predictor', None) if predictor is not None else None
+
+    if predictor is None:
+        return pv
+
+    try:
+        from api.services.forecast_ml import get_hourly_forecast
+
+        forecast_data = get_hourly_forecast(predictor, target_date)
+        for hour_data in forecast_data.get('hours', []):
+            h = int(hour_data['hour'])
+            if 0 <= h < 24:
+                pv[h] = float(hour_data['predicted_kwh'])
+    except Exception as exc:
+        logging.warning('Plan 24h: żywa prognoza PV niedostępna: %s', exc)
+
+    return pv
+
+
+def _force_charge_hours_for_season(
+    *,
+    season: str,
+    d: date,
+    pv_forecast: list[float],
+    all_day_cheap: bool,
+) -> list[int]:
+    """Godziny FC w symulacji planu — zgodne z reżimem doradczym, nie „wszystkie tanie”."""
+    from src.optimization.g12w_tariff import classify_zone
+
+    total_pv = sum(pv_forecast)
+    hours: list[int] = []
+
+    if season in ('winter', 'autumn'):
+        # Zima/jesień: tanie okna (noc + 13–15 pn–pt)
+        for h in range(24):
+            zone = classify_zone(datetime.combine(d, time(h, 0)))
+            if all_day_cheap or zone == 2:
+                hours.append(h)
+        return hours
+
+    # Lato/wiosna: FC tylko gdy dzień słaby; wyłącznie noc G12w (nie popołudnie 13–15)
+    if total_pv < 15.0:
+        for h in range(24):
+            if not (h >= 22 or h < 6):
+                continue
+            zone = classify_zone(datetime.combine(d, time(h, 0)))
+            if all_day_cheap or zone == 2:
+                hours.append(h)
+    return hours
+
+
 def build_daily_plan(target_date: str, settings_row, use_realistic_sim: bool = True, request=None) -> dict:
     """Plan 24h: strefy G12w + symulacja SoC (reguły, bez ML/komend do falownika).
 
@@ -390,46 +471,17 @@ def build_daily_plan(target_date: str, settings_row, use_realistic_sim: bool = T
             lookback_days=30,
         )
         
-        # 2. Pobierz prognozę PV z modelu ML
-        pv_forecast = [0.0] * 24
-        try:
-            from api.services.forecast_ml import get_hourly_forecast
-            
-            # Pobierz predictor z request.app.state (załadowany przy starcie)
-            if request and hasattr(request.app.state, 'pv_predictor') and request.app.state.pv_predictor:
-                forecast_data = get_hourly_forecast(request.app.state.pv_predictor, target_date)
-                for hour_data in forecast_data.get('hours', []):
-                    h = hour_data['hour']
-                    if 0 <= h < 24:
-                        pv_forecast[h] = hour_data['predicted_kwh']
-        except Exception as e:
-            # Brak prognozy — użyj zer (conservative estimate)
-            import logging
-            logging.warning(f"Nie udało się pobrać prognozy PV z modelu: {e}")
+        # 2. Prognoza PV (archiwum daily / predictor) — musi być zsynchronizowana z wykresem Home
+        pv_forecast = _hourly_pv_for_plan(target_date, request)
         
-        # 3. Wyznacz godziny ForceCharge (tania strefa + rzeczywista potrzeba)
-        force_charge_hours = []
-        
-        # Sprawdź czy ForceCharge jest potrzebny:
-        # - Zima/jesień: zawsze ładuj (PV słabe)
-        # - Lato/wiosna: tylko jeśli prognoza PV słaba (<15 kWh) lub brak prognozy
-        should_force_charge = False
-        
-        if season in ('winter', 'autumn'):
-            should_force_charge = True  # Zawsze ładuj w zimie/jesieni
-        else:
-            # Lato/wiosna: sprawdź prognozę PV
-            total_pv_forecast = sum(pv_forecast)
-            if total_pv_forecast < 15.0:  # Słaba prognoza (<15 kWh)
-                should_force_charge = True
-        
-        if should_force_charge:
-            for h in range(24):
-                dt = datetime.combine(d, time(h, 0))
-                zone = classify_zone(dt)
-                cheap = all_day_cheap or zone == 2
-                if cheap:
-                    force_charge_hours.append(h)
+        # 3. ForceCharge: zima/jesień = tanie okna; lato = tylko słabe PV i tylko noc
+        force_charge_hours = _force_charge_hours_for_season(
+            season=season,
+            d=d,
+            pv_forecast=pv_forecast,
+            all_day_cheap=all_day_cheap,
+        )
+        should_force_charge = bool(force_charge_hours)
         
         # 4. Wyznacz starting SoC — steady-state dla tego typu dnia
         # Wykres pokazuje "typowy dzień o tym reżimie pogodowym", nie "jutro po dzisiejszym dniu"
