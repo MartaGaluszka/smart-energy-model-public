@@ -2,6 +2,7 @@
 
 **Pojemność (`.env`):** `BATTERY_CAPACITY_KWH` ≈ **10,36** kWh → **1% ≈ 0,10 kWh**  
 **Taryfa:** G12w · tanio pn–pt **22:00–6:00** (i 13–15)  
+**Dom:** od **29.08.2025** · świadoma optymalizacja baterii od **I 2026** (G12w / FC / reguła 22:00)  
 **Powiązane:** [`NOTATKA_REGULA_BATERIA_POCHMURNO_22.md`](NOTATKA_REGULA_BATERIA_POCHMURNO_22.md) · advisor `battery_advisor.py`
 
 **Gdzie pisać:** ten plik = **żywy log**. Każda doba = sekcja **NOC** (ForceCharge/AGD) + sekcja **DZIEŃ** (SoC vs PV / drogie godziny / closeout).  
@@ -23,7 +24,22 @@ Pogoda → `NOTATKA_YYYY-MM-DD.md`; reguła push → notatka reguły.
 
 ## Log
 
-### 2026-08-25 → 26 — NOC (ForceCharge + chleb + zmywarka eko)
+### 2026-09-02 — DZIEŃ (closeout)
+
+SoC **100%** od ~10:00 · PV EOD **31,0** · eksport po pełnej baterii. Accu mix RF. FC nocy **pomiń**.
+
+### 2026-09-03 — DZIEŃ (w toku ~14:27)
+
+| Moment | SoC | PV / uwagi |
+|--------|----:|------------|
+| **~11:51** | **100%** | okno: niebieskie niebo · Solar **4,12 kW** |
+| **~13:40** | **100%** | PV **20,2** · Solar **4,55 kW** · dołek 13 **nie** |
+| **~13:52** | **100%** | PV **21,2** · eksport 13,0 · mix 12–14 |
+| **~14:27** | **100%** | PV **22,8** · Solar **1,36 kW** · cloud **80–90%** szare |
+
+**Werdykt na teraz:** pełna od ~10. PM zasłona — eksport spada z PV. FC 22:00 **pomiń**. Push **piątek 22:00** przed **5.09** deszcz AM.
+
+---
 
 **Kontekst:** 25 słaby (PV **4,4** · zużycie **7,6** · sieć **1,2**); 26 też słabe PV (daily RF ~**12,5**). Reguła pochmurno → ładuj 22:00.
 
