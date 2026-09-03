@@ -1,0 +1,116 @@
+<ion-content class="se-battery-page">
+  <div class="se-page">
+    <ion-spinner *ngIf="stateService.loading()" class="se-spinner"></ion-spinner>
+
+    <ion-card color="danger" *ngIf="!stateService.loading() && stateService.error() as errorMsg">
+      <ion-card-content>
+        <p class="se-error-title">Błąd połączenia z API</p>
+        <p class="se-error-body"><strong>{{ errorMsg }}</strong></p>
+        <ion-button color="light" (click)="stateService.loadSettings(true)">
+          Spróbuj ponownie
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Settings content -->
+    <ion-card class="se-card" *ngIf="!stateService.loading() && !stateService.error() && stateService.state() as state">
+    <ion-card-header>
+      <ion-card-title class="font-serif">Sezon i SoC</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="se-battery-page__season">
+        <span class="se-battery-page__label">Sezon</span>
+        <ion-segment [value]="state.season" (ionChange)="onSeasonChange($event.detail.value)">
+          <ion-segment-button *ngFor="let opt of seasonOptions" [value]="opt.value">
+            <ion-label>{{ opt.label }}</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+        <p class="se-battery-page__resolved" *ngIf="state.season === 'auto'">
+          Dziś: <strong>{{ seasonLabel(state.season_resolved) }}</strong>
+          · rezerwa {{ state.soc_reserve_percent | number:'1.0-0' }}%
+        </p>
+        <p class="se-battery-page__resolved" *ngIf="state.season !== 'auto'">
+          Tryb ręczny: <strong>{{ seasonLabel(state.season) }}</strong>
+          · rezerwa {{ state.soc_reserve_percent | number:'1.0-0' }}%
+        </p>
+      </div>
+
+      <div class="se-slider">
+        <label class="se-slider__label" for="soc-min">
+          Rezerwa SoC (zalecana) — {{ state.soc_min_percent | number:'1.0-0' }}%
+          <ion-icon 
+            name="information-circle-outline" 
+            class="se-info-icon"
+            id="soc-min-info"
+          ></ion-icon>
+          <ion-popover trigger="soc-min-info" triggerAction="click">
+            <ng-template>
+              <ion-content class="se-popover-content">
+                <p>
+                  Rezerwa SoC ({{ state.soc_min_percent | number:'1.0-0' }}%): Dolna granica bezpieczeństwa,
+                  poniżej której algorytm traktuje baterię jako wymagającą ochrony.
+                </p>
+              </ion-content>
+            </ng-template>
+          </ion-popover>
+        </label>
+        <input
+          id="soc-min"
+          class="se-slider__input"
+          type="range"
+          min="10"
+          max="50"
+          step="1"
+          [value]="state.soc_min_percent"
+          (input)="onSocMinChange($any($event.target).value)"
+        />
+      </div>
+
+      <div class="se-slider">
+        <label class="se-slider__label" for="soc-target">
+          Cel SoC (doradczy) — {{ state.soc_target_percent | number:'1.0-0' }}%
+          <ion-icon 
+            name="information-circle-outline" 
+            class="se-info-icon"
+            id="soc-target-info"
+          ></ion-icon>
+          <ion-popover trigger="soc-target-info" triggerAction="click">
+            <ng-template>
+              <ion-content class="se-popover-content">
+                <p>
+                  Cel SoC ({{ state.soc_target_percent | number:'1.0-0' }}%): Doradczy poziom doładowania w taniej strefie G12w,
+                  zostawiający bufor na nadchodzącą produkcję PV.
+                </p>
+              </ion-content>
+            </ng-template>
+          </ion-popover>
+        </label>
+        <input
+          id="soc-target"
+          class="se-slider__input se-slider__input--solar"
+          type="range"
+          min="50"
+          max="100"
+          step="1"
+          [value]="state.soc_target_percent"
+          (input)="onSocTargetChange($any($event.target).value)"
+        />
+      </div>
+
+      <div class="se-battery-page__fixed">
+        <span class="se-battery-page__label">Sprawność cyklu</span>
+        <p class="se-battery-page__fixed-value">
+          {{ state.efficiency_pct | number:'1.0-0' }}%
+          <span class="se-battery-page__fixed-tag">kalibracja {{ efficiencyCalibrationLabel }}</span>
+        </p>
+        <p class="se-battery-page__slider-note">
+          Z liczników FoxESS (~15 mies.): Δ rozładowanie / Δ ładowanie ≈ 92,7% → w apce 93%.
+          Następny przegląd: {{ efficiencyNextReviewLabel }}. Nie mierzymy na żywo co dzień.
+        </p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <p class="se-demo-note">Smart Energy · advise-only · bez automatyki FoxESS</p>
+  </div>
+</ion-content>

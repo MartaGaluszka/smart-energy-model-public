@@ -1,0 +1,172 @@
+<ion-content class="se-battery-page">
+  <div class="se-page">
+    <ion-spinner *ngIf="stateService.loading()" class="se-spinner"></ion-spinner>
+
+    <ion-card color="danger" *ngIf="!stateService.loading() && stateService.error() as errorMsg">
+      <ion-card-content>
+        <p class="se-error-title">Błąd połączenia z API</p>
+        <p class="se-error-body"><strong>{{ errorMsg }}</strong></p>
+        <ion-button color="light" (click)="stateService.loadSettings(true)">
+          Spróbuj ponownie
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Schedule content -->
+    <ion-card class="se-card" *ngIf="!stateService.loading() && !stateService.error() && stateService.state() as state">
+    <ion-card-header>
+      <ion-card-title class="font-serif">Kalkulacja okna FC</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="se-battery-page__window">
+        <span class="se-battery-page__label">Okno nocne ForceCharge</span>
+        <p class="se-battery-page__window-value">
+          {{ fcWindowLabel() }}
+          <span class="se-battery-page__fixed-tag">~+{{ estimatedDeltaSoc() }}% SoC</span>
+        </p>
+        <p class="se-battery-page__slider-note">
+          Tylko wyliczenie: {{ state.fc_night_start_hour | number:'2.0-0' }}:00–{{ fcWindowEndLabel() }}.
+          Lato/wiosna trzymaj krótko (~15 min). Żeby użyć: wstaw do harmonogramu poniżej.
+        </p>
+      </div>
+
+      <div class="se-slider">
+        <label class="se-slider__label" for="fc-start">
+          Od której godziny — {{ state.fc_night_start_hour | number:'2.0-0' }}:00
+        </label>
+        <input
+          id="fc-start"
+          class="se-slider__input"
+          type="range"
+          min="21"
+          max="23"
+          step="1"
+          [value]="state.fc_night_start_hour"
+          (input)="onFcStartChange($any($event.target).value)"
+        />
+        <p class="se-battery-page__slider-note">
+          Start taniej strefy G12w zwykle 22:00 (pn–pt).
+        </p>
+      </div>
+
+      <div class="se-slider">
+        <label class="se-slider__label" for="fc-max">
+          Do której — {{ fcWindowEndLabel() }}
+          ({{ state.fc_max_minutes | number:'1.0-0' }} min ≈ +{{ estimatedDeltaSoc() }} pp)
+        </label>
+        <input
+          id="fc-max"
+          class="se-slider__input se-slider__input--warn"
+          type="range"
+          min="5"
+          max="120"
+          step="5"
+          [value]="state.fc_max_minutes"
+          (input)="onFcMaxChange($any($event.target).value)"
+        />
+        <p class="se-battery-page__slider-note">
+          Lato/wiosna ~15 min; jesień ~45; zima do ~90 (zalecenie: {{ state.recommended_fc_max_minutes | number:'1.0-0' }} min).
+        </p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card class="se-card" *ngIf="!stateService.loading() && !stateService.error() && stateService.state() as state">
+    <ion-card-header>
+      <ion-card-title class="font-serif">Harmonogram G12w</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="se-battery-page__schedule">
+        <span class="se-battery-page__label">
+          Plan dnia — uniwersalny ({{ state.schedule_windows.length }}/{{ state.schedule_max_windows }} bloków)
+        </span>
+        <p class="se-battery-page__slider-note">
+          Szablon tylko startuje listę — zawsze możesz dodać lub usunąć bloki (max {{ state.schedule_max_windows }}).
+        </p>
+
+        <span class="se-battery-page__label">Szablon startowy</span>
+        <ion-segment [value]="state.schedule_preset" (ionChange)="applyTariffPreset($event.detail.value)">
+          <ion-segment-button *ngFor="let p of tariffPresets" [value]="p.value">
+            <ion-label>{{ p.label }}</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+        <p class="se-battery-page__slider-note" *ngIf="state.schedule_preset === 'custom'">
+          Tryb własny — lista zmieniona ręcznie.
+        </p>
+        <p class="se-battery-page__slider-note" *ngIf="state.schedule_preset !== 'custom'">
+          Aktywny: {{ state.schedule_preset | uppercase }}
+          <ng-container *ngFor="let p of tariffPresets">
+            <ng-container *ngIf="p.value === state.schedule_preset"> ({{ p.hint }})</ng-container>
+          </ng-container>
+        </p>
+
+        <p class="se-battery-page__slider-note">
+          Bloki startują wyłączone — włącz tylko te, które chcesz w planie SE.
+        </p>
+
+        <div class="se-schedule-row" *ngFor="let w of state.schedule_windows; let i = index">
+          <div class="se-schedule-row__head">
+            <span>Blok {{ i + 1 }}</span>
+            <label class="se-switch">
+              <input
+                type="checkbox"
+                [checked]="w.enabled"
+                (change)="onWindowToggle(i, $any($event.target).checked)"
+                [attr.aria-label]="'Blok ' + (i + 1)"
+              />
+              <span class="se-switch__track" aria-hidden="true"></span>
+            </label>
+            <span class="se-schedule-row__toggle-label">{{ w.enabled ? 'w planie' : 'wyłączony' }}</span>
+            <ion-button fill="clear" size="small" color="medium" (click)="removeWindow(i)">
+              Usuń
+            </ion-button>
+          </div>
+          <div class="se-schedule-row__times">
+            <label>
+              Od
+              <input type="time" [value]="w.start" (change)="onWindowTimeChange(i, 'start', $any($event.target).value)" />
+            </label>
+            <label>
+              Do
+              <input type="time" [value]="w.end" (change)="onWindowTimeChange(i, 'end', $any($event.target).value)" />
+            </label>
+          </div>
+          <div class="se-chips se-chips--wrap" role="radiogroup" [attr.aria-label]="'Tryb bloku ' + (i + 1)">
+            <button
+              type="button"
+              class="se-chip se-chip--sm"
+              *ngFor="let m of scheduleModes"
+              [class.se-chip--on]="w.mode === m.value"
+              (click)="onWindowModeChange(i, m.value)"
+            >
+              {{ m.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="se-schedule-actions">
+          <ion-button
+            expand="block"
+            fill="outline"
+            size="small"
+            [disabled]="!canAddWindow()"
+            (click)="addWindow()"
+          >
+            Dodaj blok ({{ state.schedule_windows.length }}/{{ state.schedule_max_windows }})
+          </ion-button>
+          <ion-button
+            expand="block"
+            fill="outline"
+            size="small"
+            (click)="syncNightIntoSchedule()"
+          >
+            Wstaw kalkulację do bloku nocnego FC (22:00)
+          </ion-button>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <p class="se-demo-note">Smart Energy · advise-only · bez automatyki FoxESS</p>
+  </div>
+</ion-content>

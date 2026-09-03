@@ -1,0 +1,49 @@
+// Mode selector chips (Grid/PV/Off) - scoped to schedule component
+.se-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: 100%;
+  
+  &--wrap {
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+}
+
+.se-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  
+  &--sm {
+    flex: 1 1 auto;
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+  
+  &--on {
+    background: var(--grid);
+    border-color: var(--grid);
+    color: #fafaf8;
+  }
+  
+  &:hover {
+    border-color: var(--solar);
+    opacity: 0.9;
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+}

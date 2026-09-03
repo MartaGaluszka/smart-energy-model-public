@@ -1,0 +1,48 @@
+.se-shadow-grid {
+  padding: 0;
+}
+
+.se-shadow-card {
+  margin: 0;
+  text-align: center;
+  box-shadow: none;
+  border: 1px solid var(--border);
+  background: var(--surface-light);
+}
+
+.se-shadow-card ion-card-content {
+  padding: 20px 16px;
+}
+
+.se-shadow-card__label {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.se-shadow-card__value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--moss);
+  font-family: var(--font-display);
+}
+
+.se-shadow-card__value--error {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.se-shadow-card__spin {
+  margin: 8px auto;
+}
+
+.se-shadow__method {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}

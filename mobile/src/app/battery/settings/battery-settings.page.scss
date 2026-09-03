@@ -1,0 +1,22 @@
+.se-info-icon {
+  margin-left: 6px;
+  font-size: 18px;
+  color: var(--moss);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.se-popover-content {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  max-width: 280px;
+}
+
+.se-popover-content p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}

@@ -309,7 +309,20 @@ export class ApiService {
   /** Dołącza JWT i, po wygaśnięciu access tokena (401), próbuje raz odświeżyć sesję i powtórzyć wywołanie. */
   private authed<T>(request: (token: string) => Observable<T>): Observable<T> {
     return this.auth.ensureSession().pipe(
-      switchMap((token) => request(token ?? '')),
+      switchMap((token) => {
+        if (!token) {
+          return throwError(
+            () =>
+              new HttpErrorResponse({
+                error: 'Brak sesji JWT — logowanie demo do API nie powiodło się',
+                status: 0,
+                statusText: 'Auth failed',
+                url: `${this.baseUrl}/api/v1/auth/login`,
+              }),
+          );
+        }
+        return request(token);
+      }),
       catchError((err) => {
         if (err instanceof HttpErrorResponse && err.status === 401) {
           return this.auth.renewSession().pipe(switchMap((token) => request(token ?? '')));
@@ -393,6 +406,16 @@ export class ApiService {
       this.http.get<AcRuntimeResponse>(`${this.baseUrl}/api/v1/battery/ac-runtime`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
+    );
+  }
+
+  postAcRuntime(ac_power_kw: number): Observable<AcRuntimeResponse> {
+    return this.authed((token) =>
+      this.http.post<AcRuntimeResponse>(
+        `${this.baseUrl}/api/v1/battery/ac-runtime`,
+        { ac_power_kw },
+        { headers: { Authorization: `Bearer ${token}` } },
+      ),
     );
   }
 

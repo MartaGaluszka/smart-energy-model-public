@@ -9,7 +9,7 @@
 
     <ion-card class="se-card se-sync-card">
       <ion-card-content>
-        <ion-badge *ngIf="sync.offline" class="se-offline-badge">Offline — dane demo</ion-badge>
+        <ion-badge *ngIf="sync.offline" class="se-offline-badge">Offline — brak API</ion-badge>
         <div class="se-sync-row">
           <div class="se-sync-info">
             <span class="se-sync-label">Ostatnia synchronizacja Fox</span>
@@ -46,6 +46,14 @@
             </p>
           </div>
         </div>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card color="danger" *ngIf="sync.offline && sync.apiError as apiErr">
+      <ion-card-content>
+        <p class="se-error-title se-error-title--home">Błąd połączenia z API</p>
+        <p class="se-error-body se-error-body--home"><strong>{{ apiErr }}</strong></p>
+        <ion-button color="light" (click)="homeData.refreshAll(true)">Spróbuj ponownie</ion-button>
       </ion-card-content>
     </ion-card>
 
