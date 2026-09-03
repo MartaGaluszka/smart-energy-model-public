@@ -449,6 +449,53 @@ def test_apply_settings_update_persists_schedule_and_preset():
     assert windows[1]['enabled'] is False
 
 
+def test_apply_settings_update_partial_ac_does_not_touch_season():
+    from api.services.battery_planner import apply_settings_update
+
+    row = SimpleNamespace(
+        season='auto',
+        soc_min_percent=20.0,
+        ac_power_kw=1.2,
+        schedule_windows_json='[]',
+        schedule_preset='g12w',
+    )
+    apply_settings_update(row, {'ac_power_kw': 1.4})
+    assert row.season == 'auto'
+    assert row.soc_min_percent == 20.0
+    assert row.ac_power_kw == 1.4
+    assert row.schedule_preset == 'g12w'
+
+
+def test_summer_plan_no_force_charge_when_pv_strong():
+    """Lato + silne PV: bez FC 22:00 (wcześniej PV=0 → fałszywy tryb zimowy na wykresie)."""
+    from api.services.battery_planner import _force_charge_hours_for_season
+
+    strong = [0.0] * 6 + [1.5, 2.5, 3.5, 3.8, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5, 0.2] + [0.0] * 6
+    assert sum(strong) > 15
+    fc = _force_charge_hours_for_season(
+        season='summer',
+        d=date(2026, 9, 3),
+        pv_forecast=strong,
+        all_day_cheap=False,
+    )
+    assert fc == []
+
+
+def test_summer_plan_night_fc_only_when_pv_weak():
+    from api.services.battery_planner import _force_charge_hours_for_season
+
+    weak = [0.2] * 24  # ~4.8 kWh
+    fc = _force_charge_hours_for_season(
+        season='summer',
+        d=date(2026, 9, 3),  # środa — G12w noc 22–6
+        pv_forecast=weak,
+        all_day_cheap=False,
+    )
+    assert fc
+    assert all(h >= 22 or h < 6 for h in fc)
+    assert 13 not in fc and 14 not in fc
+
+
 def test_battery_settings_put_schedule_roundtrip(client, auth_headers):
     """PUT/GET /battery/settings — toggle + tryby + preset jak w UI."""
     payload = {

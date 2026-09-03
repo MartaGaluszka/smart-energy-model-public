@@ -3,7 +3,6 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { ApiService, BatterySettingsResponse, BatterySettingsUpdate } from '../../services/api.service';
-import { AuthService } from '../../services/auth.service';
 
 /**
  * Single Source of Truth dla stanu baterii.
@@ -69,20 +68,16 @@ export class BatteryStateService {
 
   constructor(
     private readonly api: ApiService,
-    private readonly auth: AuthService,
   ) {}
 
   /**
    * Załaduj ustawienia z API.
    * Wywoływane w BatteryPage.ionViewWillEnter — jeden request współdzielony przez tabs.
+   * `force` = odśwież nawet gdy trwa inne ładowanie (np. przycisk Odśwież) — bez wylogowania.
    */
   loadSettings(force = false): void {
     if (this._loading() && !force) {
       return;
-    }
-
-    if (force) {
-      this.auth.logout();
     }
 
     this._loading.set(true);
@@ -172,11 +167,34 @@ export class BatteryStateService {
     );
   }
 
-  /** Zapis mocy AC — parametr obciążenia domu, nie baterii (Analytics / Home). */
+  /** Zapis mocy AC — tylko to pole (nie nadpisuj season/soc z lokalnego draftu). */
   persistAcPowerKw(kw: number, options?: { silent?: boolean }): Observable<BatterySettingsResponse> {
     const rounded = Math.round(Number(kw) * 10) / 10;
     this.updateSettings({ ac_power_kw: rounded });
-    return this.saveSettings(options);
+    this._saving.set(true);
+    if (!options?.silent) {
+      this._saveMessage.set(null);
+    }
+    this._error.set(null);
+    return this.api.updateBatterySettings({ ac_power_kw: rounded }).pipe(
+      tap({
+        next: (saved) => {
+          this._state.set(saved);
+          this._savedSnapshot.set(structuredClone(saved));
+          this._saving.set(false);
+          if (!options?.silent) {
+            this._saveMessage.set('Zapisano ustawienia baterii');
+            setTimeout(() => this._saveMessage.set(null), 3000);
+          }
+        },
+        error: (err) => {
+          this._saving.set(false);
+          this._error.set(
+            this.formatHttpError(err, 'PUT /api/v1/battery/settings — nieznany błąd'),
+          );
+        },
+      }),
+    );
   }
 
   /**

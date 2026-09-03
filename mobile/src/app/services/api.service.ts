@@ -102,7 +102,8 @@ export interface BatterySettingsResponse {
   schedule_preset: string;
 }
 
-export interface BatterySettingsUpdate {
+/** Pełny zapis z ekranu Bateria; partial OK (np. sam ac_power_kw z Home). */
+export type BatterySettingsUpdate = Partial<{
   soc_min_percent: number;
   soc_target_percent: number;
   efficiency_pct: number;
@@ -115,7 +116,7 @@ export interface BatterySettingsUpdate {
   fc_night_start_hour: number;
   schedule_windows: BatteryScheduleWindow[];
   schedule_preset: string;
-}
+}>;
 
 export interface BatteryPlanHour {
   hour: number;

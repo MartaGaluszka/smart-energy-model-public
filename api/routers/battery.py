@@ -49,7 +49,8 @@ def update_settings(
     db: Session = Depends(get_db),
 ) -> BatterySettingsResponse:
     row = _get_or_create_settings(db, current_user.id)
-    battery_planner.apply_settings_update(row, body.model_dump())
+    # exclude_unset: zapis AC / jednego pola nie nadpisuje season defaultami modelu
+    battery_planner.apply_settings_update(row, body.model_dump(exclude_unset=True))
     db.commit()
     db.refresh(row)
     return BatterySettingsResponse(**battery_planner.settings_payload(row))

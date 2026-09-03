@@ -135,6 +135,8 @@ export class HomeDataService {
   }
 
   refreshBatterySuggestion(): void {
+    // Wyczyść stary snapshot (np. TRYB ZIMOWY), żeby UI nie trzymał cache przy błędzie auth
+    this.battery$.next(null);
     this.api.getBatterySuggestion().pipe(timeout(OVERVIEW_TIMEOUT_MS)).subscribe({
       next: (row) => {
         this.battery$.next(row);
