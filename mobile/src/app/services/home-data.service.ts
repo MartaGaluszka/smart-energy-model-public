@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, timeout } from 'rxjs';
 import { ApiService, BatterySuggestionResponse, FoxOverviewResponse, NotificationDto } from './api.service';
@@ -27,6 +28,8 @@ export interface SyncStatus {
   message: string | null;
   /** 'error' — czerwony komunikat (timeout/fail); 'info' — neutralny (np. "dane aktualne"). */
   messageKind: 'error' | 'info' | null;
+  /** T1.10: true gdy FoxESS zwrócił limit 40402 (albo timeout syncu, zwykle ten sam limit). */
+  rateLimited: boolean;
 }
 
 const FALLBACK_KPI: HomeKpi = {
@@ -78,6 +81,21 @@ const FALLBACK_BATTERY: BatterySuggestionResponse = {
 const SYNC_TIMEOUT_MS = 15_000;
 const OVERVIEW_TIMEOUT_MS = 10_000;
 const LOOKBACK_DAYS = 5;
+const FOX_RATE_LIMIT_MSG =
+  'Limit API FoxESS (40402). Odczekaj 30–60 min i spróbuj ponownie.';
+
+/** Backend: 429 + code FOXESS_RATE_LIMIT; fallback na treść 40402 (np. stary 502). */
+function foxRateLimitMessage(err: unknown): string | null {
+  if (!(err instanceof HttpErrorResponse)) {
+    return null;
+  }
+  const body = err.error as { code?: string; detail?: unknown } | null;
+  const detail = typeof body?.detail === 'string' ? body.detail : '';
+  if (body?.code === 'FOXESS_RATE_LIMIT' || err.status === 429 || detail.includes('40402')) {
+    return detail || FOX_RATE_LIMIT_MSG;
+  }
+  return null;
+}
 
 /**
  * Most między UI (Home / tab1) i `api/` (FastAPI, Faza 0 — patrz §12 dok. projektowego).
@@ -98,6 +116,7 @@ export class HomeDataService {
     dataDay: null,
     message: null,
     messageKind: null,
+    rateLimited: false,
   });
 
   constructor(private readonly api: ApiService) {
@@ -141,19 +160,37 @@ export class HomeDataService {
    * jeśli dane są już aktualne (cooldown po stronie API) — patrz `foxess_sync.sync_incremental`.
    */
   triggerSync(): Observable<SyncStatus> {
-    this.sync$.next({ ...this.sync$.value, syncing: true, message: null, messageKind: null });
+    this.sync$.next({
+      ...this.sync$.value,
+      syncing: true,
+      message: null,
+      messageKind: null,
+      rateLimited: false,
+    });
     return this.api.syncFox().pipe(
       timeout(SYNC_TIMEOUT_MS),
-      tap((res) => this.refreshOverview(res.status === 'skipped' ? res.message : null, 'info')),
+      tap((res) => {
+        const skipped = res.status === 'skipped';
+        const limited = skipped && (res.message ?? '').includes('40402');
+        this.refreshOverview(
+          skipped ? res.message : null,
+          skipped ? 'info' : null,
+          limited,
+        );
+      }),
       catchError((err) => {
         const timedOut = err?.name === 'TimeoutError';
+        const rateLimitMsg = foxRateLimitMessage(err);
+        const rateLimited = timedOut || rateLimitMsg !== null;
         this.sync$.next({
           ...this.sync$.value,
           syncing: false,
-          message: timedOut
-            ? 'Synchronizacja z FoxESS trwa długo (limit API Fox) — spróbuj ponownie za kilka minut.'
-            : 'Synchronizacja nie powiodła się. Sprawdź połączenie z API.',
+          message: rateLimitMsg
+            ?? (timedOut
+              ? 'Synchronizacja z FoxESS trwa długo — możliwy limit API (40402). Spróbuj ponownie za 30–60 min.'
+              : 'Synchronizacja nie powiodła się. Sprawdź połączenie z API.'),
           messageKind: 'error',
+          rateLimited,
         });
         return of(null);
       }),
@@ -164,6 +201,7 @@ export class HomeDataService {
   private refreshOverview(
     message: string | null = null,
     messageKind: 'error' | 'info' | null = null,
+    rateLimited = false,
   ): void {
     this.sync$.next({ ...this.sync$.value, syncing: true });
     this.fetchLatestAvailableOverview(0).subscribe({
@@ -185,6 +223,7 @@ export class HomeDataService {
           dataDay: overview.day,
           message,
           messageKind,
+          rateLimited,
         });
         this.refreshBatterySuggestion();
       },
