@@ -135,11 +135,19 @@ class BatterySuggestionResponse(BaseModel):
 
 
 class AcRuntimeRequest(BaseModel):
-    ac_power_kw: float
+    ac_power_kw: float | None = None
 
 
 class AcRuntimeResponse(BaseModel):
     hours_safe: float
+    suggested_off_at: str | None = None
+    night_load_kw: float
+    night_house_kwh: float
+    hours_until_morning: float
+    battery_covers_from: str
+    ac_power_kw: float
+    show_card: bool = False
+    ac_day: bool = False
     soc_now_percent: float | None
     soc_min_morning_percent: float
     battery_capacity_kwh: float
