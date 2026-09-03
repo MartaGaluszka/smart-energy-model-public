@@ -1,7 +1,7 @@
 # Zadania implementacji — Smart Energy Mobile
 
-**Wersja:** 0.5  
-**Data:** 2026-07-28  
+**Wersja:** 0.6  
+**Data:** 2026-09-03  
 **Dokument nadrzędny:** [PROJEKT_APLIKACJA_MOBILNA.md](PROJEKT_APLIKACJA_MOBILNA.md) (§9.6 advise-only, §12 FastAPI)
 
 Legenda statusu: `[ ]` do zrobienia · `[~]` w toku · `[x]` gotowe  
@@ -84,7 +84,7 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | T1.1 | P0 | `[x]` Scaffold projektu Ionic Angular (Capacitor Android) w `mobile/` | `ionic serve` + build iOS simulator (2026-07-26); Android debug — do potwierdzenia |
 | T1.2 | P0 | `[x]` Design tokens Solar Graphite (CSS variables / theme) | Kolory z §3 — patrz screenshoty `mobile/docs/screenshots/` |
 | T1.3 | P0 | `[x]` Typografia (Source Serif + DM Sans) + layout bazowy (tabs) | Home / Sync / Prognoza / Więcej — brak domyślnego granatu Ionic |
-| T1.4 | P0 | `[x]` Ekrany: Home, Sync, Prognoza, Więcej | Nawigacja działa; Home z KPI + banner §9.6 + feed sugestii |
+| T1.4 | P0 | `[x]` Ekrany: Home, Sync, Prognoza, Więcej | Nawigacja działa; Home: KPI + baner doradczy + PLAN 24h + widget planu + feed (UX 2026-09-03: T1.21–T1.24) |
 | T1.5 | P1 | `[x]` Serwis HTTP + interceptory auth | JWT → live API (`35.23 kWh`, SoC 79.9% z `/foxess/overview`) |
 | T1.6 | P1 | `[~]` Splash / ikona aplikacji (własna, nie Fox) | `AppIcon` w `mobile/ios/`; dedykowany splash Solar Graphite — do dopracowania |
 
@@ -111,6 +111,45 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | T1.18 | P1 | `[x]` Napraw mylący błąd % dla "Rzeczywistość" w trakcie trwającego dnia (np. +107% w południe) | 2026-07-29, na żądanie: karty "Prognoza vs rzeczywistość" dla dziś pokazywały np. Poranna (05:00): Prognoza 31,31 kWh vs Rzeczywistość 15,10 kWh → błąd +107,4%, mimo że model wcale nie był aż tak zły — 15,10 kWh to była produkcja TYLKO DO TEJ PORY (dzień jeszcze trwał, ~13:00), porównywana niesprawiedliwie z prognozą na CAŁY dzień (24h). Nowa funkcja `target_day_is_complete()` w `src/models/forecast_validation.py` (dni przeszłe = zawsze kompletne; dziś = kompletne dopiero po zachodzie słońca + `EVENING_CLOSEOUT_MARGIN_MINUTES`, ta sama reguła co T1.17 — więc oba mechanizmy są ze sobą spójne co do momentu "domknięcia" dnia, czyli wieczornej synchronizacji). Dla dnia W TRAKCIE: `daily[].actual_total_kwh`/`error_kwh`/`error_pct` = `None` (żadnego mylącego błędu, karta pokazuje badge "w trakcie" i "Rzeczywistość: —"), a **ostateczne wartości pojawiają się dopiero po wieczornej synchronizacji** — dokładnie jak przed T1.14, bez zmiany wyglądu kart per `run_label`. **Pierwsza iteracja (wycofana tego samego dnia, na żądanie)**: próbowano dodatkowo liczyć "uczciwy" błąd częściowy per `run_label` (prognoza tylko na godziny, które już minęły) z osobnym polem `actual_so_far_kwh` w KAŻDEJ karcie — okazało się to nadmiarowe (ta sama wartość produkcji dotychczasowej powtórzona w każdej karcie run_label) i zbyt skomplikowane (dopisek tłumaczący liczbę porównywanych godzin). **Finalne rozwiązanie**: `actual_so_far_kwh`/`is_complete` przeniesione na poziom CAŁEJ odpowiedzi (`ForecastValidationResponse`, nie per wiersz) i pokazywane jako JEDNA osobna karta w UI, NAD listą "Poranna/Południowa/Popołudniowa" — "Produkcja dotychczas — ostateczna suma i błąd po zachodzie słońca", widoczna tylko gdy dzień trwa. Karty per `run_label` wróciły do dokładnie takiej postaci jak przed tym zadaniem (Prognoza / Rzeczywistość, badge %), tyle że dopóki dzień trwa, `actual_total_kwh`/`error_pct` są `None` → badge pokazuje "w trakcie", a "Rzeczywistość" pokazuje "—" zamiast mylącej liczby. Zweryfikowane end-to-end zrzutami ekranu webowego 2026-07-29: dziś (w trakcie, ~13:40) → karta "Produkcja dotychczas: 15,1 kWh" nad listą, obie karty runów z badge "w trakcie" i "Rzeczywistość: —"; wczoraj 28.07 (dzień zamknięty) → bez zmian względem stanu sprzed T1.18 (Poranna −18,1%, Południowa −32,0%, Popołudniowa −12,7%, karty z pełnymi liczbami, brak karty "Produkcja dotychczas"). |
 | T1.19 | P1 | `[x]` Wykres godzinowy "Prognoza" na żywo pokazywał hybrydę (fakt podmieniony w miejsce prognozy), nie czysty wynik modelu | 2026-07-29, na żądanie ("skąd jest 24,24 kWh?" / "na wykresie brakuje prognozy ~3,97 kWh o 12:00"): `get_hourly_forecast()` (`api/services/forecast_ml.py`, zasila WYŁĄCZNIE wykres godzinowy + "Suma prognozy" na zakładce Prognoza) wywoływał `predictor.predict_days()` z domyślnym `hybrid_today=True` — dla godzin, które już minęły i mają pomiar FoxESS, `predicted_kwh` był PODMIENIANY na rzeczywistą wartość (`prediction_source='foxess_actual'`), więc linia "Prognoza" dla przeszłych godzin przestawała być prognozą i pokrywała się z linią "Rzeczywistość". Efekt: (a) "Suma prognozy" (24,24 kWh) = suma hybrydowa (fakty do teraz + model na resztę dnia), inna niż zarchiwizowane, czysto-modelowe sumy w kartach Poranna/Południowa (31,31/27,70 kWh) — trzy różne liczby na jednym ekranie bez wyjaśnienia; (b) godz. 12:00 miała realną awarię produkcji (0,4 kWh zamiast oczekiwanych ~3,9 kWh) — hybryda nadpisała oryginalną prognozę rzeczywistością, więc błąd modelu znikał z wykresu zamiast być widoczny. Podjęto decyzję biznesową (dyskusja o tym, co lepsze na obronę pracy dyplomowej): zakładka Prognoza w apce ma służyć RZETELNEJ WALIDACJI modelu NWP+RF (tak jak dashboard Streamlit `dashboard/app.py`, gdzie kolumny `predicted_daily_raw`/`predicted_midday_raw` = "Raw = sam RF", bez hybrydy) — ukrywanie błędów modelu przez podmianę "po fakcie" jest sprzeczne z tym celem, nawet jeśli wygodne dla czysto produkcyjnego "aktualnego szacunku". Naprawione: `predict_days(days_ahead=1, from_date=base_date, hybrid_today=False)` — teraz `predicted_kwh` to zawsze CZYSTY wynik modelu (na bazie zarchiwizowanej prognozy pogody, nie obserwacji), niezależny od tego, co się już wydarzyło; `actual_kwh`/błąd nadal liczone osobno (`get_actual_hourly_ml`) i widoczne jako druga linia na wykresie — teraz mogą się realnie różnić. Zmiana punktowa: dotyczy WYŁĄCZNIE tego jednego wywołania — sugestie na Home (`recommend_appliances`), `battery_advisor.py` i `mlops/forecast_pv.py` (archiwizacja 05:00/12:00/16:00) mają własne, osobne wywołania `predict_days()` i nadal używają hybrydy tam, gdzie ma to sens praktyczny. Zweryfikowane: godz. 12:00 teraz `predicted_kwh=3.867, actual_kwh=0.4, error_pct=+866.8%` (błąd modelu widoczny) zamiast znikającego; "Suma prognozy" 31,17 kWh (blisko zarchiwizowanej porannej 31,31 kWh, sensownie spójne); dzień historyczny (28.07, 28,15 kWh) bez zmian — `hybrid_today` i tak nie miał znaczenia dla dni przeszłych (branch w `build_forecast_feature_frame` aktywuje się tylko dla `target_day == dziś`). Dyskusja po wdrożeniu: "Poranna" (31,31) i "Południowa" (27,70) na kartach niżej to WCIĄŻ hybryda + korekta operacyjna (`predicted_kwh` z `forecast_pv.py`, który nadal woła `hybrid_today=True, operational_adjust=True`) — nieporuszona przez tę zmianę celowo (osobny konsument, patrz wyżej). Świadomie zostawione tak (na żądanie, "zostawmy tak jak jest") — czysta wersja (`predicted_kwh_raw`, już zarchiwizowana w `forecast_history.csv`, tej samej "waluty" co dashboard Streamlit) mogłaby ujednolicić wszystkie liczby na ekranie, ale to odłożone jako możliwe następne zadanie, nie pilne. |
 | T1.20 | P1 | `[x]` Ranking AGD na Prognozie: top godziny PV + które urządzenia przy jakiej mocy | 2026-08-28: `appliance_tips` + progi w `/forecast/hourly`; karta „Kiedy włączyć AGD” (pralka≥1,5 / suszarka≥2 / zmywarka≥1,2 / gotowanie≥1,5 kW) |
+
+### 1.4 Home / Dashboard UX
+
+Zmniejszenie obciążenia poznawczego na stronie głównej (2026-09-03). Jedyny CTA do ustawień baterii = karta oszczędności.
+
+| ID | Pri | Zadanie | DoD |
+|----|-----|---------|-----|
+| T1.21 | P1 | `[x]` Jeden globalny baner doradczy na Home (zamiast powtórki na każdej karcie) | 2026-09-03: na górze `tab1` — `💡 Tryb doradczy: System nie steruje falownikiem. Przycisk sterowania odblokujemy po walidacji algorytmu.` Usunięty długi banner §9.6 z kart sugestii / `bat.note` / link „Dowiedz się więcej” z Home. |
+| T1.22 | P1 | `[x]` Widget „Bateria i Plan” — zwięzły PLAN sezonowy, bez list i linku do ustawień | 2026-09-03: `PLAN: TRYB LETNI/JESIENNY/ZIMOWY/WIOSENNY`; Cel / Rezerwa SoC (obecnie) / Ładowanie G12w. Usunięty link „Ustawienia i plan 24h >”. |
+| T1.23 | P1 | `[x]` Karta oszczędności = jedyny CTA Home → `/tabs/battery` | 2026-09-03: klikalna karta `Oszczędności i plan 24h. Zysk w tym miesiącu: … zł 👉`. Usunięte inne linki Home→Bateria (w tym AC „Bateria i klimatyzacja”). |
+| T1.24 | P1 | `[x]` Sugestie bez duplikatów okna + wykres PLAN 24H na Home | 2026-09-03: upsert nadpisuje kartę tego samego typu/dnia, stare unread → `read_at`; klient `dedupeSuggestions`. Copy: `🔔 Zbliża się tanie okno (13:00–15:00)` + PV. Chart.js PLAN 24H (SoC + PV + G12w) pod KPI. Test: `tests/test_t420_suggestions.py`. |
+
+### 1.5 Refaktoryzacja widoku Bateria (modularyzacja drill-down)
+
+Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 linii HTML). Plan: sub-routing z zakładkami (Ustawienia / Harmonogram G12w / Analityka & AC).
+
+| ID | Pri | Zadanie | DoD |
+|----|-----|---------|-----|
+| T4.25 | P2 | `[x]` Shell battery + sub-routing (zakładki Ustawienia/Harmonogram/Analityka) | `battery.page` = shell (`ion-header` + flex-outlet + opcjonalny footer „Zapisz cały plan”); routing `/tabs/battery/{settings,schedule,analytics}`; baner doradczy w 3. toolbarze; **2026-09-03:** naprawa scrollu (podstrony z własnym `ion-content`, bez `ion-content` w shellu) |
+| T4.26 | P2 | `[x]` Komponent BatterySettings (sezon + suwaki SoC + sprawność cyklu) | Sezon (`ion-segment` 5× równa szerokość) + rezerwa/cel SoC (suwaki) + **sprawność cyklu tylko odczyt** (kalibracja 08.2026, przegląd 08.2027). Opisy rezerwy/celu w tooltipach `[i]`. **Bez** mocy AC (→ T4.28a / Home). Rezerwa jesień = **22%** (BAT.5). Globalny „Zapisz cały plan” w shellu (`BatteryStateService`) |
+| T4.27 | P2 | `[x]` Komponent BatterySchedule (szablon taryfy + bloki 1–8) | Harmonogram G11/G12w/G13 + bloki FC; style w `battery-shared.scss` |
+| T4.28 | P2 | `[x]` Komponent BatteryAnalytics (shadow + plan24h + sugestia SE) | Shadow savings — **3 kafelki w rzędzie** (`.savings-container` / `.savings-cell`). Wykres PLAN 24H — styl sprzed refaktora (szara linia SoC, pomarańczowe PV, legenda HTML, tanie strefy z pluginu). Sugestia SE. Kalkulator AC = T4.28a |
+| T4.28a | P3 | `[x]` Interaktywny widget AC (kalkulator zamiast statycznego tekstu) | **2026-09-03:** Analityka — stan domyślny: ❄️ + „Oblicz limit czasu”; aktywny: wynik z `POST /ac-runtime` (Xh Ym, wyłącz o HH:MM), suwak mocy z live preview (SSOT `BatteryStateService`), „Przelicz ponownie”, zwiń chevron ↑. Home (T4.5): skrót suwaku na karcie AC gdy `show_card`. Disclaimer advise-only. |
+| T4.29 | **P1** | `[x]` BatteryStateService (Signal-based Single Source of Truth) | **Priority upgrade P3→P1** (2026-09-03): eliminuje bug nadpisywania settings między zakładkami + zachowuje draft przy przełączaniu. Angular Signals (16+), `hasUnsavedChanges` computed, globalny „Zapisz cały plan” w shellu (bez ikony dyskietki). **`persistAcPowerKw()`** — cichy zapis mocy AC z Analityki/Home. Settings/Schedule/Analytics używają service |
+| T4.30 | **P1** | `[x]` CanDeactivate guard dla niezapisanych zmian | 2026-09-03: `UnsavedChangesGuard` z Ionic `AlertController`. Sprawdza `hasUnsavedChanges()` z `BatteryStateService`. Native dialog "Niezapisane zmiany" z opcjami "Anuluj" / "Opuść". Podpięty do `battery-routing.module.ts`. Chroni przed przypadkową utratą danych przy nawigacji (back button, dolne menu). |
+
+**Szczegóły:** [REFAKTORYZACJA_BATERIA_PLAN.md](REFAKTORYZACJA_BATERIA_PLAN.md)
+
+**Domknięcie UX po refaktorze (2026-09-03, sesja implementacyjna):**
+
+| Obszar | Zmiana |
+|--------|--------|
+| CSS | `battery-shared.scss` — style podstron (suwaki, chipy, harmonogram, wykres, kafelki shadow, AC widget); `battery.page.scss` — tylko layout shell |
+| Nagłówki kart | Jednolity tytuł 15px (`.se-card ion-card-title`) |
+| Wykres PLAN 24h | Przywrócony styl pre-refactor (Analityka + Home) |
+| Moc AC | **Usunięta z Ustawień** → Analityka (T4.28a) + skrót na Home w dni upalne (T4.5) |
+| Sprawność | Stała 93% + tag kalibracji; nie suwak |
+| Sezon UI | `ion-segment` — 5 przycisków równiej w rzędzie (`flex: 1 1 0px`, font 12px) |
+| Home offline | Badge „Offline — brak API” zamiast demo fallback (`home-data.service`) |
 
 ---
 
@@ -152,7 +191,7 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 
 | Plan baterii | Tu (mobile/API) | Kolejność |
 |--------------|-----------------|-----------|
-| **B0** advise-only | TA.8, T4.11, banner Home | `[x]` — bez auto-apply |
+| **B0** advise-only | TA.8, T4.11, banner Home (T1.21) | `[x]` — bez auto-apply |
 | **BAT.5** `soc_min` = rezerwa sezonowa | T4.2 default + KPI SoC na Home | `[x]` 2026-08-27 — **zrobione przed** B1 |
 | **BAT.3 / B3** SoC@16 + karta reżim/FC/rezerwa | T4.19 `soc_reserve`, T4.21, `GET /battery/suggestion` | `[x]` 2026-08-27 — Home, bez ekranu suwaków |
 | **B1** sezon `autumn` + `spring` + lato 20%/15 min | T4.2/T4.3, T4.10, `charge_tonight_cloudy` | `[x]` 2026-08-27 — jesień PV&lt;8 (§D); wiosna III–V SoC&lt;40+PV&lt;8 (§E); suwak UI = T4.3 |
@@ -167,8 +206,8 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | T4.1 | P0 | `[x]` `GET /api/v1/battery/plan?date=` — okna G12w + plan SoC (reguły); **bez** wywołań `foxess_control` | Backend: `battery_planner.build_daily_plan` (BAT.5: `soc_min` z rezerwy sezonowej). Wykres 24h = T4.4 |
 | T4.2 | P0 | `[x]` Tabela `battery_strategy_settings` (SoC min, sprawność, ceny z1/z2, sezon) | CRUD API; GET zwraca `soc_min_percent` efektywne + `soc_reserve_percent` (BAT.5) |
 | T4.3 | P0 | `[x]` UI suwaki + sezon + **plan dnia SE** (bloki G12w; 30 min≈+50%) + sugestia | `/tabs/battery` + Home; własna logika doradcza (nie klon UI producenta) (2026-08-27) |
-| T4.4 | P0 | `[x]` Wykres liniowy/słupkowy 24h: strefa G12w, SoC plan, PV forecast | Chart.js; etykieta „plan doradczy”; tło = tania strefa |
-| T4.5 | P1 | `[x]` Formuła klimatyzacji: **wyłącz AC o HH:MM** + nocny dom (`GET/POST .../ac-runtime`) | 2026-09-03: nie sama liczba godzin. Energia = (SoC−rezerwa)×pojemność×η **minus** load nocny do 6:00 (domyślnie 0,55 kW od 18:00). UI: karta na Baterii + Home. **Kalendarz włącza kartę** (typ `klimatyzacja`/`upał`) — chip „Dziś klimatyzacja”. Advise-only. |
+| T4.4 | P0 | `[x]` Wykres liniowy/słupkowy 24h: strefa G12w, SoC plan, PV forecast | Chart.js; etykieta „plan doradczy”; tło = tania strefa. **2026-09-03:** ten sam wykres także na Home (T1.24), bez przewijania na `/tabs/battery` |
+| T4.5 | P1 | `[x]` Formuła klimatyzacji: **wyłącz AC o HH:MM** + nocny dom (`GET/POST .../ac-runtime`) | 2026-09-03: energia = (SoC−rezerwa)×pojemność×η **minus** load nocny do 6:00 (domyślnie 0,55 kW od 18:00). **Home:** karta gdy kalendarz = `klimatyzacja`/`upał` + **suwak mocy AC** (skrót). **Analityka:** pełny kalkulator T4.28a. Moc w `battery_settings.ac_power_kw`; `POST /ac-runtime` z override. Advise-only |
 | T4.6 | P2 | Eksport planu jako rekomendacja tekstowa / PDF | Bez komend do falownika |
 
 ### 4.2 Polityka advise-only + shadow savings (MVP)
@@ -176,11 +215,11 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 | ID | Pri | Zadanie | DoD |
 |----|-----|---------|-----|
 | T4.11 | P0 | `[x]` `GET /api/v1/battery/policy` — treść polityki §9.6 (PL) | JSON: `title`, `body`, `automation_enabled: false` |
-| T4.12 | P0 | `[x]` **Banner / karta stała** na ekranie Bateria (+ skrót na Home) | Home + `/tabs/battery` banner §9.6 (2026-08-27) |
+| T4.12 | P0 | `[x]` **Banner / karta stała** na ekranie Bateria (+ skrót na Home) | `/tabs/battery` banner §9.6 (2026-08-27). **Home 2026-09-03:** jeden krótki baner T1.21 (bez powtórki na kartach) |
 | T4.13 | P0 | `[x]` Ekran „Dowiedz się więcej”: punkty (ryzyko kosztowe, walidacja ~1 rok, potem przycisk sterowania) | Tekst na `/tabs/more` |
 | T4.14 | P0 | `[x]` UI: przycisk „Steruj falownikiem” **disabled** + tooltip | Na `/tabs/battery` — disabled + tekst §9.6 (2026-08-27) |
 | T4.15 | P0 | `[x]` `GET /api/v1/battery/shadow-savings?from=&to=` — kontrfaktyczne oszczędności | Backend MVP (przybliżenie); UI karta = T4.16 |
-| T4.16 | P0 | `[x]` UI karta „Ile BYŚMY zaoszczędzili przy automatyce” (`shadow_savings_pln` dzień/miesiąc/YTD) | `/tabs/battery` + skrót miesiąc na Home; `--moss` + etykieta „hipotetycznie” (2026-08-27) |
+| T4.16 | P0 | `[x]` UI karta „Ile BYŚMY zaoszczędzili przy automatyce” (`shadow_savings_pln` dzień/miesiąc/YTD) | Analityka: 3 kafelki w jednym rzędzie (Dziś / Ten miesiąc / YTD). Home: CTA T1.23 |
 | T4.17 | P1 | `[x]` Log / tabela `advice_events` (data, typ sugestii, czy użytkownik mógł wykonać) pod przyszłą walidację roczną | 2026-08-28: zapis przy upsert sugestii + `GET /notifications/advice-events` |
 
 ### 4.3 Powiadomienia push i feed sugestii (MVP)
@@ -189,9 +228,9 @@ Każdy wiersz = router + schematy Pydantic request/response + serwis adapter.
 |----|-----|---------|-----|
 | T4.18 | P0 | `[x]` Tabela `notifications` + `push_subscriptions` | Migracja / modele |
 | T4.19 | P0 | `[x]` `GET /api/v1/notifications` — feed sugestii na dashboard (in-app) | Typy: `cheap_window`, `charge_tonight_cloudy`, **`soc_reserve` (BAT.3)** |
-| T4.20 | P0 | `[x]` Generator sugestii baterii/magazynu: okno G12w, plan na dziś/jutro | 2026-08-28: cron `generate_battery_suggestions.py` w daily/midday/peak + ten sam przebieg przy GET |
-| T4.20a | P0 | `[x]` Banner Home „Załaduj baterię wieczorem” gdy `force_charge_night_recommended` | 2026-08-27 — bez modalu; tekst: słabe PV jutro + etykieta FC 22–6 |
-| T4.21 | P0 | `[x]` UI Home/Bateria: lista ostatnich sugestii (bez FCM wystarczy na pierwszy cut) | Home: feed + karta reżim/FC/rezerwa |
+| T4.20 | P0 | `[x]` Generator sugestii baterii/magazynu: okno G12w, plan na dziś/jutro | 2026-08-28: cron + GET. **2026-09-03:** skondensowany copy (`🔔 … okno (HH:00–HH:00)` + PV); upsert oznacza starsze unread tego samego typu jako przeczytane (bez dwóch kart 13:00–15:00) |
+| T4.20a | P0 | `[x]` Banner Home „Załaduj baterię wieczorem” gdy `force_charge_night_recommended` | 2026-08-27 — bez modalu. **2026-09-03:** skrócony tekst; bez linku do Baterii |
+| T4.21 | P0 | `[x]` UI Home/Bateria: lista ostatnich sugestii (bez FCM wystarczy na pierwszy cut) | Home: feed (T1.24) + widget PLAN (T1.22); Bateria: pełny ekran suwaków |
 | T4.22 | P1 | `POST /api/v1/notifications/push-token` + wysyłka FCM (Android) dla tych samych sugestii | Opt-in zgoda systemowa |
 | T4.23 | P1 | UI zgód na powiadomienia push | Domyślnie pytamy przy pierwszym planie baterii |
 | T4.24 | P1 | Treści push po polsku, ton doradczy („Sugestia: …”, nigdy „Wykonano automatycznie”) | Review copy |
@@ -294,10 +333,10 @@ Aktualizuj status w tej tabeli przy domknięciu fazy:
 | 0 Fundament (Docker) | `[x]` | 2026-07-26 | Zweryfikowano end-to-end: `colima` + `docker compose up -d db api` — `db` (Postgres 16) healthy, `api` startuje, 26 tabel utworzonych z `db/init/*.sql` (10 FoxESS/weather/tauron istniejących + 8 nowych z §13 + reszta). Po drodze naprawiono niedopięcie wersji `scikit-learn` (patrz wiersz niżej) i lokalny brak `docker`/`colima` na maszynie deweloperskiej (zainstalowane przez Homebrew). |
 | 0.2 / TA.* FastAPI HTTP | `[x]` | 2026-07-26 | Kontrakt §12 — pakiet `api/` kompletny (P0 w całości, większość P1 też), `uvicorn api.main:app` zweryfikowany lokalnie (Python 3.9 venv, SQLite) **i w kontenerze Docker (Python 3.11, Postgres)**: `/health`, `/ready`, `/docs` = 200; `POST /auth/register` → `/auth/login` → JWT → `GET /battery/policy` (automation_enabled=false), `GET /foxess/overview` (dane realne z projektu: 35.23 kWh, SoC 79.9%), `GET /forecast/hourly` (predykcje RF, 31.51 kWh/dzień), `GET /notifications` (auto-seed sugestii) — wszystko 200 z realnym JWT. 13/13 testów `pytest tests/test_api_contract.py` zielonych. **Naprawiono bug:** `scikit-learn>=1.3.0` (bez górnej granicy) w kontenerze instalował 1.9.0, niekompatybilny z modelem `.joblib` wytrenowanym na 1.6.1 (`AttributeError: SimpleImputer._fill_dtype`) → przypięto `scikit-learn==1.6.1` w `requirements.txt`, przebudowano obraz, potwierdzono zgodność. Auth spike: `docs/UPDATE_2026-07-26_fastapi-oauth-spike.md`. Stubbed/pominięte: `/auth/fox/callback` (TA.2, brak OAuth po stronie Fox), TA.11 (weather-notes, P2), TA.13 (rate limiting, P2), T0.17 (PKCE Ionic, P2), opis błędów per-endpoint w OpenAPI niepełny (TA.12). |
 | T1.7 Sync inkrementalny + migracja PG | `[x]` | 2026-07-26 | Patrz `docs/UPDATE_2026-07-26_foxess-incremental-sync.md` — migracja historii SQLite→Postgres + `POST /foxess/sync` liczy brakujący odcinek automatycznie, z cooldownem. |
-| 1 Shell + sync + prognoza | `[x]` | 2026-07-28 | P0 zamknięte: Ionic Solar Graphite, 4 taby, Home KPI + sync Fox + banner §9.6 + sugestie, Prognoza z wykresem Chart.js + porównaniem błędu % vs rzeczywistość (T1.14, patrz wyżej). Screenshoty: `mobile/docs/screenshots/`. **Korekta 2026-07-28:** T1.13 był błędnie oznaczony jako gotowy 2026-07-27 — ekran Prognoza był w rzeczywistości placeholderem; dobudowany teraz razem z T1.14. **T1.10** `[x]` 2026-09-03 (40402 → 429 + karta na tab2). Otwarte P1: T1.6 splash. P2: T1.11 pull-refresh, T1.15 cache prognoz (świadomie odłożone). |
+| 1 Shell + sync + prognoza | `[x]` | 2026-07-28 | P0 zamknięte: Ionic Solar Graphite, 4 taby, Home KPI + sync Fox + banner §9.6 + sugestie, Prognoza z wykresem Chart.js + porównaniem błędu % vs rzeczywistość (T1.14, patrz wyżej). Screenshoty: `mobile/docs/screenshots/`. **Korekta 2026-07-28:** T1.13 był błędnie oznaczony jako gotowy 2026-07-27 — ekran Prognoza był w rzeczywistości placeholderem; dobudowany teraz razem z T1.14. **T1.10** `[x]` 2026-09-03 (40402 → 429 + karta na tab2). **T1.21–T1.24** `[x]` 2026-09-03 — UX Home: jeden baner doradczy, widget PLAN, CTA oszczędności, PLAN 24H + dedupe sugestii. Otwarte P1: T1.6 splash. P2: T1.11 pull-refresh, T1.15 cache prognoz (świadomie odłożone). |
 | 2 Symulator | `[~]` | 2026-07-29 | Backend (T2.1–T2.3) + **UI P0** (T2.4 formularz stawek, T2.5 wykres słupkowy) + **P1** (T2.6 mini tabela kWh, T2.7 netto/brutto VAT, T2.10 przebudowa UX + polski `ion-datetime`) na `/tabs/simulator`. Otwarte P2: T2.8 depozyt, T2.9 prefill z tauron_bills. |
 | 3 ROI | `[~]` | 2026-07-27 | **Backend gotowy** (T3.1–T3.2, TA.7). **Brakuje UI mobilnego** (T3.3–T3.4 P0). Zależność: wynik symulatora (Faza 2). |
-| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-09-03 | Backend + ekran Bateria + T4.16 + BAT.4 + T4.17 + T4.20 + **T4.5 AC HH:MM** `[x]`. Brak: FCM (T4.22); kalendarz UI (T4.8). |
+| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-09-03 | Refaktor drill-down T4.25–T4.30 + domknięcie UX (scroll, shared SCSS, wykres 24h, shadow 3×1, sezon segment). **T4.28a** kalkulator AC `[x]`. T4.5 AC: Home skrót + Analityka pełny widget. Brak: FCM (T4.22); kalendarz UI (T4.8); profil domu / obciążenia (backlog — docelowe miejsce mocy AC). |
 | 5 ML advice (bez control) | `[ ]` | | |
 | 6 Sterowanie Fox (po ~roku) | `[ ]` | | poza MVP |
 

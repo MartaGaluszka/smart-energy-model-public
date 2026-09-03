@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ViewWillEnter } from '@ionic/angular';
 import { Observable } from 'rxjs';
 import { HomeDataService, SyncStatus } from '../services/home-data.service';
 
@@ -8,13 +9,17 @@ import { HomeDataService, SyncStatus } from '../services/home-data.service';
   styleUrls: ['tab2.page.scss'],
   standalone: false,
 })
-export class Tab2Page implements OnInit {
+export class Tab2Page implements OnInit, ViewWillEnter {
   sync$!: Observable<SyncStatus>;
 
-  constructor(private readonly homeData: HomeDataService) {}
+  constructor(readonly homeData: HomeDataService) {}
 
   ngOnInit() {
     this.sync$ = this.homeData.getSyncStatus();
+  }
+
+  ionViewWillEnter() {
+    this.homeData.refreshAll();
   }
 
   onSync() {

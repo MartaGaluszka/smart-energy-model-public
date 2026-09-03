@@ -1,0 +1,209 @@
+<ion-content class="se-battery-page">
+  <div class="se-page">
+    <ion-spinner *ngIf="loading" class="se-spinner"></ion-spinner>
+
+    <ion-card *ngIf="error" class="se-card se-banner se-banner--error">
+      <ion-card-content>{{ error }}</ion-card-content>
+    </ion-card>
+
+    <!-- Analytics content -->
+    <div class="se-section-title">
+    <ion-icon name="leaf-outline"></ion-icon>
+    <span>Shadow savings</span>
+  </div>
+
+  <ion-card class="se-card se-shadow-savings" *ngIf="!loading">
+    <ion-card-header>
+      <ion-card-title class="font-serif">Oszczędności dzięki PV+baterii</ion-card-title>
+      <ion-card-subtitle>brutto z VAT</ion-card-subtitle>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="savings-container">
+        <div class="savings-cell" *ngFor="let row of shadowRows">
+          <div class="se-shadow-card__label">{{ row.label }}</div>
+          <ion-spinner *ngIf="row.loading" name="crescent" class="se-shadow-card__spin"></ion-spinner>
+          <div *ngIf="!row.loading && row.error" class="se-shadow-card__value se-shadow-card__value--error">
+            brak danych
+          </div>
+          <div *ngIf="!row.loading && !row.error && row.data" class="se-shadow-card__value">
+            {{ formatPln(row.data.shadow_savings_pln) }}
+          </div>
+        </div>
+      </div>
+      <p *ngIf="shadowMethodNote" class="se-shadow__method">{{ shadowMethodNote }}</p>
+    </ion-card-content>
+  </ion-card>
+
+  <div class="se-section-title">
+    <ion-icon name="analytics-outline"></ion-icon>
+    <span>Plan 24h · {{ planDate }}</span>
+  </div>
+
+  <ion-card class="se-card" *ngIf="!loading">
+    <ion-card-content>
+      <p class="se-battery-page__plan-kicker">
+        Plan doradczy
+        <ng-container *ngIf="planSeason"> · reżim {{ seasonLabel(planSeason) }}</ng-container>
+      </p>
+      <div class="se-battery-page__chart-wrap" *ngIf="planHours.length > 0">
+        <canvas #planCanvas></canvas>
+      </div>
+      <ul class="se-battery-page__legend" *ngIf="planHours.length > 0">
+        <li><span class="se-dot se-dot--grid"></span> SoC plan (%)</li>
+        <li><span class="se-dot se-dot--solar"></span> PV prognoza (kWh)</li>
+        <li><span class="se-dot se-dot--moss"></span> tło = tania G12w</li>
+      </ul>
+      <p *ngIf="planHours.length === 0" class="se-battery-page__hint">Brak danych planu 24h.</p>
+      <p *ngIf="planNote" class="se-battery-page__hint">{{ planNote }}</p>
+    </ion-card-content>
+  </ion-card>
+
+  <div class="se-section-title">
+    <ion-icon name="thermometer-outline"></ion-icon>
+    <span>Klimatyzacja</span>
+  </div>
+
+  <ion-card class="se-card se-ac-card" *ngIf="!loading">
+    <ion-card-content class="ion-padding">
+      <!-- Stan domyślny -->
+      <ng-container *ngIf="!isAcCalculated">
+        <p class="se-ac-widget__head ion-text-center">
+          <span class="se-ac-widget__emoji" aria-hidden="true">❄️</span>
+          Klimatyzacja
+        </p>
+        <p class="se-ac-widget__intro ion-text-center ion-text-wrap">
+          Sprawdź, jak długo możesz chłodzić dom bez naruszania rezerwy na noc.
+        </p>
+        <p *ngIf="acCalcError" class="se-ac-widget__error ion-text-center">{{ acCalcError }}</p>
+        <ion-button
+          expand="block"
+          class="se-ac-widget__cta"
+          (click)="calculateAcLimit()"
+          [disabled]="acLoading"
+        >
+          <ion-spinner *ngIf="acLoading" slot="start" name="crescent"></ion-spinner>
+          Oblicz limit czasu
+        </ion-button>
+      </ng-container>
+
+      <!-- Stan aktywny -->
+      <ng-container *ngIf="isAcCalculated">
+        <div class="se-ac-widget__head-row">
+          <p class="se-ac-widget__head">
+            <span class="se-ac-widget__emoji" aria-hidden="true">❄️</span>
+            Klimatyzacja ({{ acPowerKw | number:'1.1-1' }} kW)
+          </p>
+          <ion-button
+            fill="clear"
+            size="small"
+            class="se-ac-widget__close"
+            (click)="closeAcWidget()"
+            aria-label="Zwiń kalkulator"
+          >
+            <ion-icon name="chevron-up-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="se-slider">
+          <label class="se-slider__label" for="ac-power-analytics">
+            Moc klimatyzacji — {{ acPowerKw | number:'1.1-1' }} kW
+            <ion-icon
+              name="information-circle-outline"
+              class="se-info-icon"
+              id="ac-power-analytics-info"
+            ></ion-icon>
+            <ion-popover trigger="ac-power-analytics-info" triggerAction="click">
+              <ng-template>
+                <ion-content class="se-popover-content">
+                  <p>
+                    Parametr obciążenia domu — używany w kalkulatorze czasu pracy AC vs rezerwa SoC.
+                    Zapisany w profilu domu (domyślnie 1,2 kW).
+                  </p>
+                </ion-content>
+              </ng-template>
+            </ion-popover>
+          </label>
+          <input
+            id="ac-power-analytics"
+            class="se-slider__input"
+            type="range"
+            min="0.5"
+            max="2.5"
+            step="0.1"
+            [value]="acPowerKw"
+            (input)="onAcPowerInput($event)"
+          />
+        </div>
+
+        <ion-spinner *ngIf="acLoading" class="se-spinner se-spinner--inline"></ion-spinner>
+
+        <ng-container *ngIf="!acLoading">
+          <p class="se-ac-widget__result ion-text-center ion-text-wrap" *ngIf="calculatedHours > 0 || calculatedMinutes > 0">
+            Zapas SoC pozwala na:
+            <strong>{{ calculatedHours }}h {{ calculatedMinutes }}m</strong> pracy.
+          </p>
+          <p class="se-ac-widget__result ion-text-center ion-text-wrap" *ngIf="calculatedHours === 0 && calculatedMinutes === 0">
+            Zapas SoC pozwala na: <strong>0 min</strong> pracy.
+          </p>
+          <p class="se-ac-card__time ion-text-center" *ngIf="suggestedTurnOffTime">
+            Wyłączenie AC o: <strong>{{ suggestedTurnOffTime }}</strong> zapewni rezerwę na noc.
+          </p>
+          <p class="se-ac-card__time se-ac-card__time--muted ion-text-center" *ngIf="!suggestedTurnOffTime">
+            Brak świeżego odczytu SoC — nie liczę godziny wyłączenia.
+          </p>
+          <p *ngIf="acRuntimeNote" class="se-battery-page__hint ion-text-wrap">{{ acRuntimeNote }}</p>
+          <ul class="se-ac-card__meta">
+            <li>SoC teraz: {{ acSocNow ?? '—' }}%</li>
+            <li *ngIf="acNightLoadKw != null">Nocny dom: {{ acNightLoadKw | number:'1.2-2' }} kW</li>
+          </ul>
+        </ng-container>
+
+        <p class="se-battery-page__hint se-ac-card__disclaimer ion-text-center">
+          Aplikacja nie wyłącza AC automatycznie.
+        </p>
+        <div class="se-ac-card__actions">
+          <ion-button fill="clear" expand="block" (click)="calculateAcLimit()" [disabled]="acLoading">
+            Przelicz ponownie
+          </ion-button>
+        </div>
+      </ng-container>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card class="se-card se-charge-suggest" *ngIf="suggestion as sug">
+    <ion-card-header>
+      <ion-card-title class="font-serif">Sugestia SE</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="se-battery-page__plan-kicker">{{ sug.recommendation }}</p>
+      <p class="se-charge-suggest__when">{{ sug.charge_when_summary }}</p>
+      <ul class="se-charge-suggest__list">
+        <li>
+          Noc (tania G12w):
+          <strong>{{ sug.force_charge_night_label }}</strong>
+          <ng-container *ngIf="sug.force_charge_night_start && sug.force_charge_night_end">
+            · {{ sug.force_charge_night_start }}–{{ sug.force_charge_night_end }}
+            <ng-container *ngIf="sug.force_charge_night_minutes != null">
+              ({{ sug.force_charge_night_minutes | number:'1.0-0' }} min;
+              30 min ≈ +50%)
+            </ng-container>
+          </ng-container>
+        </li>
+        <li>
+          Popołudnie (tania G12w):
+          <strong>{{ sug.force_charge_afternoon_label }}</strong>
+          <ng-container *ngIf="sug.force_charge_afternoon_window">
+            · {{ sug.force_charge_afternoon_window }}
+          </ng-container>
+        </li>
+      </ul>
+      <p class="se-battery-page__hint">
+        {{ sug.action }}
+        Plan jest doradczy (shadow vs reality) — bez automatyki falownika w MVP.
+      </p>
+    </ion-card-content>
+  </ion-card>
+
+  <p class="se-demo-note">Smart Energy · advise-only · bez automatyki FoxESS</p>
+  </div>
+</ion-content>

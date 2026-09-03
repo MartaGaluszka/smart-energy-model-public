@@ -10,10 +10,18 @@
 <ion-content [fullscreen]="true" class="se-home">
   <div class="se-page">
 
+    <ion-card class="se-card se-banner se-banner--global">
+      <ion-card-content>
+        <p class="se-banner__text">
+          💡 Tryb doradczy: System nie steruje falownikiem. Przycisk sterowania odblokujemy po walidacji algorytmu.
+        </p>
+      </ion-card-content>
+    </ion-card>
+
     <!-- Sync status -->
     <ion-card class="se-card se-sync-card" *ngIf="sync$ | async as sync">
       <ion-card-content>
-        <ion-badge *ngIf="sync.offline" class="se-offline-badge">Offline — dane demo</ion-badge>
+        <ion-badge *ngIf="sync.offline" class="se-offline-badge">Offline — brak API</ion-badge>
         <div class="se-sync-row">
           <div class="se-sync-info">
             <span class="se-sync-label">Ostatnia synchronizacja Fox</span>
@@ -41,7 +49,17 @@
       </ion-card-content>
     </ion-card>
 
-    <!-- KPI grid -->
+    <ion-card color="danger" *ngIf="(sync$ | async)?.offline && (sync$ | async)?.apiError as apiErr">
+      <ion-card-content>
+        <p class="se-error-title se-error-title--home">Błąd połączenia z API</p>
+        <p class="se-error-body se-error-body--home"><strong>{{ apiErr }}</strong></p>
+        <ion-button color="light" (click)="homeData.refreshAll(true)">Spróbuj ponownie</ion-button>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-spinner *ngIf="(sync$ | async)?.syncing && !(kpi$ | async)" class="se-spinner"></ion-spinner>
+
+    <!-- KPI grid — tylko żywe dane z API -->
     <ng-container *ngIf="kpi$ | async as kpi">
       <ion-grid class="se-kpi-grid">
         <ion-row>
@@ -49,7 +67,7 @@
             <ion-card class="se-card se-kpi">
               <ion-card-content>
                 <ion-icon name="sunny-outline" class="se-kpi__icon se-kpi__icon--solar"></ion-icon>
-                <span class="se-kpi__value">{{ kpi.productionKwh }} <small>kWh</small></span>
+                <span class="se-kpi__value">{{ formatKpiNumber(kpi.productionKwh) }} <small>kWh</small></span>
                 <span class="se-kpi__label" *ngIf="(sync$ | async) as sync">
                   Produkcja {{ isNotToday(sync.dataDay) ? '(' + formatDay(sync.dataDay) + ')' : 'dziś' }}
                 </span>
@@ -64,7 +82,7 @@
                   class="se-kpi__icon"
                   [ngClass]="'se-kpi__icon--' + socColor(kpi.socPercent, socReserve)"
                 ></ion-icon>
-                <span class="se-kpi__value">{{ kpi.socPercent }} <small>%</small></span>
+                <span class="se-kpi__value">{{ formatKpiNumber(kpi.socPercent) }} <small>%</small></span>
                 <span class="se-kpi__label">
                   SoC baterii
                   <ng-container *ngIf="battery$ | async as bat">
@@ -80,7 +98,7 @@
             <ion-card class="se-card se-kpi">
               <ion-card-content>
                 <ion-icon name="arrow-down-circle-outline" class="se-kpi__icon se-kpi__icon--grid"></ion-icon>
-                <span class="se-kpi__value">{{ kpi.gridImportKwh }} <small>kWh</small></span>
+                <span class="se-kpi__value">{{ formatKpiNumber(kpi.gridImportKwh) }} <small>kWh</small></span>
                 <span class="se-kpi__label">Import z sieci</span>
               </ion-card-content>
             </ion-card>
@@ -89,7 +107,7 @@
             <ion-card class="se-card se-kpi">
               <ion-card-content>
                 <ion-icon name="arrow-up-circle-outline" class="se-kpi__icon se-kpi__icon--moss"></ion-icon>
-                <span class="se-kpi__value">{{ kpi.gridExportKwh }} <small>kWh</small></span>
+                <span class="se-kpi__value">{{ formatKpiNumber(kpi.gridExportKwh) }} <small>kWh</small></span>
                 <span class="se-kpi__label">Eksport do sieci</span>
               </ion-card-content>
             </ion-card>
@@ -98,7 +116,31 @@
       </ion-grid>
     </ng-container>
 
-    <!-- T4.20a: banner gdy nocne FC zalecane (słabe PV jutro / niski SoC) -->
+    <ion-card class="se-card se-plan-chart">
+      <ion-card-content>
+        <span class="se-plan-chart__title">PLAN 24H</span>
+        <div class="se-plan-chart__wrap">
+          <canvas #planCanvas></canvas>
+        </div>
+        <p *ngIf="!planHours.length" class="se-plan-chart__empty">Ładuję plan…</p>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card
+      class="se-card se-battery"
+      *ngIf="battery$ | async as bat"
+      [class.se-battery--alert]="bat.soc16_alert || bat.wait_for_cheap || bat.force_charge_night_recommended"
+    >
+      <ion-card-content>
+        <p class="se-battery__plan-title">PLAN: TRYB {{ planModeAdjective(bat.season) }}</p>
+        <ul class="se-battery__plan">
+          <li>- Cel: {{ planGoal(bat) }}</li>
+          <li>- Rezerwa SoC: {{ bat.soc_reserve_percent | number:'1.0-0' }}% (obecnie: {{ formatSoc(bat.soc_now_percent) }}%)</li>
+          <li>- Ładowanie G12w: {{ planG12w(bat) }}</li>
+        </ul>
+      </ion-card-content>
+    </ion-card>
+
     <ng-container *ngIf="battery$ | async as bat">
       <ion-card
         class="se-card se-charge-alert"
@@ -110,12 +152,11 @@
             <div>
               <span class="se-charge-alert__title">Załaduj baterię wieczorem</span>
               <p class="se-charge-alert__body">
-                Bateria poniżej oczekiwań na jutro — słaba produkcja PV.
+                Słabe PV jutro
                 <ng-container *ngIf="bat.soc_now_percent !== null">
-                  Teraz {{ bat.soc_now_percent | number:'1.0-0' }}%.
-                </ng-container>
-                {{ bat.charge_when_summary || bat.force_charge_night_label }}.
-                Plan SE: krótkie doładowanie w taniej G12w (30 min ≈ +50%); nie pełnić „do rana”.
+                  · teraz {{ bat.soc_now_percent | number:'1.0-0' }}%
+                </ng-container>.
+                Krótkie doładowanie w taniej G12w.
               </p>
             </div>
           </div>
@@ -123,46 +164,6 @@
       </ion-card>
     </ng-container>
 
-    <!-- BAT.3 + BAT.5: reżim / ForceCharge / rezerwa — advise-only -->
-    <ion-card class="se-card se-battery" *ngIf="battery$ | async as bat" [class.se-battery--alert]="bat.soc16_alert || bat.wait_for_cheap || bat.force_charge_night_recommended">
-      <ion-card-content>
-        <div class="se-battery__head">
-          <ion-icon name="battery-charging-outline" class="se-battery__icon"></ion-icon>
-          <div>
-            <span class="se-battery__kicker">Bateria — sugestia</span>
-            <span class="se-battery__rec">{{ bat.recommendation }}</span>
-          </div>
-        </div>
-        <p class="se-battery__action">{{ bat.action }}</p>
-        <ul class="se-battery__meta">
-          <li>Reżim: <strong>{{ seasonLabel(bat.season) }}</strong></li>
-          <li class="se-battery__when">
-            Plan SE:
-            <strong>{{ bat.charge_when_summary || 'brak doładowania dziś' }}</strong>
-          </li>
-          <li>Rezerwa SoC: <strong>{{ bat.soc_reserve_percent | number:'1.0-0' }}%</strong>
-            <ng-container *ngIf="bat.soc_now_percent !== null">
-              (teraz {{ bat.soc_now_percent | number:'1.0-0' }}%)
-            </ng-container>
-            — podłoga na noc, nie ładuj w szczycie
-          </li>
-          <li>Noc (G12w): <strong>{{ bat.force_charge_night_label }}</strong></li>
-          <li>Popołudnie (G12w): <strong>{{ bat.force_charge_afternoon_label }}</strong></li>
-          <li>Ładowanie z sieci: <strong>tylko tania G12w</strong>
-            <ng-container *ngIf="bat.wait_for_cheap && bat.next_cheap_window">
-              — następne {{ bat.next_cheap_window }}
-            </ng-container>
-          </li>
-        </ul>
-        <p class="se-battery__note">{{ bat.note }}</p>
-        <ion-button fill="clear" size="small" class="se-battery__link" routerLink="/tabs/battery">
-          Ustawienia i plan 24h
-          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
-
-    <!-- T4.5: karta AC tylko gdy kalendarz = klimatyzacja/upał -->
     <ion-card class="se-card se-ac-home" *ngIf="acRuntime as ac">
       <ion-card-content>
         <div class="se-ac-home__row">
@@ -174,45 +175,39 @@
             <p class="se-ac-home__body">{{ ac.note }}</p>
           </div>
         </div>
-        <ion-button fill="clear" size="small" class="se-battery__link" routerLink="/tabs/battery">
-          Bateria i klimatyzacja
-          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
-        </ion-button>
+        <div class="se-ac-home__slider se-slider">
+          <label class="se-slider__label" for="ac-power-home">
+            Moc AC — {{ acPowerKw | number:'1.1-1' }} kW
+          </label>
+          <input
+            id="ac-power-home"
+            class="se-slider__input"
+            type="range"
+            min="0.5"
+            max="2.5"
+            step="0.1"
+            [value]="acPowerKw"
+            (input)="onAcPowerInput($event)"
+          />
+        </div>
       </ion-card-content>
     </ion-card>
 
-    <!-- T4.16: skrót shadow (pełna karta dzień/miesiąc/YTD na Baterii) -->
     <ion-card class="se-card se-shadow-teaser" button routerLink="/tabs/battery">
       <ion-card-content>
         <div class="se-shadow-teaser__row">
-          <div>
-            <span class="se-shadow-teaser__kicker">hipotetycznie</span>
-            <span class="se-shadow-teaser__title">Ile BYŚMY zaoszczędzili (ten miesiąc)</span>
-          </div>
-          <ion-spinner *ngIf="shadowLoading" name="crescent"></ion-spinner>
-          <span *ngIf="!shadowLoading" class="se-shadow-teaser__value">{{ formatPln(shadowMonthPln) }}</span>
+          <span class="se-shadow-teaser__cta">
+            Oszczędności i plan 24h. Zysk w tym miesiącu:
+            <ng-container *ngIf="shadowLoading">…</ng-container>
+            <ng-container *ngIf="!shadowLoading">
+              <span class="se-shadow-teaser__gain">{{ formatSavingsNumber(shadowMonthPln) }} zł</span>
+            </ng-container>
+            👉
+          </span>
         </div>
       </ion-card-content>
     </ion-card>
 
-    <!-- Advise-only banner (§9.6) -->
-    <ion-card class="se-card se-banner">
-      <ion-card-content>
-        <div class="se-banner__row">
-          <ion-icon name="information-circle-outline" class="se-banner__icon"></ion-icon>
-          <p class="se-banner__text">
-            System na razie tylko <strong>doradza</strong> i wyświetla sugestie. Nie steruje falownikiem —
-            przycisk sterowania odblokujemy dopiero po roku walidacji algorytmu.
-          </p>
-        </div>
-        <ion-button fill="clear" size="small" class="se-banner__more" routerLink="/tabs/more">
-          Dowiedz się więcej
-          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
-
-    <!-- Suggestions feed preview -->
     <div class="se-section-title">
       <ion-icon name="notifications-outline"></ion-icon>
       <span>Sugestie</span>
@@ -226,9 +221,5 @@
       </ion-card>
       <p *ngIf="!suggestions.length" class="se-demo-note">Brak nowych sugestii.</p>
     </ng-container>
-
-    <p *ngIf="(sync$ | async)?.offline" class="se-demo-note">
-      Dane demonstracyjne — API niedostępne (offline).
-    </p>
   </div>
 </ion-content>

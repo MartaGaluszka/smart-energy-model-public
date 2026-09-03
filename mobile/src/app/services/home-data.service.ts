@@ -2,13 +2,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, catchError, map, of, switchMap, tap, timeout } from 'rxjs';
 import { ApiService, BatterySuggestionResponse, FoxOverviewResponse, NotificationDto } from './api.service';
+import { AuthService } from './auth.service';
 import { toLocalIsoDate } from '../utils/date-utils';
 
 export interface HomeKpi {
-  productionKwh: number;
-  socPercent: number;
-  gridImportKwh: number;
-  gridExportKwh: number;
+  productionKwh: number | null;
+  socPercent: number | null;
+  gridImportKwh: number | null;
+  gridExportKwh: number | null;
 }
 
 export interface Suggestion {
@@ -16,6 +17,31 @@ export interface Suggestion {
   kind: string;
   title: string;
   body: string;
+}
+
+const WINDOW_IN_TITLE = /(\d{1,2}:\d{2}\s*[–-]\s*\d{1,2}:\d{2})/;
+
+/** Jedna karta na typ i na to samo okno godzinowe — nowsza predykcja nadpisuje starszą. */
+export function dedupeSuggestions(rows: NotificationDto[]): NotificationDto[] {
+  const unread = rows
+    .filter((r) => r.read_at === null)
+    .slice()
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const seenType = new Set<string>();
+  const seenWindow = new Set<string>();
+  const out: NotificationDto[] = [];
+  for (const row of unread) {
+    const match = WINDOW_IN_TITLE.exec(row.title);
+    const windowKey = match ? match[1].replace(/\s/g, '') : null;
+    if (windowKey) {
+      if (seenWindow.has(windowKey)) continue;
+      seenWindow.add(windowKey);
+    }
+    if (seenType.has(row.notif_type)) continue;
+    seenType.add(row.notif_type);
+    out.push(row);
+  }
+  return out;
 }
 
 export interface SyncStatus {
@@ -30,57 +56,10 @@ export interface SyncStatus {
   messageKind: 'error' | 'info' | null;
   /** T1.10: true gdy FoxESS zwrócił limit 40402 (albo timeout syncu, zwykle ten sam limit). */
   rateLimited: boolean;
+  /** Pełny komunikat techniczny gdy API niedostępne (bez danych demo). */
+  apiError: string | null;
 }
 
-const FALLBACK_KPI: HomeKpi = {
-  productionKwh: 34.4,
-  socPercent: 62,
-  gridImportKwh: 1.2,
-  gridExportKwh: 18.5,
-};
-
-/** Zawsze pokaż kartę — *ngIf ukrywa ją przy null (timeout Fox / 500). */
-const FALLBACK_BATTERY: BatterySuggestionResponse = {
-  as_of: new Date().toISOString(),
-  season: 'summer',
-  season_mode: 'auto',
-  soc_now_percent: null,
-  soc_min_percent: 20,
-  soc_reserve_percent: 20,
-  soc_target_percent: 80,
-  soc_min_evening_percent: 50,
-  force_charge_night_recommended: false,
-  force_charge_night_label: 'pomiń — wystarczy PV',
-  force_charge_afternoon_recommended: false,
-  force_charge_afternoon_label: 'rzadko potrzebne',
-  force_charge_night_start: null,
-  force_charge_night_end: null,
-  force_charge_night_minutes: null,
-  force_charge_afternoon_window: null,
-  charge_when_summary: 'Dziś bez doładowania z sieci — wystarczy PV / rezerwa SE',
-  fc_max_minutes: 15,
-  fc_night_start_hour: 22,
-  soc16_alert: false,
-  soc16_hour_passed: false,
-  soc16_percent: null,
-  soc16_title: null,
-  soc16_body: null,
-  wait_for_cheap: false,
-  next_cheap_window: null,
-  recommendation: 'REŻIM LATO',
-  action:
-    'Trzymaj min 20% na noc (rezerwa). Ładowanie z sieci tylko gdy bateria spada poniżej 20% i jutro słabe PV. System tylko doradza — decyzja należy do Ciebie.',
-  automation_enabled: false,
-  note: 'Sugestia — nie wykonano automatycznie (advise-only).',
-};
-
-// FoxESS Cloud bywa limitowane (40402) — istniejąca logika sync w src/data/foxess_fetch_all.py
-// wtedy retry'uje z narastającym backoffem, co może zająć naprawdę długo (nawet >10 min).
-// Klient nie może na to czekać w nieskończoność — po timeoucie pokazujemy komunikat
-// i cofamy spinner, ale sync może się jeszcze dokończyć w tle po stronie API.
-const SYNC_TIMEOUT_MS = 15_000;
-const OVERVIEW_TIMEOUT_MS = 10_000;
-const LOOKBACK_DAYS = 5;
 const FOX_RATE_LIMIT_MSG =
   'Limit API FoxESS (40402). Odczekaj 30–60 min i spróbuj ponownie.';
 
@@ -97,18 +76,18 @@ function foxRateLimitMessage(err: unknown): string | null {
   return null;
 }
 
+const SYNC_TIMEOUT_MS = 15_000;
+const OVERVIEW_TIMEOUT_MS = 10_000;
+const LOOKBACK_DAYS = 5;
+
 /**
  * Most między UI (Home / tab1) i `api/` (FastAPI, Faza 0 — patrz §12 dok. projektowego).
- * Jeśli backend jest nieosiągalny, serwis cofa się do danych demonstracyjnych — flaga
- * `offline` w SyncStatus sygnalizuje to w widoku. Jeśli backend działa, ale dla "dziś"
- * nie ma jeszcze zapisanych danych (sync jeszcze się nie wykonał), automatycznie
- * pokazujemy najnowszy dzień z realnymi danymi (`dataDay`) — nigdy fałszywych liczb
- * pod etykietą "dziś".
+ * Brak danych demo — gdy API niedostępne, KPI/bateria = null i `offline` + `apiError`.
  */
 @Injectable({ providedIn: 'root' })
 export class HomeDataService {
-  private readonly kpi$ = new BehaviorSubject<HomeKpi>(FALLBACK_KPI);
-  private readonly battery$ = new BehaviorSubject<BatterySuggestionResponse | null>(FALLBACK_BATTERY);
+  private readonly kpi$ = new BehaviorSubject<HomeKpi | null>(null);
+  private readonly battery$ = new BehaviorSubject<BatterySuggestionResponse | null>(null);
   private readonly sync$ = new BehaviorSubject<SyncStatus>({
     lastSyncedAt: null,
     syncing: false,
@@ -117,14 +96,26 @@ export class HomeDataService {
     message: null,
     messageKind: null,
     rateLimited: false,
+    apiError: null,
   });
 
-  constructor(private readonly api: ApiService) {
+  constructor(
+    private readonly api: ApiService,
+    private readonly auth: AuthService,
+  ) {
+    this.refreshAll();
+  }
+
+  /** Odśwież KPI + sugestię baterii z API (np. przy wejściu na Home). */
+  refreshAll(clearSession = false): void {
+    if (clearSession) {
+      this.auth.logout();
+    }
     this.refreshOverview();
     this.refreshBatterySuggestion();
   }
 
-  getKpi(): Observable<HomeKpi> {
+  getKpi(): Observable<HomeKpi | null> {
     return this.kpi$.asObservable();
   }
 
@@ -134,7 +125,7 @@ export class HomeDataService {
 
   getSuggestions(): Observable<Suggestion[]> {
     return this.api.getNotifications().pipe(
-      map((rows) => rows.filter((r) => r.read_at === null).map(this.toSuggestion)),
+      map((rows) => dedupeSuggestions(rows).map((row) => this.toSuggestion(row))),
       catchError(() => of([] as Suggestion[])),
     );
   }
@@ -145,11 +136,12 @@ export class HomeDataService {
 
   refreshBatterySuggestion(): void {
     this.api.getBatterySuggestion().pipe(timeout(OVERVIEW_TIMEOUT_MS)).subscribe({
-      next: (row) => this.battery$.next(row),
-      error: () => {
-        if (this.battery$.value === null) {
-          this.battery$.next(FALLBACK_BATTERY);
-        }
+      next: (row) => {
+        this.battery$.next(row);
+      },
+      error: (err) => {
+        console.warn('[HomeDataService] GET /battery/suggestion failed', err);
+        this.battery$.next(null);
       },
     });
   }
@@ -203,18 +195,24 @@ export class HomeDataService {
     messageKind: 'error' | 'info' | null = null,
     rateLimited = false,
   ): void {
-    this.sync$.next({ ...this.sync$.value, syncing: true });
+    this.sync$.next({ ...this.sync$.value, syncing: true, apiError: null });
     this.fetchLatestAvailableOverview(0).subscribe({
       next: (overview) => {
-        if (!overview) {
-          this.sync$.next({ ...this.sync$.value, syncing: false, offline: true });
+        if (!overview || !overview.has_data) {
+          this.kpi$.next(null);
+          this.sync$.next({
+            ...this.sync$.value,
+            syncing: false,
+            offline: true,
+            apiError: 'GET /api/v1/foxess/overview — brak danych FoxESS w bazie',
+          });
           return;
         }
         this.kpi$.next({
-          productionKwh: overview.pv_kwh ?? FALLBACK_KPI.productionKwh,
-          socPercent: overview.soc_percent ?? FALLBACK_KPI.socPercent,
-          gridImportKwh: overview.grid_import_kwh ?? FALLBACK_KPI.gridImportKwh,
-          gridExportKwh: overview.grid_export_kwh ?? FALLBACK_KPI.gridExportKwh,
+          productionKwh: overview.pv_kwh,
+          socPercent: overview.soc_percent,
+          gridImportKwh: overview.grid_import_kwh,
+          gridExportKwh: overview.grid_export_kwh,
         });
         this.sync$.next({
           lastSyncedAt: overview.last_synced_at ? new Date(overview.last_synced_at) : null,
@@ -224,11 +222,14 @@ export class HomeDataService {
           message,
           messageKind,
           rateLimited,
+          apiError: null,
         });
         this.refreshBatterySuggestion();
       },
       error: (err) => {
-        console.warn('[HomeDataService] api/foxess/overview niedostępne — dane demo.', err);
+        console.warn('[HomeDataService] api/foxess/overview niedostępne', err);
+        this.kpi$.next(null);
+        this.markApiError(err, 'GET /api/v1/foxess/overview — nieznany błąd');
         this.sync$.next({ ...this.sync$.value, syncing: false, offline: true });
       },
     });
@@ -252,6 +253,42 @@ export class HomeDataService {
   }
 
   private toSuggestion(row: NotificationDto): Suggestion {
-    return { id: String(row.id), kind: row.notif_type, title: row.title, body: row.body };
+    const body = row.body
+      .replace(/\s*Sugestia doradcza, bez automatyki\.?/gi, '')
+      .replace(/\s*System tylko doradza[^.]*\./gi, '')
+      .trim();
+    return { id: String(row.id), kind: row.notif_type, title: row.title, body };
+  }
+
+  private markApiError(err: unknown, fallback: string): void {
+    this.sync$.next({
+      ...this.sync$.value,
+      offline: true,
+      apiError: this.formatHttpError(err, fallback),
+    });
+  }
+
+  private formatHttpError(err: unknown, fallback: string): string {
+    if (err instanceof HttpErrorResponse) {
+      const parts: string[] = [];
+      if (err.status) {
+        parts.push(`HTTP ${err.status}${err.statusText ? ` ${err.statusText}` : ''}`);
+      }
+      const body = err.error as { code?: string; detail?: unknown } | string | null;
+      if (typeof body === 'string' && body.trim()) {
+        parts.push(body.trim());
+      } else if (body && typeof body === 'object') {
+        if (typeof body.code === 'string' && body.code) parts.push(`code=${body.code}`);
+        const detail = body.detail;
+        if (typeof detail === 'string' && detail.trim()) parts.push(detail.trim());
+        else if (detail != null) parts.push(String(detail));
+      }
+      if (err.message && !parts.some((p) => p.includes(err.message))) parts.push(err.message);
+      if (err.url) parts.push(err.url);
+      return parts.length ? parts.join(' · ') : fallback;
+    }
+    if (err instanceof Error && err.message) return err.message;
+    if (typeof err === 'string' && err.trim()) return err.trim();
+    return fallback;
   }
 }
