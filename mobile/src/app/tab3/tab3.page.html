@@ -139,7 +139,7 @@
 
     <ion-card class="se-card" *ngIf="!state.loading && !state.daily.length">
       <ion-card-content>
-        <p class="se-demo-note">{{ state.note || 'Brak zarchiwizowanej prognozy dla tego dnia.' }}</p>
+        <p class="se-demo-note se-demo-note--in-card">{{ emptyDayNote }}</p>
       </ion-card-content>
     </ion-card>
 
@@ -157,58 +157,63 @@
         </ion-segment-button>
       </ion-segment>
 
-      <ion-card class="se-card se-daily-row" *ngIf="selectedDaily as d; else missingRun">
-        <ion-card-content>
-          <div class="se-daily-row__top">
-            <span class="se-daily-row__label">{{ runLabelName(d.run_label) }}</span>
-            <span
-              class="se-error-badge"
-              [ngClass]="errorClass(d.error_pct)"
-              *ngIf="d.error_pct !== null; else pendingBadge"
-            >{{ formatPct(d.error_pct) }}</span>
-            <ng-template #pendingBadge>
-              <span class="se-error-badge se-error-badge--pending">w trakcie</span>
-            </ng-template>
-          </div>
-          <div class="se-daily-row__values">
-            <span>Prognoza: <strong>{{ formatKwh(d.predicted_total_kwh) }}</strong>
-              <small class="se-daily-row__outlook" *ngIf="d.outlook_mode === 'model_raw'"> (model)</small>
-            </span>
-            <span>Rzeczywistość: <strong>{{ formatKwh(d.actual_total_kwh) }}</strong></span>
-          </div>
-        </ion-card-content>
-      </ion-card>
-      <ng-template #missingRun>
-        <ion-card class="se-card">
+      <ng-container *ngIf="selectedDaily as d; else missingRun">
+        <ion-card class="se-card se-daily-row">
           <ion-card-content>
-            <p class="se-demo-note">Brak zarchiwizowanej prognozy dla okna {{ runLabelName(selectedRunLabel) }}.</p>
+            <div class="se-daily-row__top">
+              <span class="se-daily-row__label">{{ runLabelName(d.run_label) }}</span>
+              <span
+                class="se-error-badge"
+                [ngClass]="errorClass(d.error_pct)"
+                *ngIf="d.error_pct !== null; else pendingBadge"
+              >{{ formatPct(d.error_pct) }}</span>
+              <ng-template #pendingBadge>
+                <span class="se-error-badge se-error-badge--pending">w trakcie</span>
+              </ng-template>
+            </div>
+            <div class="se-daily-row__values">
+              <span>Prognoza: <strong>{{ formatKwh(d.predicted_total_kwh) }}</strong>
+                <small class="se-daily-row__outlook" *ngIf="d.outlook_mode === 'model_raw'"> (model)</small>
+              </span>
+              <span>Rzeczywistość: <strong>{{ formatKwh(d.actual_total_kwh) }}</strong></span>
+            </div>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card class="se-card" *ngIf="selectedHourlyRows.length">
+          <ion-card-content>
+            <p class="se-hourly-group__title">{{ runLabelName(selectedRunLabel) }}</p>
+            <table class="se-hourly-table">
+              <thead>
+                <tr>
+                  <th>Godz.</th>
+                  <th>Prognoza</th>
+                  <th>Rzeczywistość</th>
+                  <th>Błąd (kWh)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of selectedHourlyRows; trackBy: trackByRank">
+                  <td>{{ row.predicted_hour }}:00</td>
+                  <td>{{ row.predicted_kwh | number: '1.1-2' }}</td>
+                  <td>{{ row.actual_pv_ml_kwh !== null ? (row.actual_pv_ml_kwh | number: '1.1-2') : '—' }}</td>
+                  <td [ngClass]="hourlyErrorClass(hourlyErrorKwh(row))">{{ formatHourlyError(row) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </ion-card-content>
+        </ion-card>
+      </ng-container>
+      <ng-template #missingRun>
+        <ion-card class="se-card se-daily-row">
+          <ion-card-content>
+            <div class="se-daily-row__top">
+              <span class="se-daily-row__label">{{ runLabelName(selectedRunLabel) }}</span>
+            </div>
+            <p class="se-demo-note se-demo-note--in-card">{{ selectedRunEmptyNote }}</p>
           </ion-card-content>
         </ion-card>
       </ng-template>
-
-      <ion-card class="se-card" *ngIf="selectedHourlyRows.length">
-        <ion-card-content>
-          <p class="se-hourly-group__title">{{ runLabelName(selectedRunLabel) }}</p>
-          <table class="se-hourly-table">
-            <thead>
-              <tr>
-                <th>Godz.</th>
-                <th>Prognoza</th>
-                <th>Rzeczywistość</th>
-                <th>Błąd (kWh)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let row of selectedHourlyRows; trackBy: trackByRank">
-                <td>{{ row.predicted_hour }}:00</td>
-                <td>{{ row.predicted_kwh | number: '1.1-2' }}</td>
-                <td>{{ row.actual_pv_ml_kwh !== null ? (row.actual_pv_ml_kwh | number: '1.1-2') : '—' }}</td>
-                <td [ngClass]="hourlyErrorClass(hourlyErrorKwh(row))">{{ formatHourlyError(row) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </ion-card-content>
-      </ion-card>
     </ng-container>
 
     <p class="se-demo-note">

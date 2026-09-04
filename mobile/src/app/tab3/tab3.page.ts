@@ -9,12 +9,62 @@ import { MAX_FUTURE_DAYS } from '../services/forecast-data.service';
 
 Chart.register(...registerables);
 
+/** Godzina startu archiwum launchd dla zakładki (Poranna / Południowa / Popołudniowa). */
+export const RUN_WINDOW_HOUR: Record<string, number> = {
+  daily: 5,
+  midday: 12,
+  peak: 16,
+};
+
 /** Poranna < 12:00, południowa 12:00–16:00, popołudniowa od 16:00. */
 export function defaultRunLabelForHour(now: Date = new Date()): string {
   const hour = now.getHours();
   if (hour < 12) return 'daily';
   if (hour < 16) return 'midday';
   return 'peak';
+}
+
+/**
+ * Czy okno jeszcze nie nadeszło: dziś przed godziną granicy, albo dzień przyszły.
+ * Dni przeszłe → false (brak danych to prawdziwy brak archiwum).
+ */
+export function isRunWindowScheduled(
+  runLabel: string,
+  opts: { dayIso: string; now?: Date; todayIso?: string },
+): boolean {
+  const day = (opts.dayIso || '').slice(0, 10);
+  if (!day) return false;
+  const today = opts.todayIso ?? todayIsoLocal();
+  if (day > today) return true;
+  if (day < today) return false;
+  const threshold = RUN_WINDOW_HOUR[runLabel];
+  if (threshold === undefined) return false;
+  const hour = (opts.now ?? new Date()).getHours();
+  return hour < threshold;
+}
+
+export function runWindowClockLabel(runLabel: string): string {
+  const hour = RUN_WINDOW_HOUR[runLabel];
+  if (hour === undefined) return '';
+  return `${String(hour).padStart(2, '0')}:00`;
+}
+
+/**
+ * Domyślna zakładka przy wejściu na dzień:
+ * dziś → wg zegara (rano Poranna);
+ * jutro / pojutrze → Poranna (okna 12/16 jeszcze nie nadeszły);
+ * dni zamknięte (przeszłość) → Popołudniowa (16:00) — pełny obraz doby.
+ */
+export function defaultRunLabelForViewedDay(
+  dayIso: string,
+  opts?: { now?: Date; todayIso?: string },
+): string {
+  const day = (dayIso || '').slice(0, 10);
+  const today = opts?.todayIso ?? todayIsoLocal();
+  if (day && day === today) return defaultRunLabelForHour(opts?.now);
+  if (day && day > today) return 'daily';
+  if (day && day < today) return 'peak';
+  return 'daily';
 }
 
 @Component({
@@ -48,6 +98,8 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
   /** Pierwsze wejście dostaje dane już pobrane przez konstruktor serwisu (singleton) —
    *  unikamy zbędnego podwójnego zapytania przy starcie apki. */
   private hasEnteredBefore = false;
+  /** Ostatni dzień, dla którego zsynchronizowano zakładkę okna — reset przy zmianie dnia. */
+  private syncedRunDay = '';
 
   readonly runTabs: { value: string; name: string; time: string }[] = [
     { value: 'daily', name: 'Poranna', time: '05:00' },
@@ -63,6 +115,7 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
   ngAfterViewInit(): void {
     this.sub = this.forecastData.getState().subscribe((state) => {
       this.state = state;
+      this.syncRunTabToDay(state.day);
       this.renderChart(state);
     });
   }
@@ -78,6 +131,7 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
       this.hasEnteredBefore = true;
       return;
     }
+    this.resetRunTabForCurrentDay();
     this.forecastData.reload();
   }
 
@@ -147,6 +201,44 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
     if (typeof value === 'string' && value) {
       this.selectedRunLabel = value;
     }
+  }
+
+  /** Reset zakładki przy zmianie dnia (Dziś vs 03.09 vs jutro). */
+  private syncRunTabToDay(dayIso: string): void {
+    const day = this.normalizedDay(dayIso);
+    if (!day || day === this.syncedRunDay) return;
+    this.syncedRunDay = day;
+    this.selectedRunLabel = defaultRunLabelForViewedDay(day);
+  }
+
+  /** Powrót na tab Prognoza: nie trzymaj Popołudniowej z poprzedniego wejścia. */
+  private resetRunTabForCurrentDay(): void {
+    const day = this.normalizedDay(this.state.day);
+    this.selectedRunLabel = defaultRunLabelForViewedDay(day);
+    if (day) this.syncedRunDay = day;
+  }
+
+  get isSelectedRunScheduled(): boolean {
+    return isRunWindowScheduled(this.selectedRunLabel, { dayIso: this.state.day });
+  }
+
+  get selectedRunClock(): string {
+    return runWindowClockLabel(this.selectedRunLabel);
+  }
+
+  /** Pusty stan zakładki: zapowiedź okna vs prawdziwy brak archiwum. */
+  get selectedRunEmptyNote(): string {
+    if (this.isSelectedRunScheduled && this.selectedRunClock) {
+      return `Okno zaplanowane na godzinę ${this.selectedRunClock} — dane pojawią się po tym czasie`;
+    }
+    return `Brak zarchiwizowanej prognozy dla okna ${this.runLabelName(this.selectedRunLabel)}.`;
+  }
+
+  get emptyDayNote(): string {
+    if (this.isSelectedRunScheduled && this.selectedRunClock) {
+      return `Okno zaplanowane na godzinę ${this.selectedRunClock} — dane pojawią się po tym czasie`;
+    }
+    return this.state.note || 'Brak zarchiwizowanej prognozy dla tego dnia.';
   }
 
   get selectedDaily(): ForecastValidationDailyRow | null {
