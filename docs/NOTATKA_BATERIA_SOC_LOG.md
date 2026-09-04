@@ -40,6 +40,21 @@ SoC **100%** od ~10:00 · PV EOD **31,0** · eksport po pełnej baterii. Accu mi
 
 **Werdykt:** pełna od ~10; PM zasłona bez deszczu. EOD **27,4** w szacunku 25–28. Push **piątek 22:00** przed **5.09** deszcz AM.
 
+### 2026-09-04 — DZIEŃ (śledzenie)
+
+Accu+MB **CS4** · okno białe 80–90% + breaks · app daily **17,68**.
+
+| Moment | SoC | PV / uwagi |
+|--------|----:|------------|
+| **~9:40** | **79%** | PV **2,00** · Solar **1,12 kW** · load **2,18** · rozład. **1,03 kW** · sieć **38 W** · zużycie **2,90** · Autokonsumpcja |
+| ~11:00 | | |
+| ~14:00 | | |
+| ~17:00 | | |
+| ~22:00 | | FC przed **5.09** deszcz AM? |
+| closeout | | PV / zużycie / sieć / SoC EOD |
+
+**Werdykt ~9:40:** PV < load → bateria pokrywa lukę, prawie bez sieci. Jeszcze **nie** ładuje z dachu (1,12 kW za mało). Bufor **79%** OK na drogie godziny; watch czy SoC spadnie zanim PV urośnie.
+
 ---
 
 **Kontekst:** 25 słaby (PV **4,4** · zużycie **7,6** · sieć **1,2**); 26 też słabe PV (daily RF ~**12,5**). Reguła pochmurno → ładuj 22:00.
