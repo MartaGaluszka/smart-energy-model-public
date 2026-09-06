@@ -7,6 +7,9 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-06 ~14:07** | **MB** MM + ens + meteogram · **6.09** I=U mix · ens cloud spread 20–80% · Accu 47% w środku · **7.09** ICON chmurny / UKMO jaśniej · I≈U OM ~80% suche · **8.09** ICON słońce · UKMO-10 deszcz AM outlier · **Oneshot** 6: ½ **26,3**=midday ENS (I 23,8 / U 28,9) · 7: ~**25** · 8: ICON **30,8** UKMO rad skip |
+| **2026-09-06 ~14:04** | AccuWeather outlook **7.09** **2** / **93%** / **0** · P3% → **pochmurny→CS4** · **8.09** **8** / **45%** / **0** · P4% → **mix→RF** (nie jasny) · launchd ENS **24,3** / **30,3** |
+| **2026-09-06 ~14:00** | AccuWeather dziś-na-dziś (**6.09**) · **7** / **47%** / **0** · P2% → **mix→RF** (Lumen 8→7 vs outlook 4.09) · closeout **4.09** Fox **18,9** ENS **−6,5%** · **5.09** Fox **20,2** ENS **+1,3%** · launchd ENS **28,1** / midday **26,3** |
 | **2026-09-04 ~9:47** | **Oneshot** RF/CS4 × ICON/UKMO (forecast; archive 502) · **4.09** RF I/U **16,9/19,1** ½=**18,0** · launchd ENS **17,68** ICON **16,4** CS4 **15,1** · **5.09** ½ **19,7** vs ENS **21,9** / CS4 **14,9** · **6.09** ~27 (UKMO rad NaN) |
 | **2026-09-04 ~9:40** | **Fox** PV **2,00** · Solar **1,12 kW** · SoC **79%** rozład. · app **17,68** = ENS daily @05 — AM za jasny vs dach · vs wczoraj 4,12 kW @11:51 |
 | **2026-09-04 ~9:31** | **MB** meteogram + MultiModel + ensemble · **4.09** 0 mm · warstwa średnia/wysoka + MM słońce+chmura · ens cloud spread 20–90% · **5.09** zgoda deszcz AM peak ~1,5–1,8 mm/h suma ens ~8–10 · **6.09** MM słońce PM / meteogram szary · vs Accu: 4 CS4 ✓ · 5 CS4 ale Accu 2,5 vs ens 8–10 · 6 RF |
@@ -102,7 +105,33 @@ Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletnoś�
 
 ---
 
-## AccuWeather — 4.09 ~9:30 (obecny run)
+## AccuWeather — 6.09 ~14:00 (obecny run)
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
+|-------|------:|--------:|------:|------:|------------------|----------------|--------------|
+| **6.09** nd. (dziś) | **18°C** (RF **19°** / Shade **16°**) | **7** jasne | **47%** | **0,0 mm** | **2%** / **0%** | WNW **22** / **50** | **mix** — chmury i słońce |
+| **7.09** pn. | **22°C** (RF **21°** / Shade **20°**) | **2** ciemny | **93%** | **0,0 mm** | **3%** / **0%** | S **9** / **19** | **pochmurny** — rosnące zachmurzenie |
+| **8.09** wt. | **29°C** (RF **29°** / Shade **27°**) | **8** jasne | **45%** | **0,0 mm** | **4%** / **0%** | SW **13** / **33** | **mix** — częściowo słonecznie |
+
+UV: 6.09 = **4** · 7.09 = **3** · 8.09 = **4**. AccuLumen: **7** / **2** / **8**.
+
+### Alarmy Accu (6.09)
+
+| Alarm | Okno |
+|-------|------|
+| Ostrzeżenie Accu — **susza** | tło |
+
+### Drift vs Accu 4.09 ~9:30
+
+| | Accu 4.09 outlook | **Accu 6.09 run** | Uwaga |
+|--|-------------------|-------------------|-------|
+| **6.09** | 8/47%/0 P25% → **RF** | **7/47%/0** P2% → **RF** | ten sam pick; Lumen **8→7**; T 20→18 |
+
+**Wniosek:** **6.09** paper **RF** · MB mix · oneshot ½ **26,3**=midday ENS (ICON 24 / UKMO 29). **7.09** paper **CS4** ≈ ICON/NEMS · I≈U ~25 · Accu 93% ciemniejszy niż MB. **8.09** paper **RF** ≈ ICON słońce · UKMO-10 MM deszcz AM vs ens 0 · OM UKMO rad skip. Closeout **4.09** Fox **18,9** · **5.09** Fox **20,2**. Dzień: [`NOTATKA_2026-09-06.md`](NOTATKA_2026-09-06.md).
+
+---
+
+## AccuWeather — 4.09 ~9:30 (archiwum)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
 |-------|------:|--------:|------:|------:|------------------|----------------|--------------|
