@@ -427,7 +427,7 @@ Skrypt: [`scripts/plots/plot_production_accuracy.py`](../scripts/plots/plot_prod
 
 ![Weryfikacja produkcyjna](images/ml/production_validation.png)
 
-**Raw vs hybryda dnia** (closeouty launchd **14–23.07**):
+**Raw vs hybryda dnia** (closeouty launchd **14.07–05.09**; od **02.09** tło ENS primary):
 
 | Plik | Skrypt |
 |------|--------|
