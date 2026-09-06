@@ -4,7 +4,7 @@ Krótka oś czasu: **kiedy** był retrening `.joblib`, **co** weszło do produkc
 Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 
 **Model produkcyjny teraz:** dual — `pv_hourly_model.joblib` (**16**) + `pv_hourly_model_cs4.joblib` (**CS4**)  
-**Stan na 2026-08-16:** GPS dach · ICON · target **ΔPVEnergyTotal** · Test MAE **0.643** (16) / **0.637** (CS4) · **nieprzeuczone** · UKMO = tylko testy · weekly: [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md)
+**Stan na 2026-09-06:** GPS dach · **ENS** primary (od 02.09) · target **ΔPVEnergyTotal** · Test MAE **0.686** (16) / **0.688** (CS4) · **nieprzeuczone** · weekly: [`NOTATKA_WEEKLY_2026-09-06.md`](NOTATKA_WEEKLY_2026-09-06.md)
 
 ---
 
@@ -22,6 +22,9 @@ Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 | **2026-07-26** | ~17:00 | **Dual prod:** 16 primary + CS4 w launchd; train niedziela = oba; UKMO w testach | tak (CS4 + gate vs 16) | **0.623** / **0.621** | `…_before_cs4.joblib` |
 | **2026-08-09** | 04:30 | Weekly odświeżenie wag (+7 dni do 08.08); bez zmiany logiki | tak (16 + CS4 + XGB+TS) | **0.624** / **0.632** / **0.608** | (nadpisanie `.joblib`) |
 | **2026-08-16** | 04:30 | Weekly odświeżenie wag (okno → 15.08); primary bez zmiany | tak (16 + CS4 + XGB+TS) | **0.643** / **0.637** / **0.626** | (nadpisanie `.joblib`) |
+| **2026-08-23** | 04:30 | Weekly (okno → 22.08) | tak (16 + CS4 + XGB+TS) | **0.658** / **0.664** / **0.618** | (nadpisanie `.joblib`) |
+| **2026-08-30** | 04:30 | Weekly (okno → 29.08) | tak (16 + CS4 + XGB+TS) | **0.668** / **0.672** / **0.654** | (nadpisanie `.joblib`) |
+| **2026-09-06** | 04:31 | Weekly (okno → 05.09); primary nadal RF16+ENS | tak (16 + CS4 + XGB+TS) | **0.686** / **0.688** / **0.665** | (nadpisanie `.joblib`) |
 
 \*Test MAE z summary w momencie treningu — **nie porównuj 0.666 z 0.582 wprost** (inna skala targetu: ∫pvPower vs PVE).
 
@@ -178,6 +181,7 @@ Closeout **17.08** (deszcz Accu/MB) = pierwszy dzień porównania nowych wag RF 
 
 | Plik | Treść |
 |------|--------|
+| [NOTATKA_WEEKLY_2026-09-06.md](NOTATKA_WEEKLY_2026-09-06.md) | Weekly 06.09 — gate ACCEPT Δ +0.018 (na granicy) |
 | [NOTATKA_WEEKLY_2026-08-16.md](NOTATKA_WEEKLY_2026-08-16.md) | Weekly 16.08 — gate ACCEPT, metryki |
 | [PLAN_T1_T2_LIPIEC_2026.md](PLAN_T1_T2_LIPIEC_2026.md) | Rozpiska T1–T2, checklista closeoutów · EA TODO |
 | [UPDATE_2026-08-02_error-analysis-cloud-fi.md](UPDATE_2026-08-02_error-analysis-cloud-fi.md) | Error Analysis: skala chmur + feature importance |
