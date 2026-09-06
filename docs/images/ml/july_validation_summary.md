@@ -48,6 +48,7 @@ _Zakres całość: 14.07–05.09 (54 closeoutów) · MAPE raw 5:00 = **17.3%** �
 #### Notatka odświeżenia 06.09.2026
 
 - Zakres closeoutów: **14.07–05.09** (n=54). PNG + ten plik wygenerowane **06.09**.
+- Linie na wykresie: **ICON** od **18.07** (wdrożenie 17.07 wieczór) · **kalibracja dual** od **26.07** · **ENS primary** od **02.09**.
 - **ENS primary** od **02.09** (gate 01.09, pierwszy daily 5:00) — n=4 closeoutów · MAPE raw **7.7% / 8.4%**.
 - Era dual ICON **27.07–01.09** (n=37): MAPE raw **15.6% / 15.8%**.
 - Ostatnie closeouty (actual · |APE| raw 5:00): 29.08 **21.1** (raw 5:00 1.8%), 30.08 **33.2** (raw 5:00 15.0%), 31.08 **24.6** (raw 5:00 19.7%), 01.09 **32.4** (raw 5:00 9.8%), 02.09 **31.0** (raw 5:00 11.2%), 03.09 **27.5** (raw 5:00 11.6%), 04.09 **18.9** (raw 5:00 6.5%), 05.09 **20.2** (raw 5:00 1.3%).

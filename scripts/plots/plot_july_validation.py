@@ -50,6 +50,35 @@ CLOUD_POOR_MIN = 70.0
 # różnica APE (pp) uznana za „pomaga / szkodzi”, nie szum
 HYBRID_DELTA_PP = 1.0
 
+# Pierwszy daily 5:00 z ENSEMBLE_PRIMARY=1 (gate 01.09, wdrożenie 01–02.09).
+ENS_PRIMARY_START = '2026-09-02'
+# ICON live: wdrożenie 17.07 ~19:52; pierwszy pełny dzień daily ≈ 18.07.
+ICON_LIVE_START = '2026-07-18'
+# Dual 16+CS4 + weekly obu — ostateczny stack produkcyjny (nie sam ICON).
+DUAL_CALIBRATION_START = '2026-07-26'
+
+# Tła er (start włącznie, end wyłącznie). Kolory z tej samej rodziny co ENS.
+WEATHER_ERAS: list[dict] = [
+    {
+        'start': ICON_LIVE_START,
+        'end': DUAL_CALIBRATION_START,
+        'label': 'ICON',
+        'color': '#1ABC9C',
+    },
+    {
+        'start': DUAL_CALIBRATION_START,
+        'end': ENS_PRIMARY_START,
+        'label': 'Kalibracja dual',
+        'color': '#27AE60',
+    },
+    {
+        'start': ENS_PRIMARY_START,
+        'end': None,
+        'label': 'ENS primary',
+        'color': '#16A085',
+    },
+]
+
 # Okna closeoutów po wdrożeniu / retreningu (pierwszy dzień = pierwsza
 # prognoza daily 5:00 na nowym artefakcie — patrz docs/NOTATKA_RETRENINGI_LIPIEC_2026.md).
 # start/end włącznie (YYYY-MM-DD).
@@ -67,8 +96,13 @@ RETRAIN_SEGMENTS: list[tuple[str, str, str]] = [
     ),
     (
         '2026-07-27',
+        '2026-09-01',
+        'era dual ICON primary (po 26.07; weekly = odświeżenie wag)',
+    ),
+    (
+        '2026-09-02',
         '2099-12-31',
-        'era produkcyjna dual (po 26.07; weekly = odświeżenie wag; do ostatniego closeoutu)',
+        'era ENS primary (ICON+UKMO; gate 01.09, daily od 02.09)',
     ),
 ]
 
@@ -206,10 +240,10 @@ def build_july_error_summary(
         return pd.Timestamp(ts).strftime('%d.%m')
 
     lines: list[str] = [
-        '### Podsumowanie błędów (lipiec) — pogoda i hybryda',
+        '### Podsumowanie błędów (closeouty od lipca) — pogoda, hybryda, ENS',
         '',
         'Metryka: **|APE| %** = `|actual − prognoza| / actual × 100`. '
-        'Pogoda: średnie **cloud ICON 6–20** z `weather_data`.',
+        'Pogoda: średnie **cloud 6–20** z `weather_data` (ICON; od **02.09** primary = ensemble ICON+UKMO).',
         '',
     ]
 
@@ -256,8 +290,9 @@ def build_july_error_summary(
     lines.append('')
     lines.append(
         '- **Wzorzec:** na dniach **jasnych / wysokiej produkcji** raw bywa lekko **za niski** '
-        '(ICON za chmurny vs Accu) — błąd umiarkowany w %, duży w kWh. '
-        'Na dniach **słabych / burzowych** raw często **zawyża** — wtedy |APE| % bywa największy.'
+        '(NWP za chmurny vs Accu) — błąd umiarkowany w %, duży w kWh. '
+        'Na dniach **słabych / burzowych** raw często **zawyża** — wtedy |APE| % bywa największy. '
+        'Od **02.09** primary to **ENS (ICON+UKMO)** zamiast ICON solo — ten sam RF16, inna pogoda.'
     )
     lines.append('')
 
@@ -333,8 +368,10 @@ def build_july_error_summary(
     lines.append('')
     lines.append(
         'Podział według **zmian logiki / targetu / cech** (nie każdy niedzielny odśwież wag). '
-        'Weekly retreningi wchodzą w erę dual od 27.07 (do ostatniego closeoutu). '
-        'Szczegóły: `docs/NOTATKA_RETRENINGI_LIPIEC_2026.md`.'
+        'Weekly retreningi wchodzą w erę dual od 27.07. '
+        f'Od **{_fmt_day(ENS_PRIMARY_START)}** primary NWP = ensemble ICON+UKMO '
+        '(pionowa linia / tło na wykresie). '
+        'Szczegóły: `docs/NOTATKA_RETRENINGI_LIPIEC_2026.md` · gate `docs/NOTATKA_TEST_ROUTING_28-31_08.md`.'
     )
     lines.append('')
     lines.append(
@@ -370,7 +407,68 @@ def build_july_error_summary(
         f'MAPE raw 12:00 = **{mape12:.1f}%**._'
     )
     lines.append('')
+
+    ens = m[day >= ENS_PRIMARY_START]
+    icon_dual = m[(day >= '2026-07-27') & (day <= '2026-09-01')]
+    lines.append(f'#### Notatka odświeżenia {pd.Timestamp.now().strftime("%d.%m.%Y")}')
+    lines.append('')
+    last = m.sort_values('target_day').tail(8)
+    recent_parts = []
+    for r in last.itertuples():
+        if pd.notna(r.ape_raw_morning):
+            recent_parts.append(
+                f'{_fmt_day(r.target_day)} **{r.actual_pv_total:.1f}** '
+                f'(raw 5:00 {r.ape_raw_morning:.1f}%)'
+            )
+        else:
+            recent_parts.append(_fmt_day(r.target_day))
+    recent = ', '.join(recent_parts)
+    lines.append(
+        f'- Zakres closeoutów: **{_fmt_day(m.target_day.min())}–{_fmt_day(m.target_day.max())}** '
+        f'(n={n}). PNG + ten plik wygenerowane **{pd.Timestamp.now().strftime("%d.%m")}**.'
+    )
+    lines.append(
+        f'- Linie na wykresie: **ICON** od **18.07** (wdrożenie 17.07 wieczór) · '
+        f'**kalibracja dual** od **26.07** · **ENS primary** od **02.09**.'
+    )
+    lines.append(
+        f'- **ENS primary** od **02.09** (gate 01.09, pierwszy daily 5:00) — '
+        f'n={len(ens)} closeoutów'
+        + (
+            f' · MAPE raw **{ens["ape_raw_morning"].mean():.1f}% / '
+            f'{ens["ape_raw_midday"].mean():.1f}%**'
+            if len(ens) else ''
+        )
+        + '.'
+    )
+    if len(icon_dual):
+        lines.append(
+            f'- Era dual ICON **27.07–01.09** (n={len(icon_dual)}): MAPE raw '
+            f'**{icon_dual["ape_raw_morning"].mean():.1f}% / '
+            f'{icon_dual["ape_raw_midday"].mean():.1f}%**.'
+        )
+    lines.append(f'- Ostatnie closeouty (actual · |APE| raw 5:00): {recent}.')
+    lines.append('')
     return '\n'.join(lines)
+
+
+def _mark_weather_eras(ax, x_end=None) -> None:
+    """Piony + tła: ICON (18.07) → dual/kalibracja (26.07) → ENS (02.09)."""
+    right_default = x_end if x_end is not None else pd.Timestamp(ENS_PRIMARY_START) + pd.Timedelta(days=14)
+    ymax = ax.get_ylim()[1]
+    for i, era in enumerate(WEATHER_ERAS):
+        start = pd.Timestamp(era['start'])
+        end = pd.Timestamp(era['end']) if era['end'] else right_default
+        if end <= start:
+            continue
+        ax.axvline(start, color=era['color'], linestyle='--', linewidth=1.4, alpha=0.85, zorder=0)
+        ax.axvspan(start, end, color=era['color'], alpha=0.07, zorder=0)
+        ax.text(
+            start, ymax * (0.98 - 0.08 * (i % 2)),
+            era['label'],
+            rotation=90, va='top', ha='right',
+            fontsize=7.5, color=era['color'], fontweight='bold', alpha=0.9,
+        )
 
 
 def _plot_line(ax, x, y, *, color, label, marker, linestyle='-'):
@@ -388,7 +486,7 @@ def build_july_plot(df: pd.DataFrame, output: Path) -> None:
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, axes = plt.subplots(2, 1, figsize=(13, 9.4), gridspec_kw={'height_ratios': [2, 1]})
     fig.suptitle(
-        'Walidacja — Lipiec 2026 (skala PVEnergyTotal)',
+        'Walidacja closeoutów — od lipca 2026 (skala PVEnergyTotal)',
         fontsize=15,
         fontweight='bold',
         y=0.995,
@@ -398,6 +496,11 @@ def build_july_plot(df: pd.DataFrame, output: Path) -> None:
         'Raw = sam RF na cały dzień  ·  Hybryda dnia = FoxESS (minione godz.) + RF (przyszłe)'
         '  ·  to nie jest korekta ADJUST',
         ha='center', va='top', fontsize=9.5, color='#34495E',
+    )
+    fig.text(
+        0.5, 0.935,
+        'Tła: ICON od 18.07 (wdrożenie 17.07 wieczór)  ·  kalibracja dual od 26.07  ·  ENS primary od 02.09',
+        ha='center', va='top', fontsize=8.5, color='#16A085', style='italic',
     )
 
     ax1, ax2 = axes
@@ -444,6 +547,8 @@ def build_july_plot(df: pd.DataFrame, output: Path) -> None:
         ax1.legend(loc='upper right', fontsize=8, ncol=2)
         ax1.xaxis.set_major_formatter(mdates.DateFormatter('%d.%m'))
         ax1.tick_params(axis='x', rotation=30)
+        x_end = df['target_day'].max() + pd.Timedelta(days=1)
+        _mark_weather_eras(ax1, x_end)
 
         # |APE| %: raw vs hybryda dnia (5:00 i 12:00)
         width = 0.2
@@ -469,8 +574,16 @@ def build_july_plot(df: pd.DataFrame, output: Path) -> None:
             fontsize=10, pad=6, loc='left', color='#34495E',
         )
         ax2.legend(loc='upper right', fontsize=8, ncol=2)
+        # Oś X = indeks dni (słupki) — linie er po numerze, nie po Timestamp.
+        for era in WEATHER_ERAS:
+            pos = np.flatnonzero(df['target_day'] >= pd.Timestamp(era['start']))
+            if len(pos):
+                ax2.axvline(
+                    pos[0] - 0.5, color=era['color'],
+                    linestyle='--', linewidth=1.4, alpha=0.85, zorder=0,
+                )
 
-    plt.tight_layout(rect=[0, 0, 1, 0.94])
+    plt.tight_layout(rect=[0, 0, 1, 0.93])
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=200, bbox_inches='tight', facecolor='white')
     plt.close(fig)
