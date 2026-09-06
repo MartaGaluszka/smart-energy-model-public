@@ -48,13 +48,23 @@ COLORS = {
 # Retreningi i zmiany produkcji (annotacje na wykresie)
 MILESTONES = [
     {'date': '2026-07-14', 'label': 'Start MLOps', 'color': '#95A5A6', 'type': 'deploy'},
-    {'date': '2026-07-17', 'label': 'GPS+ICON', 'color': '#3498DB', 'type': 'deploy'},
-    {'date': '2026-07-18', 'label': 'PVE target', 'color': '#9B59B6', 'type': 'deploy'},
-    {'date': '2026-07-26', 'label': 'CS4 dual', 'color': '#E74C3C', 'type': 'deploy'},
+    {'date': '2026-07-18', 'label': 'ICON live', 'color': '#1ABC9C', 'type': 'deploy'},
+    {'date': '2026-07-26', 'label': 'Kalibracja dual', 'color': '#27AE60', 'type': 'deploy'},
     {'date': '2026-08-09', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-08-16', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-08-23', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-08-30', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-09-02', 'label': 'ENS primary', 'color': '#16A085', 'type': 'deploy'},
+]
+
+ENS_PRIMARY_START = '2026-09-02'
+ICON_LIVE_START = '2026-07-18'
+DUAL_CALIBRATION_START = '2026-07-26'
+
+WEATHER_ERAS: list[dict] = [
+    {'start': ICON_LIVE_START, 'end': DUAL_CALIBRATION_START, 'color': '#1ABC9C'},
+    {'start': DUAL_CALIBRATION_START, 'end': ENS_PRIMARY_START, 'color': '#27AE60'},
+    {'start': ENS_PRIMARY_START, 'end': None, 'color': '#16A085'},
 ]
 
 
@@ -157,7 +167,8 @@ def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
     )
     fig.text(
         0.5, 0.935,
-        'Linie pionowe: retreningi weekly (pomarańczowe) + zmiany produkcji (kolorowe)',
+        'Linie pionowe: retreningi weekly (pomarańczowe) + zmiany produkcji  ·  '
+        'tła: ICON od 18.07  ·  kalibracja dual od 26.07  ·  ENS primary od 02.09',
         ha='center', va='top', fontsize=8.5, color='#7F8C8D', style='italic',
     )
 
@@ -201,6 +212,14 @@ def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
     
     # Dodaj annotacje retreningów i deploymentów
     _add_milestones(ax1, pd.Timestamp(long_start))
+    span_end = x_end + pd.Timedelta(days=1)
+    for era in WEATHER_ERAS:
+        start = pd.Timestamp(era['start'])
+        if start < pd.Timestamp(long_start):
+            start = pd.Timestamp(long_start)
+        end = pd.Timestamp(era['end']) if era['end'] else span_end
+        if end > start:
+            ax1.axvspan(start, end, color=era['color'], alpha=0.07, zorder=0)
 
     # --- Wykres 2: zoom MLOps ---
     ax2.set_title(
@@ -246,6 +265,14 @@ def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
     
     # Dodaj annotacje retreningów i deploymentów
     _add_milestones(ax2, zoom_start)
+    span_end = x_end + pd.Timedelta(days=1)
+    for era in WEATHER_ERAS:
+        start = pd.Timestamp(era['start'])
+        if start < zoom_start:
+            start = zoom_start
+        end = pd.Timestamp(era['end']) if era['end'] else span_end
+        if end > start:
+            ax2.axvspan(start, end, color=era['color'], alpha=0.07, zorder=0)
 
     plt.tight_layout(rect=[0, 0, 1, 0.94])
     output.parent.mkdir(parents=True, exist_ok=True)
