@@ -1,7 +1,7 @@
 # README rewrite — task list (local)
 
 **Status:** domknięte — README PL + hub + screenshoty + GIF tour  
-**Screenshoty:** [`docs/images/app/`](images/app/) (`s1`–`s4` + `app-tour.gif`)
+**Screenshoty:** [`docs/images/app/`](images/app/) (`01`–`24` + `app-tour-2026-09-08.gif`)
 
 **Owner:** Marta Gałuszka  
 **Goal:** Short portfolio README: purpose → value → data flow → FoxESS limits → app HOW TO.
@@ -88,7 +88,7 @@
 
 11 slajdów · **3 s** hold · crossfade ~0,5 s
 
-![Tour aplikacji Smart Energy](images/app/app-tour.gif)
+![Tour aplikacji Smart Energy](images/app/app-tour-2026-09-08.gif)
 
 | Artefakt | Uwagi |
 |----------|--------|
