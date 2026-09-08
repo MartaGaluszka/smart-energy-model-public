@@ -1,28 +1,28 @@
 # Screenshoty aplikacji (README §6)
 
-Pliki z symulatora iOS (2026-08-05):
+Pliki z symulatora iOS (2026-09-08):
 
 | Plik | Treść |
 |------|--------|
-| `app-tour.gif` | Animacja tour (11 slajdów, 3 s + crossfade ~0,5 s, ~2 MB) |
-| `s1-sync.png` | Home — Dachowy Bilans + status sync Fox |
-| `s2-prognoza-dzis.png` | Prognoza dziś — profil godzinowy |
-| `s3-prognoza-jutro.png` | Prognoza innego dnia (closeout 04.08) |
-| `s4-sugestie.png` | Symulator rachunków — wynik (oszczędność) |
+| `app-tour.gif` | Animacja tour (12 slajdów, ~2,2 s + crossfade, ~3,3 MB) |
+| `s1-home.png` | Home — KPI, sync Fox, PLAN 24h |
+| `s2-prognoza.png` | Prognoza dziś — KPI 1×2, profil, okna AGD |
+| `s3-bateria.png` | Bateria — sezon / SoC (advise-only) |
+| `s4-symulator.png` | Symulator rachunków — wynik (oszczędność) |
 
 ### Animacja
 
 - **Plik:** [`app-tour.gif`](app-tour.gif)
-- **Hold:** 3 s na slajd
-- **Przejście:** crossfade ~0,5 s
-- **Kolejność:** Home → Sync → Prognoza (chart / KPI / szczyty / 04.08) → Więcej → polityka → Symulator (formularz / okres / wynik)
+- **Hold:** ~2,2 s na slajd
+- **Przejście:** crossfade krótkie
+- **Kolejność:** Home → PLAN 24h → Sync → Prognoza → jutro/AGD → Więcej → Symulator → Bateria (ustawienia / harmonogram / analityka / AC)
 
 W README (ścieżki od katalogu głównego repozytorium):
 
 ```
 docs/images/app/app-tour.gif
-docs/images/app/s1-sync.png
-docs/images/app/s2-prognoza-dzis.png
-docs/images/app/s3-prognoza-jutro.png
-docs/images/app/s4-sugestie.png
+docs/images/app/s1-home.png
+docs/images/app/s2-prognoza.png
+docs/images/app/s3-bateria.png
+docs/images/app/s4-symulator.png
 ```

@@ -4,7 +4,7 @@
 
 **Autor:** Marta Gałuszka  
 **Typ:** projekt portfolio / naukowy (instalacja domowa PV + magazyn FoxESS)  
-**Metryki ML / MLOps:** [`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md) · pogoda 15–17.08: [`docs/NOTATKA_POGODA_2026-08-15.md`](docs/NOTATKA_POGODA_2026-08-15.md)
+**Metryki ML / MLOps:** [`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md) · pogoda: [`docs/NOTATKA_POGODA_2026-08-15.md`](docs/NOTATKA_POGODA_2026-08-15.md)
 
 > Kopia publiczna: bez lokalnego `.env`, bez bazy/danych surowych, bez dokładnego GPS/SN instalacji oraz bez prywatnych materiałów na obronę. Notebooki badawcze i prezentacyjne: `01`–`07` w [`notebooks/`](notebooks/).
 
@@ -33,6 +33,7 @@ smart-energy-model/
 |-- src/               # Kod źródłowy (data, features, models)
 |-- api/               # FastAPI
 |-- mobile/            # Aplikacja mobilna (Ionic / Capacitor)
+|-- dashboard/         # Streamlit (notatki pogodowe + prognoza vs app)
 |-- mlops/             # Produkcja: sync, prognoza, closeout, launchd
 |-- scripts/           # Trening, wykresy, analizy
 |-- models/            # Zapisane modele (.joblib)
@@ -70,7 +71,7 @@ Instalacja fotowoltaiczna z falownikiem/magazynem **FoxESS** i taryfą strefową
 Godzinowy **Random Forest (16 cech)** przewiduje produkcję PV na horyzoncie **1–3 dni**.
 
 - target = **Δ`PVEnergyTotal`** — ta sama zmienna, co w aplikacji FoxESS (bez sztucznego skalowania `pvPower`),
-- pogoda = Open-Meteo **ICON** (współrzędne lokalizacji instalacji w lokalnym `.env`),
+- pogoda = Open-Meteo **ensemble ICON+UKMO** (primary od 02.09; ICON solo zostaje w shadow; współrzędne w lokalnym `.env`),
 - wynik = suma dnia + profil godzinowy → ranking okien na autokonsumpcję.
 
 Szczegóły metryk i walidacji: [`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md) · metoda: [`docs/02_ML_predykcja_PV.md`](docs/02_ML_predykcja_PV.md).
@@ -79,10 +80,11 @@ Szczegóły metryk i walidacji: [`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS
 
 Aplikacja mobilna (Ionic / Capacitor, `mobile/`) **oraz** API (`api/`) **przekształcają** wyjście modelu w **decyzje na dziś**:
 
-- prognoza produkcji (dziś / kolejne dni),
-- profil godzinowy,
-- kontekst synchronizacji z FoxESS (czy dane są świeże),
-- sugestie / doradztwo (m.in. bateria — tryb doradczy, bez automatycznego sterowania falownikiem w MVP).
+- **Prognoza** — KPI dnia, profil godzinowy, zakładki okien AGD, walidacja vs closeout,
+- **Home** — sync FoxESS, PLAN 24h, feed sugestii, baner trybu doradczego,
+- **Bateria** — plan sezonowy, SoC, harmonogram G12w, shadow savings, kalkulator AC; reguła „ładuj wieczorem przy pochmurnym jutrze”,
+- **Symulator** — rachunek bez PV / z PV (stawki z faktury),
+- wszystko w **trybie doradczym** — bez automatycznego sterowania falownikiem w MVP.
 
 To nie jest kolejny widget pogodowy — to **most między modelem a instalacją**, na liczbach porównywalnych **z aplikacją FoxESS**.
 
@@ -112,7 +114,7 @@ Migracja początkowych danych (seed) z SQLite → Postgres: `scripts/migrate_sql
 1. **Pobranie** danych z FoxESS Cloud (klucz API) — timeseries / raporty dzienne.  
 2. **Zapis** do bazy (SQLite na co dzień; Postgres pod aplikację).  
 3. **Agregacja** do godzinowych delt **PVE** (target ML).  
-4. **Pogoda** Open-Meteo ICON → join po czasie i lokalizacji dachu.  
+4. **Pogoda** Open-Meteo **ensemble ICON+UKMO** (primary) + shadow ICON → join po czasie i lokalizacji.  
 5. **Cechy** (16 produkcyjnych) → model RF → artefakty prognozy.  
 6. **Closeout wieczorny** — porównanie prognozy z danymi rzeczywistymi (actual) pochodzącymi z aplikacji FoxESS / timeseries.
 
@@ -124,8 +126,9 @@ Kluczowe skrypty: `mlops/sync_data.py`, `mlops/forecast_pv.py`, `mlops/evening_c
 
 | Wejście | Skąd | Co widzi użytkownik |
 |---------|------|---------------------|
-| Prognoza godzinowa / dzienna | inferencja na podstawie `pv_hourly_model.joblib` przez API (`/api/v1/forecast/…`) + historia prognoz | ekran **Prognoza** — KPI dnia, profil |
+| Prognoza godzinowa / dzienna | inferencja na podstawie `pv_hourly_model.joblib` przez API (`/api/v1/forecast/…`) + historia prognoz | ekran **Prognoza** — KPI, profil, okna AGD |
 | Dane rzeczywiste / stan instalacji | synchronizacja FoxESS → DB → API (`/api/v1/foxess/…`) | produkcja, SoC, status ostatniej synchronizacji |
+| Plan baterii / sugestie | `/api/v1/battery/…` + `/notifications` (advise-only) | Home + **Bateria** — sezon, G12w, shadow, AC |
 | Walidacja | closeout / endpoint validation | jakość prognozy względem danych rzeczywistych |
 
 **Raw vs hybryda:**  
@@ -148,7 +151,7 @@ Pełna procedura: [`docs/FOXESS_KROK_PO_KROKU.md`](docs/FOXESS_KROK_PO_KROKU.md)
 cp .env.example .env
 # FOXESS_API_KEY=...
 # FOXESS_DEVICE_SN=...   # zalecane przy limitach
-# WEATHER_LAT / WEATHER_LON = współrzędne GPS dachu
+# WEATHER_LAT / WEATHER_LON = współrzędne lokalizacji (tylko w .env)
 ```
 
 **Nie commituj** `.env`.
@@ -243,15 +246,16 @@ npx cap run android
 
 1. Zaloguj się (lub użyj konta demo, jeśli jest skonfigurowane).  
 2. Sprawdź status **ostatniej synchronizacji** FoxESS — w razie potrzeby pobierz dane (nie przekraczaj limitów API).  
-3. Otwórz **Prognoza** — KPI dnia + profil godzinowy.  
-4. Przejrzyj prognozę na jutro / kolejne dni, jeśli dostępne.
+3. Otwórz **Prognoza** — KPI dnia, profil godzinowy, zakładki okien AGD.  
+4. **Bateria** — plan sezonowy, harmonogram G12w, shadow savings (tryb doradczy).  
+5. Przejrzyj prognozę na jutro / kolejne dni, jeśli dostępne.
 
 ### Screenshoty (pojedyncze klatki)
 
-![Home](docs/images/app/s1-sync.png)
-![Prognoza](docs/images/app/s2-prognoza-dzis.png)
-![Closeout 04.08](docs/images/app/s3-prognoza-jutro.png)
-![Symulator](docs/images/app/s4-sugestie.png)
+![Home](docs/images/app/s1-home.png)
+![Prognoza](docs/images/app/s2-prognoza.png)
+![Bateria](docs/images/app/s3-bateria.png)
+![Symulator](docs/images/app/s4-symulator.png)
 
 ### Gdy coś nie działa
 
@@ -270,11 +274,11 @@ npx cap run android
 
 Szczegóły i tabele: **[`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md)** (jedyna aktualna tabela metryk).
 
-- Model produkcyjny: **RF 16** · PVE · ICON · GPS dachu · shadow CS4 + XGB+TS  
-- Offline (okno do 10.08): Test MAE **0,605** · train–test gap **0,029** · okno treningowe → **2026-08-10**  
-- Live: closeouty **14.07–10.08** · era dual MAPE raw **9,4%** / **9,2%**  
-- MLOps: launchd 5:00 / 12:00 / 16:00 / closeout · retrain niedziela **04:30** — [`mlops/README.md`](mlops/README.md)  
-- **CI:** GitHub Actions → `pytest` (30 testów) — [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+- Model produkcyjny: **RF 16** · PVE · ensemble **ICON+UKMO** (primary od 02.09) · okolice Krakowa · shadow ICON + CS4 + XGB+TS  
+- Offline (okno do 05.09): Test MAE **0,686** · train–test gap **0,096** · okno treningowe → **2026-09-05**  
+- Live: closeouty **14.07–05.09** · era dual ICON MAPE raw **15,6%** / **15,8%** · era ENS **02–05.09** **7,7%** / **8,4%**  
+- MLOps: launchd 5:00 / 12:00 / 16:00 / closeout · retrain niedziela **04:30** · `ENSEMBLE_PRIMARY=1` — [`mlops/README.md`](mlops/README.md)  
+- **CI:** GitHub Actions → `pytest` (125 testów) — [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 - Dokumentacja: [`01` EDA](docs/01_EDA_analiza.md) · [`02` ML](docs/02_ML_predykcja_PV.md) · [`03` decyzje](docs/03_ZALOZENIA_I_DECYZJE.md)
 
 ### Dla oceniającego / portfolio
@@ -293,4 +297,4 @@ Szczegóły i tabele: **[`docs/STATUS_ML_MLOPS.md`](docs/STATUS_ML_MLOPS.md)** (
 
 ---
 
-*Smart Energy Model · ostatnia aktualizacja: 2026-08-11*
+*Smart Energy Model · ostatnia aktualizacja: 2026-09-08*
