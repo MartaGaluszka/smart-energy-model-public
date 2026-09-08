@@ -189,7 +189,7 @@ docker compose up -d db api
 
 ## 6. Szybki start — aplikacja mobilna
 
-![Tour aplikacji Smart Energy — animacja](docs/images/app/app-tour.gif)
+![Tour aplikacji Smart Energy — animacja](docs/images/app/app-tour-2026-09-08.gif)
 
 ### Wymagania
 
@@ -250,12 +250,44 @@ npx cap run android
 4. **Bateria** — plan sezonowy, harmonogram G12w, shadow savings (tryb doradczy).  
 5. Przejrzyj prognozę na jutro / kolejne dni, jeśli dostępne.
 
-### Screenshoty (pojedyncze klatki)
+### Screenshoty (2026-09-08)
 
-![Home](docs/images/app/s1-home.png)
-![Prognoza](docs/images/app/s2-prognoza.png)
-![Bateria](docs/images/app/s3-bateria.png)
-![Symulator](docs/images/app/s4-symulator.png)
+<p>
+<img src="docs/images/app/01-home-kpi.png" width="180" alt="Home KPI">
+<img src="docs/images/app/02-home-plan.png" width="180" alt="Home PLAN 24h">
+<img src="docs/images/app/03-sync.png" width="180" alt="Sync Fox">
+<img src="docs/images/app/04-prognoza-dzis.png" width="180" alt="Prognoza dziś">
+</p>
+<p>
+<img src="docs/images/app/05-prognoza-agd.png" width="180" alt="Prognoza AGD">
+<img src="docs/images/app/06-prognoza-07-09.png" width="180" alt="Prognoza 07.09">
+<img src="docs/images/app/07-prognoza-07-09-agd.png" width="180" alt="AGD 07.09">
+<img src="docs/images/app/08-prognoza-07-09-tabela.png" width="180" alt="Tabela 07.09">
+</p>
+<p>
+<img src="docs/images/app/09-prognoza-jutro.png" width="180" alt="Prognoza jutro">
+<img src="docs/images/app/10-prognoza-jutro-agd.png" width="180" alt="AGD jutro">
+<img src="docs/images/app/11-prognoza-jutro-tabela.png" width="180" alt="Tabela jutro">
+<img src="docs/images/app/12-wiecej-moduly.png" width="180" alt="Więcej — moduły">
+</p>
+<p>
+<img src="docs/images/app/13-wiecej-polityka.png" width="180" alt="Polityka doradcza">
+<img src="docs/images/app/14-symulator-stawki.png" width="180" alt="Symulator stawki">
+<img src="docs/images/app/15-symulator-kalendarz.png" width="180" alt="Symulator kalendarz">
+<img src="docs/images/app/16-symulator-okres.png" width="180" alt="Symulator okres">
+</p>
+<p>
+<img src="docs/images/app/17-symulator-wynik.png" width="180" alt="Symulator wynik">
+<img src="docs/images/app/18-bateria-ustawienia.png" width="180" alt="Bateria ustawienia">
+<img src="docs/images/app/19-bateria-fc.png" width="180" alt="Bateria FC">
+<img src="docs/images/app/20-bateria-bloki.png" width="180" alt="Bateria bloki">
+</p>
+<p>
+<img src="docs/images/app/21-bateria-bloki-noc.png" width="180" alt="Bateria bloki noc">
+<img src="docs/images/app/22-bateria-analityka.png" width="180" alt="Bateria analityka">
+<img src="docs/images/app/23-bateria-ac.png" width="180" alt="Klimatyzacja">
+<img src="docs/images/app/24-bateria-ac-wynik.png" width="180" alt="Klimatyzacja wynik">
+</p>
 
 ### Gdy coś nie działa
 
