@@ -42,7 +42,7 @@
 
 - [x] **T6.1** Prerequisites  
 - [x] **T6.2** docker compose + `npm start`  
-- [x] **T6.3** [`images/app/`](images/app/): `s1-sync.png` … `s4-sugestie.png` + `app-tour.gif` · wpisane w README §6  
+- [x] **T6.3** [`images/app/`](images/app/): `s1-home.png` … `s4-symulator.png` + `app-tour.gif` · wpisane w README §6  
 - [x] **T6.4** Troubleshooting  
 
 ### T7 — Cleanup
@@ -92,16 +92,16 @@
 
 | Artefakt | Uwagi |
 |----------|--------|
-| Tour GIF | 11 slajdów · ~8,5 MB · pełna rozdzielczość |
-| S1 `s1-sync.png` | Home + status sync Fox |
-| S2 `s2-prognoza-dzis.png` | Prognoza dziś (profil) |
-| S3 `s3-prognoza-jutro.png` | Closeout 04.08 (inny dzień) |
-| S4 `s4-sugestie.png` | Symulator — wynik / oszczędność |
+| Tour GIF | 12 slajdów · ~3,3 MB |
+| S1 `s1-home.png` | Home — KPI + PLAN 24h |
+| S2 `s2-prognoza.png` | Prognoza dziś (KPI, profil, AGD) |
+| S3 `s3-bateria.png` | Bateria — sezon / SoC |
+| S4 `s4-symulator.png` | Symulator — wynik / oszczędność |
 
-![Home](images/app/s1-sync.png)
-![Prognoza](images/app/s2-prognoza-dzis.png)
-![Closeout 04.08](images/app/s3-prognoza-jutro.png)
-![Symulator](images/app/s4-sugestie.png)
+![Home](images/app/s1-home.png)
+![Prognoza](images/app/s2-prognoza.png)
+![Bateria](images/app/s3-bateria.png)
+![Symulator](images/app/s4-symulator.png)
 
 ---
 
