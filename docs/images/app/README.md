@@ -1,14 +1,13 @@
 # Screenshoty aplikacji (README §6)
 
-Pliki z symulatora iOS (**2026-09-08**).
+Galeria PNG = **6 klatek-wyników**. Reszta flow jest w GIF.
 
 | Plik | Treść |
 |------|--------|
-| `app-tour-2026-09-08.gif` | Animacja tour |
-| `01`–`02` | Home — KPI + PLAN 24h |
-| `04`–`05` | Prognoza **dziś** |
-| `12` | Więcej — moduły |
-| `14`, `16`, `17` | Symulator (stawki / okres / wynik) |
-| `18`, `19`, `21`–`24` | Bateria |
-
-Usunięte z galerii PNG: `03` Sync · `06`–`11` inne dni Prognozy · `13` polityka · `15` kalendarz · `20` bloki Harmonogramu.
+| `app-tour-2026-09-08.gif` | Animacja tour (pełny flow) |
+| `01-home-kpi.png` | Home — KPI |
+| `04-prognoza-dzis.png` | Prognoza dziś |
+| `17-symulator-wynik.png` | Symulator — oszczędność |
+| `18-bateria-ustawienia.png` | Bateria — sezon / SoC |
+| `22-bateria-analityka.png` | Shadow savings + PLAN 24h |
+| `24-bateria-ac-wynik.png` | Kalkulator AC — wynik |
