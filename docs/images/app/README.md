@@ -1,15 +1,15 @@
 # Screenshoty aplikacji (README §6)
 
-Pliki z symulatora iOS (**2026-09-08**, 24 klatki):
+Pliki z symulatora iOS (**2026-09-08**). Z Prognozy w galerii PNG zostaje tylko **dziś**.
 
 | Plik | Treść |
 |------|--------|
-| `app-tour-2026-09-08.gif` | Animacja tour (24 slajdy, ~1,8 s + crossfade, ~4,3 MB) |
+| `app-tour-2026-09-08.gif` | Animacja tour |
 | `01`–`02` | Home — KPI + PLAN 24h |
 | `03` | Sync Fox |
-| `04`–`11` | Prognoza (dziś / 07.09 / jutro + AGD + tabele) |
+| `04`–`05` | Prognoza **dziś** (KPI/profil + AGD) |
 | `12`–`13` | Więcej — moduły + polityka |
-| `14`–`17` | Symulator (stawki / kalendarz / okres / wynik) |
-| `18`–`24` | Bateria (ustawienia / FC / bloki / analityka / AC) |
+| `14`–`17` | Symulator |
+| `18`–`24` | Bateria |
 
-W README: `docs/images/app/app-tour-2026-09-08.gif` + galeria `01`–`24`.
+Usunięte z galerii PNG: `06`–`11` (Prognoza 07.09 i jutro).
