@@ -255,24 +255,18 @@ npx cap run android
 <p>
 <img src="docs/images/app/01-home-kpi.png" width="180" alt="Home KPI">
 <img src="docs/images/app/02-home-plan.png" width="180" alt="Home PLAN 24h">
-<img src="docs/images/app/03-sync.png" width="180" alt="Sync Fox">
 <img src="docs/images/app/04-prognoza-dzis.png" width="180" alt="Prognoza dziś">
-</p>
-<p>
 <img src="docs/images/app/05-prognoza-agd.png" width="180" alt="Prognoza dziś — AGD">
-<img src="docs/images/app/12-wiecej-moduly.png" width="180" alt="Więcej — moduły">
-<img src="docs/images/app/13-wiecej-polityka.png" width="180" alt="Polityka doradcza">
-<img src="docs/images/app/14-symulator-stawki.png" width="180" alt="Symulator stawki">
 </p>
 <p>
-<img src="docs/images/app/15-symulator-kalendarz.png" width="180" alt="Symulator kalendarz">
+<img src="docs/images/app/12-wiecej-moduly.png" width="180" alt="Więcej — moduły">
+<img src="docs/images/app/14-symulator-stawki.png" width="180" alt="Symulator stawki">
 <img src="docs/images/app/16-symulator-okres.png" width="180" alt="Symulator okres">
 <img src="docs/images/app/17-symulator-wynik.png" width="180" alt="Symulator wynik">
-<img src="docs/images/app/18-bateria-ustawienia.png" width="180" alt="Bateria ustawienia">
 </p>
 <p>
+<img src="docs/images/app/18-bateria-ustawienia.png" width="180" alt="Bateria ustawienia">
 <img src="docs/images/app/19-bateria-fc.png" width="180" alt="Bateria FC">
-<img src="docs/images/app/20-bateria-bloki.png" width="180" alt="Bateria bloki">
 <img src="docs/images/app/21-bateria-bloki-noc.png" width="180" alt="Bateria bloki noc">
 <img src="docs/images/app/22-bateria-analityka.png" width="180" alt="Bateria analityka">
 </p>
