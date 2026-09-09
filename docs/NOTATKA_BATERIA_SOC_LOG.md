@@ -22,7 +22,51 @@ Pogoda → `NOTATKA_YYYY-MM-DD.md`; reguła push → notatka reguły.
 
 ---
 
+## Bojler (CWU) — sygnatura FoxESS
+
+Potwierdzone **5.09** (po kajakach; nie gotowanie).
+
+| | |
+|--|--|
+| **Moc** | **~2,2–2,6 kW** (start cyklu bywa **~1,7 kW**) |
+| **Czas** | **~20–30 min** |
+| **Energia** | **~0,9–1,2 kWh** / cykl · **≈ −8…−11 pp** SoC (1% ≈ 0,10 kWh) |
+| **Skąd** | bateria, gdy SoC wysoki (sieć ~0) |
+| **Kiedy** | po ciepłej wodzie, typowo wieczór **~19:15–22:25** |
+
+**5.09:** **20:20–20:47** · 1,7→2,6 kW · SoC **97%→88%** (−9 pp) · ~1 kWh.  
+Podobny wieczorny impuls (ten sam rząd kW): 1.09 ~22:00–22:23 · 2.09 ~21:44–22:02 · 3.09 ~22:02–22:20 · 4.09 ~19:16–19:34.
+
+Nie mylić z płytą (też ~2 kW, ale przy obecności / posiłku) — 5.09 bez gotowania.
+
+---
+
 ## Log
+
+### 2026-09-05 — DZIEŃ (kajaki / pusty dom)
+
+Wyjazd ~**8:30** · powrót ~**14:30** (bez skoku mocy). Nie gotowali, nie grzali. PC/przedłużki zostawione — load jak pusta noc.
+
+| Moment | SoC | PV / uwagi |
+|--------|----:|------------|
+| ~7:40–7:49 | 70→67% | śniadanie ~2,5 kW |
+| **~8:25** | **66%** | wyjazd — load **~90–110 W** |
+| **11:38** | **100%** | eksport |
+| 8:30–14:30 | 66→100% | load domu **0,50 kWh** (vs weekend w domu 1,7–4,8) |
+| **20:20–20:47** | **97%→88%** | **bojler** **2,2–2,6 kW** · ~1 kWh · sieć ~0 |
+| EOD | **87%** | PV Fox **20,2** · ENS **+1,3%** |
+
+**Werdykt:** pusty dom zszedł ~**4 kWh** vs typowy weekend. Zapomniany sprzęt nie zjadł wyjazdu. Bojler wieczór z baterii.
+
+### 2026-09-06 — DZIEŃ (closeout)
+
+Accu mix→**RF** · Fox EOD **23,3** vs app **27,5** / ENS **28,1**. FC wieczór: rozważyć jeśli SoC niski przed **7.09** CS4 (Accu 2/93%).
+
+| Moment | SoC | PV / uwagi |
+|--------|----:|------------|
+| closeout ~19:04 | | PV **23,3** · zużycie / sieć / SoC EOD *(uzupełnij)* |
+
+**Werdykt:** produkcja poniżej ENS (UKMO za jasny). Jutro paper **CS4** — watch SoC przed 22:00.
 
 ### 2026-09-02 — DZIEŃ (closeout)
 

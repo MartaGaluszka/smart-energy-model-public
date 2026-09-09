@@ -1,4 +1,4 @@
-# Notatka pogoda — 16.08–6.09.2026
+# Notatka pogoda — 16.08–9.09.2026
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
 **Produkcja ML:** Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, od **02.09**) · RF16  
@@ -7,6 +7,12 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-09 ~17:38** | **MB** MM + ens + meteogram + hi-res · **9.09** I=U słońce 0 mm (front 7.09 odwołany) · oneshot RF I/U **27,0/30,1** · PVE **31,7** ≈ UKMO · **10.09** I=U deszcz AM · Accu 0 mm zły · **MB→CS4** · ½ **16** · **11.09** ICON deszcz ~12 / UKMO ~18 · CS4 · ½ **10** ≈ midday ENS — [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md) |
+| **2026-09-09 ~17:33** | Accu **9.09** **9**/ **5%**/0 P3% → **jasny→RF** · upały żółte do **18:00** · PVE **31,7** w toku · **10.09** **5**/69%/0 → mix RF (OM ~6 mm mokrzejszy) · **11.09** **1**/99%/**7,1** → **CS4** · closeout **7.09** Fox **26,3** ENS **+5,8%** · **8.09** Fox **33,3** ENS **−8,7%** — [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md) |
+| **2026-09-07 ~08:08** | **Okno:** niebieskie niebo, słońce, białe chmury **≤10%** — Accu 93% i OM ICON 80% za ciemne · MM słońce ≈ dach · paper **okno→RF** — [`NOTATKA_2026-09-07.md`](NOTATKA_2026-09-07.md) |
+| **2026-09-07 ~08:03** | **MB** meteogram + MM + ens + hi-res (7–9.09) · **7.09** Accu 93% za ciemny vs MB mix 22° / MM słońce · OM I **80%** / U **67%** · oneshot RF **24,1 / 26,4** ½=**25,3** vs ENS **27,8** · **8.09** I≈U **30,4** = ENS · **9.09** ICON **29,7** · UKMO rad skip · MB front wieczór — [`NOTATKA_2026-09-07.md`](NOTATKA_2026-09-07.md) |
+| **2026-09-06 ~22:07** | **5.09** wyjazd **kajaki / pusty dom** ~8:25–20:20 · load 8:30–14:30 **0,50 kWh** (~90 W) · bojler **20:20–20:47** **2,2–2,6 kW** · ~1 kWh z baterii · Fox PV **20,2** ENS **+1,3%** — [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) |
+| **2026-09-06 ~19:04** | **Closeout 6.09** Fox **23,3** · app **27,5 (+18%)** · ENS daily **28,1 (+21%)** · midday **26,3 (+13%)** · oneshot ICON **23,8 (+2%)** ≈ fakt · UKMO **+24%** — Accu RF ✓, miss = UKMO |
 | **2026-09-06 ~14:07** | **MB** MM + ens + meteogram · **6.09** I=U mix · ens cloud spread 20–80% · Accu 47% w środku · **7.09** ICON chmurny / UKMO jaśniej · I≈U OM ~80% suche · **8.09** ICON słońce · UKMO-10 deszcz AM outlier · **Oneshot** 6: ½ **26,3**=midday ENS (I 23,8 / U 28,9) · 7: ~**25** · 8: ICON **30,8** UKMO rad skip |
 | **2026-09-06 ~14:04** | AccuWeather outlook **7.09** **2** / **93%** / **0** · P3% → **pochmurny→CS4** · **8.09** **8** / **45%** / **0** · P4% → **mix→RF** (nie jasny) · launchd ENS **24,3** / **30,3** |
 | **2026-09-06 ~14:00** | AccuWeather dziś-na-dziś (**6.09**) · **7** / **47%** / **0** · P2% → **mix→RF** (Lumen 8→7 vs outlook 4.09) · closeout **4.09** Fox **18,9** ENS **−6,5%** · **5.09** Fox **20,2** ENS **+1,3%** · launchd ENS **28,1** / midday **26,3** |
@@ -105,7 +111,46 @@ Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletnoś�
 
 ---
 
-## AccuWeather — 6.09 ~14:00 (obecny run)
+## AccuWeather — 9.09 ~17:33 (obecny run)
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
+|-------|------:|--------:|------:|------:|------------------|----------------|--------------|
+| **9.09** śr. (dziś) | **31°C** (RF **32°** / Shade **30°**) | **9** b. jasne | **5%** | **0,0 mm** | **3%** / **0%** | WSW **13** / **39** | **jasny** — słonecznie |
+| **10.09** czw. | **20°C** (RF **21°** / Shade **18°**) | **5** średnie | **69%** | **0,0 mm** | **7%** / **0%** | W **15** / **37** | **mix** — chłodniej |
+| **11.09** pt. | **14°C** (RF **13°** / Shade **12°**) | **1** ciemny | **99%** | **7,1 mm** · 3,5 h | **59%** / **0%** | ENE **11** / **22** | **pochmurny** — prawdopodobieństwo deszczu |
+
+UV: 9.09 = **4** · 10.09 = **4** · 11.09 = **1**. AccuLumen: **9** / **5** / **1**.
+
+### Alarmy Accu (9.09)
+
+| Alarm | Okno |
+|-------|------|
+| Żółte ostrzeżenie — **upały** | **wt. 14:00 – śr. 18:00** |
+| Ostrzeżenie Accu — **susza** | tło (×3 w UI) |
+
+### Drift vs MB 7.09 ~08:03
+
+| | MB 7.09 | **Accu 9.09 run** | Uwaga |
+|--|---------|-------------------|-------|
+| **9.09** | 33° + front wieczór (hi-res 15–20 mm) | **9/5%/0** P3% → **RF** | Accu suchszy; PVE **31,7** @17:28 · OM 0 mm |
+| **10.09** | ~20° + deszcz ~06 | **5/69%/0** P7% → **RF** | T zgoda; Accu 0 mm vs OM ~6 mm |
+| **11.09** | ~20° mix | **1/99%/7,1** → **CS4** | Accu=OM mokry |
+
+**Wniosek:** **7.09** Fox **26,3** · okno RF ✓ · ENS **+5,8%**. **8.09** Fox **33,3** · ENS **−8,7%**. **9.09** paper **RF** · PVE **31,7** · MB I=U słońce. **10.09** Accu RF za suchy · **MB→CS4**. **11.09** paper **CS4**. Dzień: [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md).
+
+### MB 9.09 ~17:38 — vs Accu · MultiModel + ensemble + hi-res
+
+| Dzień | Accu | MB meteogram / MM | Pick |
+|-------|------|-------------------|------|
+| **9.09** | jasny→**RF** (9/5%/0) | I=U **słońce** · 0 mm · T **31–33°** · hi-res cloud 0–15% | RF ✓ · front 7.09 odwołany |
+| **10.09** | mix→**RF** (5/69%/0) | I=U **deszcz AM** (I 04–08, U 03–09) · T **20°** · suma 2–5 mm | Accu RF · **MB→CS4** |
+| **11.09** | pochmurny→**CS4** (1/99%/7,1) | ICON deszcz ~12 · UKMO ~18 · cloud 80–100% | **CS4** ✓ · kWh ~10 (nie daily 14) |
+
+**Wniosek MB:** **9.09** Accu=MM. **10.09** Accu za suchy jak 29.08. **11.09** ICON mokry w PV, UKMO później. Oneshot: [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md).
+
+---
+
+## AccuWeather — 6.09 ~14:00 (archiwum)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
 |-------|------:|--------:|------:|------:|------------------|----------------|--------------|
@@ -127,7 +172,17 @@ UV: 6.09 = **4** · 7.09 = **3** · 8.09 = **4**. AccuLumen: **7** / **2** / **8
 |--|-------------------|-------------------|-------|
 | **6.09** | 8/47%/0 P25% → **RF** | **7/47%/0** P2% → **RF** | ten sam pick; Lumen **8→7**; T 20→18 |
 
-**Wniosek:** **6.09** paper **RF** · MB mix · oneshot ½ **26,3**=midday ENS (ICON 24 / UKMO 29). **7.09** paper **CS4** ≈ ICON/NEMS · I≈U ~25 · Accu 93% ciemniejszy niż MB. **8.09** paper **RF** ≈ ICON słońce · UKMO-10 MM deszcz AM vs ens 0 · OM UKMO rad skip. Closeout **4.09** Fox **18,9** · **5.09** Fox **20,2**. Dzień: [`NOTATKA_2026-09-06.md`](NOTATKA_2026-09-06.md).
+**Wniosek:** **6.09 closeout** Fox **23,3** · Accu RF ✓ · ENS **+21%** · oneshot ICON **+2%** (UKMO za jasny). **7.09** Accu CS4 **zły vs okno** (słońce, białe ≤10%) · OM ICON 80% miss AM · ENS **27,8**. **8.09** paper **RF** · I≈U **30,4**. **9.09** ICON **29,7** · MB front wieczór · UKMO rad skip. Closeout **4.09** Fox **18,9** · **5.09** Fox **20,2** · **6.09** Fox **23,3**. Dzień: [`NOTATKA_2026-09-07.md`](NOTATKA_2026-09-07.md).
+
+### MB 7.09 ~08:03 — vs Accu · MultiModel + ensemble + hi-res
+
+| Dzień | Accu 6.09 | MB meteogram / MM | Pick |
+|-------|-----------|-------------------|------|
+| **7.09** | pochmurny→**CS4** (2/93%/0) | mix **22°** · MM I=U **słońce** · **okno ≤10%** · **0 mm** | Accu CS4 **zły vs okno** · **okno→RF** · OM ICON 80% miss AM |
+| **8.09** | mix→**RF** (8/45%/0) | **30°** prawie bezchmurnie · I=U słońce · **0 mm** (UKMO-10 deszcz AM zniknął) | RF ✓; MB/OM jaśniejsze (jasny) |
+| **9.09** | — | **33°** AM słońce · chmury PM · MM deszcz ~21 · hi-res **15–20 mm** + porywy ~40 | watch front; OM 0 mm; UKMO rad skip |
+
+**Wniosek MB:** **7.09 ~08:08** dach ≈ MM ikony / hi-res, **nie** Accu 93% i **nie** OM ICON 80%. Lekcja 6.09 (ICON oneshot) nie na to AM. **8.09** zgoda słońce. **9.09** hi-res mokry wieczór vs OM suche. Dzień: [`NOTATKA_2026-09-07.md`](NOTATKA_2026-09-07.md).
 
 ---
 
@@ -563,7 +618,7 @@ Opis 27: *„Jaskrawe słońce”* · UV 5.
 | **27.08** | (brak) | jasność **10**, cloud **0%**, 0 mm |
 
 **Wniosek:** **25** Accu≈ICON na **cloud** — paper-trade **CS4**. Deszcz: **od 11:25** ≈ ilościowy **ICON** (1. wet godz. 11); **UKMO** za późny/suchy; ikony MultiModel rano za wcześnie; **NEMS** OK do 11:25. **26** Accu mix vs ICON bardzo chmurny — midday. **27** Accu jasność 10 → undershoot risk. Primary bez zmian.  
-Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade: paper-trade Accu (tylko repo prywatne).
+Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade — tylko repo prywatne.
 
 ### MB 25.08 ~10:35 — Accu vs MB · NEMS vs ICON/UKMO
 

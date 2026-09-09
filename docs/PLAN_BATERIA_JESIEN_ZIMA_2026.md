@@ -2,7 +2,8 @@
 
 **Data:** 2026-08-02  
 **Źródło:** `foxess_data` + `foxess_report_daily` (IX.2025–II.2026) · doradca: `battery_advisor` / G12w  
-**Pojemność:** ~10,36 kWh · dno sprzętowe SoC ~5–10%
+**Pojemność:** ~10,36 kWh · dno sprzętowe SoC ~5–10%  
+**Czujniki podłogówki (~2.12.2025) vs FC (od 7.01.2026):** test jesień [`NOTATKA_CZUJNIKI_PODLOGOWKA.md`](NOTATKA_CZUJNIKI_PODLOGOWKA.md) — load/HDD ≠ zł Tauron.
 
 Powiązane: [`PROJEKT_APLIKACJA_MOBILNA.md`](PROJEKT_APLIKACJA_MOBILNA.md) §9 · [`PLAN_T1_T2_LIPIEC_2026.md`](PLAN_T1_T2_LIPIEC_2026.md) · EA chmur (osobny wątek ML)
 

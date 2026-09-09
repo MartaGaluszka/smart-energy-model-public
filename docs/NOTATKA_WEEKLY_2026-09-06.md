@@ -63,17 +63,18 @@ Closeouty 30.08–05.09 (Fox / ENS daily raw):
 | **3.09** | RF | **27,4** | ENS **−11%** · peak −4% |
 | **4.09** | CS4 | **18,9** | ENS **−6,5%** · CS4 −20% |
 | **5.09** | CS4 | **20,2** | ENS **+1,3%** |
+| **6.09** | RF | **23,3** | ENS **+21%** · oneshot ICON **+2%** |
 
-Live era ENS **02.09–05.09** (n=4): MAPE raw **7,7% / 8,4%**. Dual ICON **27.07–01.09** (n=37): **15,6% / 15,8%**. Wykresy: [`july_validation_summary.md`](images/ml/july_validation_summary.md).
+Live era ENS **02.09–05.09** (n=4, wykresy): MAPE raw **7,7% / 8,4%**. **6.09** Fox **23,3** vs ENS **28,1 (+21%)** — pierwszy duży overshoot ENS (UKMO). Dual ICON **27.07–01.09** (n=37): **15,6% / 15,8%**. Wykresy: [`july_validation_summary.md`](images/ml/july_validation_summary.md).
 
-Dzień 6.09 (po train): Accu mix→**RF** · midday ENS **26,3** · oneshot ½ **26,3** — [`NOTATKA_2026-09-06.md`](NOTATKA_2026-09-06.md).
+Dzień 6.09 (po train, closeout): Accu mix→**RF** ✓ · Fox **23,3** · midday ENS **26,3 (+13%)** · oneshot ICON **23,8** — [`NOTATKA_2026-09-06.md`](NOTATKA_2026-09-06.md).
 
 ---
 
 ## Co dalej
 
 1. Nic nie zmieniać w launchd / primary (RF16 + ENS).  
-2. Closeout **6.09** EOD · **7.09** Accu CS4 · **8.09** Accu RF (UKMO rad skip).  
+2. Closeout **6.09** **zrobiony** (Fox **23,3** · ENS **+21%**) · **7.09** Accu CS4 · **8.09** Accu RF (UKMO rad skip).  
 3. Kolejny weekly: **niedziela 13.09 ~04:30** — pilnować Δ Test MAE (ten run na granicy).  
 4. Wykresy walidacji już do **05.09** (linie ICON 18.07 / dual 26.07 / ENS 02.09).
 
