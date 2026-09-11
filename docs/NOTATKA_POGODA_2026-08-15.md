@@ -1,4 +1,4 @@
-# Notatka pogoda — 16.08–9.09.2026
+# Notatka pogoda — 16.08–11.09.2026
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
 **Produkcja ML:** Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, od **02.09**) · RF16  
@@ -7,6 +7,9 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-11 ~20:54** | **MB** MM + ens + meteogram (update 20:54) · **11.09** I=U deszcz · peak ~6 mm/h @21 · Fox **3,1** vs oneshot ½ **8,6** · **12.09** deszcz do ~06 · słońce+chmura **17°** · OM ~92% · oneshot I/U **17,2/15,9** ½=**16,6** · ENS **18,4** ≈ CS4 · **13.09** MB **21°** · ICON 92% / UKMO 58% · oneshot **18,0/24,4** ½=**21,2** · ENS **24,5≈UKMO** · Accu CS4 · MB watch mix — [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
+| **2026-09-11 ~20:52** | Accu **brak dziś** · **12.09** **2**/ **89%**/0 P10% → **CS4** (ciemniej niż 3/82%) · peak ENS **18,4** ≈ CS4 **19,8** · **13.09** **5**/ **74%**/0 P16% → **CS4** (cloud ≥70) · peak ENS **24,5** vs CS4 **19,1** · closeout **10.09** Fox **18,8** · **11.09** Fox **3,1** — [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
+| **2026-09-10 ~10:51** | **MB** MM + ens + meteogram (update 10:51) · **10.09** deszcz AM w kumulacji · teraz słońce+chmura 21° · ens cloud **~55% ≈ okno** · Accu 83% za szary · oneshot RF I/U **14,9/18,7** · **11.09** deszcz rano+PM+peak ~4 mm/h @21 · CS4 · ½ **9,6** ≈ ENS **10,7** · **12.09** MB słońce 19° vs Accu 82% · ICON **25,7** · UKMO rad skip — [`NOTATKA_2026-09-10.md`](NOTATKA_2026-09-10.md) |
 | **2026-09-09 ~17:38** | **MB** MM + ens + meteogram + hi-res · **9.09** I=U słońce 0 mm (front 7.09 odwołany) · oneshot RF I/U **27,0/30,1** · PVE **31,7** ≈ UKMO · **10.09** I=U deszcz AM · Accu 0 mm zły · **MB→CS4** · ½ **16** · **11.09** ICON deszcz ~12 / UKMO ~18 · CS4 · ½ **10** ≈ midday ENS — [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md) |
 | **2026-09-09 ~17:33** | Accu **9.09** **9**/ **5%**/0 P3% → **jasny→RF** · upały żółte do **18:00** · PVE **31,7** w toku · **10.09** **5**/69%/0 → mix RF (OM ~6 mm mokrzejszy) · **11.09** **1**/99%/**7,1** → **CS4** · closeout **7.09** Fox **26,3** ENS **+5,8%** · **8.09** Fox **33,3** ENS **−8,7%** — [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md) |
 | **2026-09-07 ~08:08** | **Okno:** niebieskie niebo, słońce, białe chmury **≤10%** — Accu 93% i OM ICON 80% za ciemne · MM słońce ≈ dach · paper **okno→RF** — [`NOTATKA_2026-09-07.md`](NOTATKA_2026-09-07.md) |
@@ -111,7 +114,77 @@ Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletnoś�
 
 ---
 
-## AccuWeather — 9.09 ~17:33 (obecny run)
+## AccuWeather — 11.09 ~20:52 (obecny run)
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
+|-------|------:|--------:|------:|------:|------------------|----------------|--------------|
+| **11.09** pt. (dziś) | — | — | — | — | — | — | **brak karty** — zostaje CS4 z 10.09 |
+| **12.09** sob. | **18°C** (RF **17°** / Shade **17°**) | **2** ciemny | **89%** | **0,0 mm** | **10%** / **0%** | W **11** / **22** | **pochmurny** — cieplej |
+| **13.09** nd. | **21°C** (RF **21°** / Shade **19°**) | **5** średnie | **74%** | **0,0 mm** | **16%** / **0%** | WSW **11** / **20** | **pochmurny** — częściowo słonecznie, potem chmury |
+
+UV: 12.09 = **1** · 13.09 = **4**. AccuLumen: **2** / **5**.
+
+### Drift vs Accu 10.09 ~10:47
+
+| | Accu 10.09 outlook | **Accu 11.09 ~20:52** | Uwaga |
+|--|-------------------|----------------------|-------|
+| **11.09** | **1/100%/7,1** → CS4 | brak karty | Fox **3,1** — reżim OK, kWh za wysoko |
+| **12.09** | **3/82%/0** → CS4 | **2/89%/0** → **CS4** | ciemniej, nadal sucho; peak ENS **18,4** ≈ CS4 |
+| **13.09** | — | **5/74%/0** → **CS4** | Lumen mix, cloud CS4; peak ENS **24,5** vs CS4 **19,1** |
+
+**Wniosek:** **10.09** Fox **18,8** ≈ peak ENS. **11.09** Fox **3,1** vs midday **8,5** / oneshot ½ **8,6**. **12.09** Accu CS4 ≈ ENS; MB jaśniejszy PM. **13.09** Accu CS4 vs ENS/UKMO **~24**. Dzień: [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md).
+
+### MB 11.09 ~20:54 — vs Accu · modele
+
+| Dzień | Accu | MB / oneshot | Pick kWh |
+|-------|------|----------------|----------|
+| **11.09** | CS4 (outlook) | I=U deszcz · peak ~6 mm/h @21 · RF×I **8,2** · RF×U **9,0** · ½ **8,6** · ENS **8,2** · Fox **3,1** | **CS4** ✓ reżim |
+| **12.09** | CS4 2/89% | meteogram słońce **17°** · OM ~92% · I **17,2** · U **15,9** · ½ **16,6** · ENS **18,4** · CS4 **19,8** | Accu CS4 · **watch mix** |
+| **13.09** | CS4 5/74% | meteogram **21°** · ICON 92% / UKMO 58% · I **18,0** · U **24,4** · ½ **21,2** · ENS **24,5≈U** · CS4 **19,1** | Accu CS4 · **UKMO watch mix** |
+
+**Wniosek MB:** **12.09** Accu≈OM szare, MB słońce PM. **13.09** ENS idzie za UKMO. **UKMO OM działa** (czwartek na 12.09 był skip).
+
+---
+
+## AccuWeather — 10.09 ~10:47
+
+| Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
+|-------|------:|--------:|------:|------:|------------------|----------------|--------------|
+| **10.09** czw. (dziś) | **20°C** (RF **20°** / Shade **19°**) | **3** przyćm. | **83%** | **0,0 mm** | **8%** / **0%** | W **15** / **33** | **pochmurny** — chłodniej |
+| **11.09** pt. | **14°C** (RF **13°** / Shade **13°**) | **1** ciemny | **100%** | **7,1 mm** · 3 h | **62%** / **0%** | NE **11** / **28** | **pochmurny** — słaby deszcz |
+| **12.09** sob. | **18°C** (RF **18°** / Shade **18°**) | **3** przyćm. | **82%** | **0,0 mm** | **25%** / **0%** | W **7** / **22** | **pochmurny** — cieplej |
+
+UV: 10.09 = **3** · 11.09 = **1** · 12.09 = **1**. AccuLumen: **3** / **1** / **3**.
+
+### Alarmy Accu (10.09)
+
+| Alarm | Okno |
+|-------|------|
+| Ostrzeżenie Accu — **susza** | tło (×3 w UI) |
+
+### Drift vs Accu 9.09 ~17:33
+
+| | Accu 9.09 outlook | **Accu 10.09 run** | Uwaga |
+|--|-------------------|-------------------|-------|
+| **10.09** | **5/69%/0** → mix RF | **3/83%/0** → **CS4** | dogonił AM; 83% za szary vs okno 50% |
+| **11.09** | **1/99%/7,1** → CS4 | **1/100%/7,1** → **CS4** | bez zmian |
+| **12.09** | — | **3/82%/0** → **CS4** | nowy; MB/ICON jaśniejszy |
+
+**Wniosek:** **9.09** Fox **32,2** · ENS **−8,2%**. **10.09** Accu CS4 · **okno/MB mix** · oneshot I/U **14,9/18,7** · ENS **16,2≈CS4 16,3** (paper nie rusza kWh). **11.09** CS4 · ½ **9,6** ≈ ENS **10,7**. **12.09** Accu CS4 vs ICON **25,7** · UKMO rad skip. Dzień: [`NOTATKA_2026-09-10.md`](NOTATKA_2026-09-10.md).
+
+### MB 10.09 ~10:51 — vs Accu · modele
+
+| Dzień | Accu | MB / oneshot | Pick kWh |
+|-------|------|----------------|----------|
+| **10.09** | CS4 3/83% | ens cloud **~55% ≈ okno** · RF×I **14,9** · RF×U **18,7** · ½ **16,8** · ENS **16,2** · CS4 **16,3** · XGB **14,8** | Accu CS4 · **oper. mix**; spór I vs U, nie RF vs CS4 |
+| **11.09** | CS4 7,1 mm | deszcz rano+PM+peak ~4 mm/h @21 · I **8,0** · U **11,1** · ½ **9,6** · ENS **10,7** · CS4 **8,0** · XGB **6,6** | **CS4** ✓ |
+| **12.09** | CS4 82% | meteogram słońce **19°** · ICON **25,7** · UKMO **skip** | Accu CS4 · **watch mix** |
+
+**Wniosek MB:** clearing dziś = UKMO/okno, nie Accu 83%. Jutro mokry konsensus. Sobota ICON jasny, Accu za szary.
+
+---
+
+## AccuWeather — 9.09 ~17:33 (archiwum)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
 |-------|------:|--------:|------:|------:|------------------|----------------|--------------|
@@ -132,11 +205,11 @@ UV: 9.09 = **4** · 10.09 = **4** · 11.09 = **1**. AccuLumen: **9** / **5** / *
 
 | | MB 7.09 | **Accu 9.09 run** | Uwaga |
 |--|---------|-------------------|-------|
-| **9.09** | 33° + front wieczór (hi-res 15–20 mm) | **9/5%/0** P3% → **RF** | Accu suchszy; PVE **31,7** @17:28 · OM 0 mm |
-| **10.09** | ~20° + deszcz ~06 | **5/69%/0** P7% → **RF** | T zgoda; Accu 0 mm vs OM ~6 mm |
+| **9.09** | 33° + front wieczór (hi-res 15–20 mm) | **9/5%/0** P3% → **RF** | Accu suchszy; Fox **32,2** · OM 0 mm |
+| **10.09** | ~20° + deszcz ~06 | **5/69%/0** P7% → **RF** | T zgoda; Accu 0 mm vs OM ~6 mm — supersede → 10.09 |
 | **11.09** | ~20° mix | **1/99%/7,1** → **CS4** | Accu=OM mokry |
 
-**Wniosek:** **7.09** Fox **26,3** · okno RF ✓ · ENS **+5,8%**. **8.09** Fox **33,3** · ENS **−8,7%**. **9.09** paper **RF** · PVE **31,7** · MB I=U słońce. **10.09** Accu RF za suchy · **MB→CS4**. **11.09** paper **CS4**. Dzień: [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md).
+**Wniosek:** **7.09** Fox **26,3** · okno RF ✓ · ENS **+5,8%**. **8.09** Fox **33,3** · ENS **−8,7%**. **9.09** paper **RF** · Fox **32,2** · ENS **−8,2%**. **10.09** outlook Accu RF za suchy · **MB→CS4**. **11.09** paper **CS4**. Dzień: [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md).
 
 ### MB 9.09 ~17:38 — vs Accu · MultiModel + ensemble + hi-res
 
@@ -618,7 +691,7 @@ Opis 27: *„Jaskrawe słońce”* · UV 5.
 | **27.08** | (brak) | jasność **10**, cloud **0%**, 0 mm |
 
 **Wniosek:** **25** Accu≈ICON na **cloud** — paper-trade **CS4**. Deszcz: **od 11:25** ≈ ilościowy **ICON** (1. wet godz. 11); **UKMO** za późny/suchy; ikony MultiModel rano za wcześnie; **NEMS** OK do 11:25. **26** Accu mix vs ICON bardzo chmurny — midday. **27** Accu jasność 10 → undershoot risk. Primary bez zmian.  
-Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade — tylko repo prywatne.
+Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade: paper-trade Accu (tylko repo prywatne).
 
 ### MB 25.08 ~10:35 — Accu vs MB · NEMS vs ICON/UKMO
 
