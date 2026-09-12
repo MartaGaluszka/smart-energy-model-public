@@ -1,4 +1,4 @@
-# Notatka pogoda — 16.08–11.09.2026
+# Notatka pogoda — 16.08–14.09.2026
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
 **Produkcja ML:** Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, od **02.09**) · RF16  
@@ -7,6 +7,8 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-12 ~22:00** | **MB** MM + ens + meteogram (12–14.09) · **12.09** AM deszcz → PM słońce **19°** · OM I **98%**/U jaśniejszy · oneshot I/U **11,9/19,6** · peak **11,94≈ICON** · **13.09** MB **22°** sucho · I≈U **~23** · Accu CS4 vs MB jasny · **14.09** deszcz PM · ½ **12,3≈peak** · Accu CS4 ✓ — [`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md) |
+| **2026-09-12 ~21:53** | Accu **13.09** Lumen **3**/ **82%**/0 P13% → **CS4** (ciemniej vs 11.09 **5/74%**) · **14.09** Lumen **3**/ **77%/** **1,2** P84% Pburz17% → **CS4** (przelotne) · nd. weekly **04:30** · brak daily @05 dziś — [`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md) |
 | **2026-09-11 ~20:54** | **MB** MM + ens + meteogram (update 20:54) · **11.09** I=U deszcz · peak ~6 mm/h @21 · Fox **3,1** vs oneshot ½ **8,6** · **12.09** deszcz do ~06 · słońce+chmura **17°** · OM ~92% · oneshot I/U **17,2/15,9** ½=**16,6** · ENS **18,4** ≈ CS4 · **13.09** MB **21°** · ICON 92% / UKMO 58% · oneshot **18,0/24,4** ½=**21,2** · ENS **24,5≈UKMO** · Accu CS4 · MB watch mix — [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
 | **2026-09-11 ~20:52** | Accu **brak dziś** · **12.09** **2**/ **89%**/0 P10% → **CS4** (ciemniej niż 3/82%) · peak ENS **18,4** ≈ CS4 **19,8** · **13.09** **5**/ **74%**/0 P16% → **CS4** (cloud ≥70) · peak ENS **24,5** vs CS4 **19,1** · closeout **10.09** Fox **18,8** · **11.09** Fox **3,1** — [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
 | **2026-09-10 ~10:51** | **MB** MM + ens + meteogram (update 10:51) · **10.09** deszcz AM w kumulacji · teraz słońce+chmura 21° · ens cloud **~55% ≈ okno** · Accu 83% za szary · oneshot RF I/U **14,9/18,7** · **11.09** deszcz rano+PM+peak ~4 mm/h @21 · CS4 · ½ **9,6** ≈ ENS **10,7** · **12.09** MB słońce 19° vs Accu 82% · ICON **25,7** · UKMO rad skip — [`NOTATKA_2026-09-10.md`](NOTATKA_2026-09-10.md) |
@@ -114,7 +116,53 @@ Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletnoś�
 
 ---
 
-## AccuWeather — 11.09 ~20:52 (obecny run)
+## AccuWeather — 12.09 ~21:53 (obecny run)
+
+| Dzień | T max | Lumen | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
+|-------|------:|------:|------:|------:|------------------|----------------|--------------|
+| **13.09** nd. | **21°C** (RF **21°** / Shade **19°**) | **3** Przyćm. | **82%** | **0,0 mm** | **13%** / **0%** | SW **7** / **20** | **pochmurny** — z duże zachmurzenie |
+| **14.09** pn. | **19°C** (RF **19°** / Shade **17°**) | **3** Przyćm. | **77%** | **1,2 mm** | **84%** / **17%** | WSW **11** / **24** | **pochmurny** — przelotne opady |
+
+UV: 13.09 = **3** · 14.09 = **2**. Godziny opadów 14.09: **1,5 h**.
+
+### Drift vs Accu 11.09 ~20:52
+
+| | Accu 11.09 outlook | **Accu 12.09 ~21:53** | Uwaga |
+|--|-------------------|----------------------|-------|
+| **13.09** | **5/74%/0** · Lumen **5** | **3/82%/0** P13% · Lumen **3** | ciemniej → nadal **CS4** |
+| **14.09** | — (MB deszcz PM) | **3/77%/1,2** P84% Pburz17% | nowy outlook → **CS4** |
+
+**Wniosek:** **13.09** paper **CS4** bez zmian reżimu; ciemniej niż piątek. **14.09** mokry sygnał — zgodne z MB +1 z 11.09. Dzień: [`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md).
+
+---
+
+## Meteoblue — 12.09 ~22:00 (obecny run)
+
+Lokalizacja w notatkach: okolice Krakowa (GPS tylko w `.env`). Update MB **2026-09-12 ~22:00**.
+
+| | 12.09 (dziś) | 13.09 | 14.09 |
+|--|-------------|-------|-------|
+| **Meteogram T / niebo** | deszcz noc/AM → PM **słońce+chmura 19°** | **22°** sucho · słońce+chmura | **19°** · zachmurzenie · przelotne PM · porywy **~30 km/h** |
+| **MM T / ikony** | **ICON = UKMO** · AM deszcz → PM clear | zgoda — czyste niebo | deszcz od **~12:00** (UKMO mokrszy) |
+| **Ensemble** | cloud **~95%** → clearing PM | T **~24°** · cloud **~35%** południe | opady od **~18:00** u części członków |
+| **OM 6–20** | I **0 / 98% / 1416** · U **0,2 / 91% / 2921** | I **0 / 86% / 3343** · U **0 / 63% / 4223** | I **2,4 / 95% / 1400** · U **0,9 / 83% / 2656** |
+| **Oneshot RF I/U / ½** | **11,9 / 19,6 / 15,7** | **22,8 / 23,2 / 23,0** | **9,8 / 14,8 / 12,3** |
+| **Launchd ENS** | peak **11,94** | peak **23,23** | peak **12,66** |
+| **vs Accu / paper** | Accu CS4 · **MB watch mix** · kWh **ICON** | Accu CS4 · **MB/½ watch mix** | Accu **CS4** ✓ · ½ ≈ peak |
+
+### Drift vs MB 11.09 ~20:54
+
+| Dzień | oneshot I/U (11.09) | **oneshot I/U (12.09)** | peak ENS |
+|-------|--------------------:|------------------------:|---------:|
+| **12.09** | 17,2 / 15,9 | **11,9 / 19,6** | **18,4 → 11,94** |
+| **13.09** | 18,0 / 24,4 | **22,8 / 23,2** | **24,5 → 23,23** |
+| **14.09** | — | **9,8 / 14,8** | **12,66** |
+
+**Wniosek MB:** **12.09** wieczorem ICON **ciemnieje** mimo MB PM słońce — peak ≈ ICON. **13.09** **I≈U** (koniec rozjazdu UKMO). **14.09** mokry konsensus. `weather_notes` `#164`. Dzień: [`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md).
+
+---
+
+## AccuWeather — 11.09 ~20:52 (archiwum)
 
 | Dzień | T max | Jasność | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
 |-------|------:|--------:|------:|------:|------------------|----------------|--------------|
@@ -691,7 +739,7 @@ Opis 27: *„Jaskrawe słońce”* · UV 5.
 | **27.08** | (brak) | jasność **10**, cloud **0%**, 0 mm |
 
 **Wniosek:** **25** Accu≈ICON na **cloud** — paper-trade **CS4**. Deszcz: **od 11:25** ≈ ilościowy **ICON** (1. wet godz. 11); **UKMO** za późny/suchy; ikony MultiModel rano za wcześnie; **NEMS** OK do 11:25. **26** Accu mix vs ICON bardzo chmurny — midday. **27** Accu jasność 10 → undershoot risk. Primary bez zmian.  
-Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade: paper-trade Accu (tylko repo prywatne).
+Dzień: [`NOTATKA_2026-08-25.md`](NOTATKA_2026-08-25.md) · paper-trade: tylko repo prywatne.
 
 ### MB 25.08 ~10:35 — Accu vs MB · NEMS vs ICON/UKMO
 
