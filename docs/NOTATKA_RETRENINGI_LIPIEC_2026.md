@@ -4,7 +4,7 @@ Krótka oś czasu: **kiedy** był retrening `.joblib`, **co** weszło do produkc
 Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 
 **Model produkcyjny teraz:** dual — `pv_hourly_model.joblib` (**16**) + `pv_hourly_model_cs4.joblib` (**CS4**)  
-**Stan na 2026-09-06:** GPS dach · **ENS** primary (od 02.09) · target **ΔPVEnergyTotal** · Test MAE **0.686** (16) / **0.688** (CS4) · **nieprzeuczone** · weekly: [`NOTATKA_WEEKLY_2026-09-06.md`](NOTATKA_WEEKLY_2026-09-06.md)
+**Stan na 2026-09-13:** GPS dach · **ENS** primary (od 02.09) · target **ΔPVEnergyTotal** · Test MAE **0.666** (16) / **0.659** (CS4) · **nieprzeuczone** · weekly: [`NOTATKA_WEEKLY_2026-09-13.md`](NOTATKA_WEEKLY_2026-09-13.md)
 
 ---
 

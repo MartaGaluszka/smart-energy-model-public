@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-09-11  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 06.09**) · `forecast_validation.csv` (closeouty do **5.09**) · [`NOTATKA_WEEKLY_2026-09-06.md`](NOTATKA_WEEKLY_2026-09-06.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
+**Stan na:** 2026-09-13  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 13.09**) · `forecast_validation.csv` (closeouty do **11.09**) · [`NOTATKA_WEEKLY_2026-09-13.md`](NOTATKA_WEEKLY_2026-09-13.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -21,14 +21,14 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 
 | Metryka | Wartość |
 |---------|---------|
-| Okno | 2025-06-01 → **2026-09-05** |
-| Test MAE | **0.686** kWh/h |
-| Gap train–test | **0.096** |
-| Daily MAE | **3.58** kWh/d |
-| Daily R² | **0.850** |
+| Okno | 2025-06-01 → **2026-09-12** |
+| Test MAE | **0.666** kWh/h |
+| Gap train–test | **0.071** |
+| Daily MAE | **3.38** kWh/d |
+| Daily R² | **0.859** |
 | Werdykt | nie przeuczony |
 
-Gate vs weekly **30.08** (0.668): Δ **+0.018** ≤ +0.02 → **ACCEPT** (na granicy).
+Gate vs weekly **06.09** (0.686): Δ **−0.020** → **ACCEPT** (lepszy).
 
 ### Live (closeout vs app)
 
@@ -77,6 +77,7 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
 | Pogoda 15.08–11.09 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · dzień [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
+| Weekly **13.09** | [`NOTATKA_WEEKLY_2026-09-13.md`](NOTATKA_WEEKLY_2026-09-13.md) |
 | Weekly **06.09** | [`NOTATKA_WEEKLY_2026-09-06.md`](NOTATKA_WEEKLY_2026-09-06.md) |
 | Weekly **30.08** | [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md) |
 | Weekly **23.08** | [`NOTATKA_WEEKLY_2026-08-23.md`](NOTATKA_WEEKLY_2026-08-23.md) |
