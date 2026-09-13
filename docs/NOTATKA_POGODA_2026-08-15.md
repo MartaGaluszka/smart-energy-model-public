@@ -1,4 +1,4 @@
-# Notatka pogoda — 16.08–14.09.2026
+# Notatka pogoda — 16.08–15.09.2026
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
 **Produkcja ML:** Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, od **02.09**) · RF16  
@@ -7,6 +7,8 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-13 ~08:07** | **MB** + **oneshot shadow** (13–15.09) · **13.09** RF I/U **17,5/24,8** · CS4 I **18,8≈Poranna** · ENS **24,42≈U** · Accu CS4 watch mix · **14.09** ½ **12,7≈ENS** · CS4 prod **9,34** najniżej · **15.09** klaster **~20** · U skip — [`NOTATKA_2026-09-13.md`](NOTATKA_2026-09-13.md) |
+| **2026-09-13 ~08:03** | Accu **13.09** **4**/ **74%**/0 → **CS4** (jaśniej vs 12.09 **3/82%**) · **14.09** **3/77%/1,2** → **CS4** · **15.09** **7/41%/0** Lumen **Jasne** → **mix→RF** · Poranna ENS **24,42** — [`NOTATKA_2026-09-13.md`](NOTATKA_2026-09-13.md) |
 | **2026-09-12 ~22:00** | **MB** MM + ens + meteogram (12–14.09) · **12.09** AM deszcz → PM słońce **19°** · OM I **98%**/U jaśniejszy · oneshot I/U **11,9/19,6** · peak **11,94≈ICON** · **13.09** MB **22°** sucho · I≈U **~23** · Accu CS4 vs MB jasny · **14.09** deszcz PM · ½ **12,3≈peak** · Accu CS4 ✓ — [`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md) |
 | **2026-09-12 ~21:53** | Accu **13.09** Lumen **3**/ **82%**/0 P13% → **CS4** (ciemniej vs 11.09 **5/74%**) · **14.09** Lumen **3**/ **77%/** **1,2** P84% Pburz17% → **CS4** (przelotne) · nd. weekly **04:30** · brak daily @05 dziś — [`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md) |
 | **2026-09-11 ~20:54** | **MB** MM + ens + meteogram (update 20:54) · **11.09** I=U deszcz · peak ~6 mm/h @21 · Fox **3,1** vs oneshot ½ **8,6** · **12.09** deszcz do ~06 · słońce+chmura **17°** · OM ~92% · oneshot I/U **17,2/15,9** ½=**16,6** · ENS **18,4** ≈ CS4 · **13.09** MB **21°** · ICON 92% / UKMO 58% · oneshot **18,0/24,4** ½=**21,2** · ENS **24,5≈UKMO** · Accu CS4 · MB watch mix — [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
@@ -116,7 +118,29 @@ Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletnoś�
 
 ---
 
-## AccuWeather — 12.09 ~21:53 (obecny run)
+## AccuWeather — 13.09 ~08:03 (obecny run)
+
+| Dzień | T max | Lumen | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
+|-------|------:|------:|------:|------:|------------------|----------------|--------------|
+| **13.09** nd. | **20°C** (RF **21°** / Shade **19°**) | **4** Przyćm. | **74%** | **0,0 mm** | **13%** / **0%** | SW **7** / **20** | **pochmurny** — częściowe przejaśnienia · susza |
+| **14.09** pn. | **20°C** (RF **19°** / Shade **18°**) | **3** Przyćm. | **77%** | **1,2 mm** | **84%** / **17%** | WSW **11** / **24** | **pochmurny** — przelotne opady |
+| **15.09** wt. | **21°C** (RF **22°** / Shade **20°**) | **7** Jasne | **41%** | **0,0 mm** | **5%** / **0%** | W **9** / **28** | **mix** — słońce po chmurach rano |
+
+UV: 13.09 = **3** · 14.09 = **2** · 15.09 = **4**. Godziny opadów 14.09: **1,5 h**.
+
+### Drift vs Accu 12.09 ~21:53
+
+| | Accu 12.09 outlook | **Accu 13.09 ~08:03** | Uwaga |
+|--|-------------------|----------------------|-------|
+| **13.09** | **3/82%/0** · Lumen **3** | **4/74%/0** · Lumen **4** | jaśniej → nadal **CS4** |
+| **14.09** | **3/77%/1,2** | bez zmian | **CS4** ✓ |
+| **15.09** | — | **7/41%/0** | nowy · **mix→RF** |
+
+**Wniosek:** **13.09** reżim **CS4** bez zmian; Accu jaśniej niż wczoraj wieczorem, ENS **24,42** vs CS4 **18,73** — **watch mix** (MB też jaśniejszy). **14.09** mokro bez zmian. **15.09** pierwszy jasny sygnał Accu w outlook. Dzień: [`NOTATKA_2026-09-13.md`](NOTATKA_2026-09-13.md).
+
+---
+
+## AccuWeather — 12.09 ~21:53 (archiwum)
 
 | Dzień | T max | Lumen | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
 |-------|------:|------:|------:|------:|------------------|----------------|--------------|
@@ -136,7 +160,34 @@ UV: 13.09 = **3** · 14.09 = **2**. Godziny opadów 14.09: **1,5 h**.
 
 ---
 
-## Meteoblue — 12.09 ~22:00 (obecny run)
+## Meteoblue — 13.09 ~08:07 (obecny run)
+
+Lokalizacja w notatkach: okolice Krakowa (GPS tylko w `.env`). Update MB **2026-09-13 ~08:06**.
+
+| | 13.09 (dziś) | 14.09 | 15.09 |
+|--|-------------|-------|-------|
+| **Meteogram T / niebo** | max **18°** · słońce+chmury wysokie · sucho | max **18°** · zachmurzenie · deszcz · peak wieczór **~2–5 mm/h** | max **20°** · chmury rano → **słońce PM** · sucho |
+| **MM T / ikony** | **ICON = UKMO** · słońce+chmura | **I = U** · deszcz cały dzień | I/U · chmury rano → słońce |
+| **Ensemble** | cloud dip **~40%** południe · RH min **~50%** | cloud **80–100%** · RH **80–95%** | clearing PM · RH min **~60%** |
+| **OM 6–20 cloud** | I **90%** · U **51%** | I **96%** · U **95%** | I **61%** · U **skip** |
+| **Oneshot RF I/U / ½** | **17,5 / 24,8 / 21,2** | **12,1 / 13,3 / 12,7** | **19,5 / skip / —** |
+| **Oneshot CS4 I/U** | **18,8 / 26,0** | **12,4 / 15,9** | **19,4 / skip** |
+| **Poranna ENS / CS4 / ICON** | **24,42 / 18,73 / 20,79** | **11,79 / 9,34 / 9,70** | **20,76 / 19,56 / 21,28** |
+| **vs Accu / paper** | Accu **CS4** · **MB/ENS→watch mix** | Accu **CS4** ✓ · ½≈ENS | Accu **mix→RF** · klaster ~20 |
+
+### Drift vs MB 12.09 ~22:00
+
+| Dzień | oneshot I/U (12.09) | **oneshot I/U (13.09)** | Poranna ENS |
+|-------|--------------------:|------------------------:|------------:|
+| **13.09** | 22,8 / 23,2 | **17,5 / 24,8** | **23,23 → 24,42** |
+| **14.09** | 9,8 / 14,8 | **12,1 / 13,3** | **12,66 → 11,79** |
+| **15.09** | — | **19,5 / skip** | **20,76** |
+
+**Wniosek MB:** **13.09** ICON **ciemnieje** (22,8→17,5), UKMO stabilny — ENS za **U**. Accu **74% CS4** vs MB **18°** jasny — **watch mix**. **14.09** pełna zgoda mokro I=U · ½≈ENS. **15.09** UKMO rad skip · MB+Accu słońce PM. `weather_notes` `#169`. Dzień: [`NOTATKA_2026-09-13.md`](NOTATKA_2026-09-13.md).
+
+---
+
+## Meteoblue — 12.09 ~22:00 (archiwum)
 
 Lokalizacja w notatkach: okolice Krakowa (GPS tylko w `.env`). Update MB **2026-09-12 ~22:00**.
 
