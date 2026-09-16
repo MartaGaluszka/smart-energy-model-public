@@ -64,6 +64,61 @@ ion-card {
   padding: 4px 12px 32px;
 }
 
+/* Prognoza — nawigacja dnia (ion-button / ion-icon w shadow DOM) */
+.se-day-nav {
+  ion-button.se-day-nav__btn {
+    --color: var(--solar-pressed);
+    --background: transparent;
+    --background-hover: transparent;
+    --background-focused: transparent;
+    --background-activated: rgba(201, 134, 10, 0.12);
+    --ripple-color: rgba(201, 134, 10, 0.2);
+    margin: 0;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 20px;
+  }
+
+  ion-button.se-day-nav__btn::part(native) {
+    color: var(--solar-pressed);
+  }
+
+  ion-button.se-day-nav__btn ion-icon {
+    color: var(--solar-pressed);
+  }
+
+  ion-button.se-day-nav__btn.button-disabled,
+  ion-button.se-day-nav__btn[disabled] {
+    --color: var(--solar-pressed);
+    opacity: 0.35;
+  }
+
+  ion-button.se-day-nav__btn.button-disabled ion-icon,
+  ion-button.se-day-nav__btn[disabled] ion-icon {
+    color: var(--solar-pressed);
+    opacity: 0.35;
+  }
+
+  .se-day-nav__label {
+    min-width: 96px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--solar-pressed);
+  }
+
+  ion-button.se-day-nav__today-btn {
+    --color: var(--solar-pressed);
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  ion-button.se-day-nav__today-btn::part(native) {
+    color: var(--solar-pressed);
+  }
+}
+
 .se-card {
   --background: var(--surface);
   margin: 10px 0;
@@ -215,4 +270,29 @@ ion-card {
   ion-icon {
     color: var(--solar-pressed);
   }
+}
+
+/* ============================================================================
+   Ukrycie systemowego paska przewijania dla natywnego wyglądu aplikacji
+   ============================================================================ */
+
+/* Ukrycie scrollbar - wszystkie przeglądarki */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Chrome, Safari, Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ionic Shadow DOM - ion-content */
+ion-content::part(scroll) {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+ion-content::part(scroll)::-webkit-scrollbar {
+  display: none;
 }

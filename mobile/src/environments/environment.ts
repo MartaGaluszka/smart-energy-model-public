@@ -4,9 +4,9 @@
 
 export const environment = {
   production: false,
-  // 127.0.0.1 zamiast "localhost" — WKWebView na iOS Simulator czasem nie potrafi
-  // rozwiązać hostname "localhost" (NSURLErrorCannotFindHost / -1003), literał IP
-  // omija DNS. Dla realnego telefonu podać LAN IP hosta.
+  // Fallback na loopback Maca (przeglądarka / ng serve). W Simulatorze
+  // resolveApiBaseUrl() podmienia host na LAN z window.location (127.0.0.1
+  // w iOS 26 to pętla telefonu, nie hosta).
   apiBaseUrl: 'http://127.0.0.1:8000',
 };
 

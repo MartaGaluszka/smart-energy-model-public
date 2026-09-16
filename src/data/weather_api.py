@@ -10,7 +10,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import socket
 import sqlite3
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
@@ -64,12 +67,38 @@ WEATHER_EXTRA_COLUMNS = {
 }
 
 
-def _get_json(url: str, params: dict) -> dict:
+def _get_json(
+    url: str,
+    params: dict,
+    *,
+    retries: int = 5,
+    backoff_s: float = 8.0,
+) -> dict:
+    """GET JSON z Open-Meteo. Retry na DNS/timeout — launchd 05:00 padało na chwilowym braku sieci."""
     query = urllib.parse.urlencode(params)
     full_url = f'{url}?{query}'
     logger.debug('GET %s', full_url)
-    with urllib.request.urlopen(full_url, timeout=120) as resp:
-        return json.loads(resp.read().decode())
+    last_err: Exception | None = None
+    attempts = max(1, retries)
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(full_url, timeout=120) as resp:
+                return json.loads(resp.read().decode())
+        except (urllib.error.URLError, TimeoutError, socket.gaierror, OSError) as err:
+            last_err = err
+            if attempt >= attempts:
+                break
+            sleep_for = backoff_s * attempt
+            logger.warning(
+                'Open-Meteo GET failed (%s/%s): %s — retry in %.0fs',
+                attempt,
+                attempts,
+                err,
+                sleep_for,
+            )
+            time.sleep(sleep_for)
+    assert last_err is not None
+    raise last_err
 
 
 def _response_to_df(payload: dict, location: str, data_source: str) -> pd.DataFrame:

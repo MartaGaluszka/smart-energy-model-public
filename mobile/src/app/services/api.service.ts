@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, switchMap, throwError } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { resolveApiBaseUrl } from './api-base-url';
 import { AuthService } from './auth.service';
 
 export interface FoxOverviewResponse {
@@ -303,7 +303,7 @@ export interface SimulateBillResponse {
  */
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly baseUrl = environment.apiBaseUrl;
+  private readonly baseUrl = resolveApiBaseUrl();
 
   constructor(private readonly http: HttpClient, private readonly auth: AuthService) {}
 

@@ -444,6 +444,39 @@ def build_daily_forecast_summary(
     return pd.DataFrame(rows)
 
 
+def official_day_outlook_total(target_day: str) -> float | None:
+    """Oficjalna suma doby z ``forecast_history`` (jak karty Poranna/Południowa/Popołudniowa).
+
+    Preferuje najpóźniejszy zaplanowany run tego samego dnia: peak → midday → daily.
+    Nie sumuje godzin ``model`` z CSV midday/peak — tam brakuje rana (foxess_actual).
+    """
+    if not os.path.exists(HISTORY_FILE):
+        return None
+
+    history = pd.read_csv(HISTORY_FILE)
+    sub = history[
+        (history['target_day'].astype(str) == target_day)
+        & (history['run_label'].astype(str).isin(DEFAULT_RUN_LABELS))
+    ].copy()
+    if sub.empty:
+        return None
+
+    sub['run_at'] = parse_forecast_ts(sub['run_at'])
+    sub = sub[sub['run_at'].apply(lambda ts: _is_run_valid_for_target(ts, target_day))]
+    if sub.empty:
+        return None
+
+    for label in reversed(DEFAULT_RUN_LABELS):
+        group = sub[sub['run_label'].astype(str) == label]
+        if group.empty:
+            continue
+        row = group.sort_values('run_at').iloc[-1]
+        if pd.isna(row.get('predicted_kwh')):
+            continue
+        return round(_day_outlook_from_history_row(row), 2)
+    return None
+
+
 def _day_outlook_from_history_row(row: pd.Series) -> float:
     """Suma dnia do kart UI: outlook (raw w południe), nie ścieżka hybrydowa.
 

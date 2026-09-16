@@ -15,26 +15,38 @@ from api.errors import ApiError
 
 
 def _archived_hourly_predictions(target_day: str) -> pd.DataFrame:
-    """Pełny dzień z archiwum 05:00 (daily). Midday/peak trzymają tylko godziny po runie
-    (hybryda wycina rano jako foxess_actual) — na wykresie dawały 12–19 / 17–19."""
+    """Pełny dzień z archiwum 05:00 (daily), min. ~10 godzin modelowych.
+
+    Midday/peak NIE są tu fallbackiem — w CSV zostają tylko godziny ``model`` (rano
+    wypada jako foxess_actual), więc suma godzin dawała np. 7,23 kWh zamiast ~13 kWh
+    z ``forecast_history`` (12.09 bez Porannej @05).
+    """
     from src.models.forecast_validation import load_forecast_snapshot
 
-    best = pd.DataFrame()
-    for label in ('daily', 'midday', 'peak', 'manual'):
-        fc, _ = load_forecast_snapshot(label, target_day)
-        if fc.empty or 'hour' not in fc.columns or 'predicted_kwh' not in fc.columns:
-            continue
-        fc = fc.copy()
-        fc['hour'] = fc['hour'].astype(int)
-        fc['day'] = fc['day'].astype(str) if 'day' in fc.columns else target_day
-        if 'prediction_source' not in fc.columns:
-            fc['prediction_source'] = 'archive'
-        n = int(fc['hour'].nunique())
-        if label == 'daily' and n >= 10:
-            return fc
-        if best.empty or n > int(best['hour'].nunique()):
-            best = fc
-    return best
+    fc, _ = load_forecast_snapshot('daily', target_day)
+    if fc.empty or 'hour' not in fc.columns or 'predicted_kwh' not in fc.columns:
+        return pd.DataFrame()
+    fc = fc.copy()
+    fc['hour'] = fc['hour'].astype(int)
+    fc['day'] = fc['day'].astype(str) if 'day' in fc.columns else target_day
+    if 'prediction_source' not in fc.columns:
+        fc['prediction_source'] = 'archive'
+    if int(fc['hour'].nunique()) >= 10:
+        return fc
+    return pd.DataFrame()
+
+
+def _scale_day_predictions_to_total(frame: pd.DataFrame, target_total: float) -> pd.DataFrame:
+    """Skaluje godzinówkę tak, by suma = oficjalny outlook (kształt dnia z replay)."""
+    out = frame.copy()
+    raw_sum = float(out['predicted_kwh'].sum())
+    if raw_sum <= 0 or target_total <= 0:
+        return out
+    if abs(raw_sum - target_total) <= 0.05:
+        return out
+    factor = target_total / raw_sum
+    out['predicted_kwh'] = out['predicted_kwh'] * factor
+    return out
 
 
 def get_hourly_forecast(predictor, day: str | None = None) -> dict:
@@ -48,8 +60,10 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
         predictions = pd.DataFrame()
         # Dni zamknięte: najpierw poranny snapshot (pełne 6–19), nie dziurawy ensemble
         # z midday/peak ani leftover NWP. Dziś/jutro: żywa inferencja.
+        used_full_daily_archive = False
         if base_date < date.today():
             predictions = _archived_hourly_predictions(target_day)
+            used_full_daily_archive = not predictions.empty
         if predictions.empty:
             # hybrid_today=False (celowo, inaczej niż domyślne True) — ten endpoint zasila
             # WYŁĄCZNIE zakładkę "Prognoza" (wykres godzinowy + "Suma prognozy"), której celem
@@ -65,6 +79,16 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
             # (rekomendacje na Home, mlops/forecast_pv.py archiwizujący 05:00/12:00/16:00) mają
             # OSOBNE wywołania i nie są tym dotknięte.
             predictions = predictor.predict_days(days_ahead=1, from_date=base_date, hybrid_today=False)
+        if not used_full_daily_archive and base_date < date.today():
+            from src.models.forecast_validation import official_day_outlook_total
+
+            official_total = official_day_outlook_total(target_day)
+            if official_total is not None and not predictions.empty:
+                mask = predictions['day'].astype(str) == target_day
+                predictions = predictions.copy()
+                predictions.loc[mask, :] = _scale_day_predictions_to_total(
+                    predictions.loc[mask], official_total,
+                )
     except (ValueError, KeyError) as exc:
         raise ApiError(422, 'FORECAST_NO_WEATHER_DATA', f'Brak danych pogodowych dla {target_day}: {exc}') from exc
 

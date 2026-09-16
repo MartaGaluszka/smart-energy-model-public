@@ -67,7 +67,7 @@ Kontekst launchd: **12.09** brak Porannej (flock/bash) · **morning-hold + fix**
 ## Co dalej
 
 1. Nic nie zmieniać w launchd / primary (RF16 + ENS).  
-2. Closeout **12.09** — do wieczornego ticku.  
+2. ~~Closeout **12.09**~~ — **OK** · wykresy walidacji odświeżone **13.09**.  
 3. Kolejny weekly: **niedziela 20.09 ~04:30**.  
 4. Outlook **13.09**: Accu **CS4** reżim vs MB/ENS ~**24** — watch mix ([`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md)).
 

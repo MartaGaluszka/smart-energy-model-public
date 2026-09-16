@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, finalize, map, of, shareReplay, switchMap, tap } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { resolveApiBaseUrl } from './api-base-url';
 
 interface TokenResponse {
   access_token: string;
@@ -26,7 +26,7 @@ const DEMO_PASSWORD = 'demo12345678';
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly baseUrl = environment.apiBaseUrl;
+  private readonly baseUrl = resolveApiBaseUrl();
   /** In-flight login/register — NIE cache'ujemy porażki (API chwilowo down → demo forever). */
   private sessionInFlight$: Observable<string | null> | null = null;
 

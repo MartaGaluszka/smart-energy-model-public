@@ -14,26 +14,25 @@
     <!-- Nawigacja dnia: zawsze widać datę dd.mm; „Dziś” tylko jako skok wstecz gdy nie jesteśmy na dziś -->
     <div class="se-day-nav">
       <ion-button
+        class="se-day-nav__btn"
         fill="clear"
         size="small"
         [disabled]="!state.canGoPrev"
         (click)="prevDay()"
         aria-label="Poprzedni dzień"
       >
-        <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+        <ion-icon slot="icon-only" name="chevron-back-outline" aria-hidden="true"></ion-icon>
       </ion-button>
-      <span
-        class="se-day-nav__label"
-        [class.se-day-nav__label--today]="selectedIsToday"
-      >{{ dayNavLabel }}</span>
+      <span class="se-day-nav__label">{{ dayNavLabel }}</span>
       <ion-button
+        class="se-day-nav__btn"
         fill="clear"
         size="small"
         [disabled]="!state.canGoNext"
         (click)="nextDay()"
         aria-label="Następny dzień"
       >
-        <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+        <ion-icon slot="icon-only" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
       </ion-button>
       <ion-button
         *ngIf="!selectedIsToday"
@@ -137,13 +136,9 @@
       <span>Prognoza vs rzeczywistość</span>
     </div>
 
-    <ion-card class="se-card" *ngIf="!state.loading && !state.daily.length">
-      <ion-card-content>
-        <p class="se-demo-note se-demo-note--in-card">{{ emptyDayNote }}</p>
-      </ion-card-content>
-    </ion-card>
-
-    <ng-container *ngIf="state.daily.length">
+    <!-- Zawsze 3 zakładki (Poranna / Południowa / Popołudniowa) — niezależnie od tego,
+         ile runów zwróciło API; brak danych = pusty stan per zakładka. -->
+    <ng-container *ngIf="!state.loading">
       <ion-segment
         class="se-run-seg"
         [value]="selectedRunLabel"

@@ -15,6 +15,17 @@ cd "$PROJECT_ROOT"
 mkdir -p "${PROJECT_ROOT}/logs"
 
 # shellcheck source=/dev/null
+source "${PROJECT_ROOT}/mlops/_lock.sh"
+if ! mlops_acquire_lock "${PROJECT_ROOT}/logs/.weekly_train.lockd"; then
+  echo "⚠️  weekly train już trwa — pomijam"
+  exit 0
+fi
+
+# shellcheck source=/dev/null
+source "${PROJECT_ROOT}/mlops/_network.sh"
+mlops_wait_for_network 8
+
+# shellcheck source=/dev/null
 source "${PROJECT_ROOT}/mlops/_venv.sh"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/mpl}"
 export MPLBACKEND=Agg
@@ -38,6 +49,8 @@ echo ""
 echo "--- [3/3] XGB+TS shadow → pv_hourly_model_xgb_ts.joblib ---"
 "$PYTHON" "${PROJECT_ROOT}/scripts/train/train_xgb_ts_shadow.py" \
   --model-path models/pv_hourly_model_xgb_ts.joblib
+
+date '+%Y-%m-%d' > "${PROJECT_ROOT}/logs/.weekly_train_ok"
 
 echo ""
 echo "✅ Train OK | produkcja RF 16 + shadow CS4 + shadow XGB+TS"

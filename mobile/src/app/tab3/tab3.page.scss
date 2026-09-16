@@ -8,23 +8,39 @@
   justify-content: center;
   gap: 4px;
   margin: 6px 0 2px;
+
+  ion-button.se-day-nav__btn {
+    --color: var(--solar-pressed);
+    --background: transparent;
+    --background-hover: transparent;
+    --background-focused: transparent;
+    --background-activated: rgba(201, 134, 10, 0.12);
+    --ripple-color: rgba(201, 134, 10, 0.2);
+    margin: 0;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 20px;
+  }
+
+  ion-button.se-day-nav__btn.button-disabled,
+  ion-button.se-day-nav__btn[disabled] {
+    --color: var(--solar-pressed);
+    opacity: 0.35;
+  }
 }
 
 .se-day-nav__label {
   min-width: 96px;
   text-align: center;
   font-weight: 600;
-  color: var(--text);
   font-size: 14px;
-
-  &--today {
-    color: var(--solar-pressed);
-  }
+  color: var(--solar-pressed);
 }
 
 .se-day-nav__today-btn {
   --color: var(--solar-pressed);
   font-size: 12px;
+  font-weight: 600;
   margin-left: 4px;
 }
 

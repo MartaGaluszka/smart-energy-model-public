@@ -47,6 +47,7 @@ class Settings(BaseSettings):
 
     # 127.0.0.1 ≠ localhost dla przeglądarki/WebView (Origin) — live-reload skryptu
     # run-ios-simulator.sh serwuje na 127.0.0.1:8100, więc bez tego wpisu CORS → offline/demo.
+    # LAN (192.168/10/172.16) pokrywa allow_origin_regex w api/main.py (iOS Simulator).
     CORS_ORIGINS: str = (
         'http://localhost:8100,http://127.0.0.1:8100,'
         'http://localhost,http://127.0.0.1,'
