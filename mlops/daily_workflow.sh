@@ -27,6 +27,17 @@ cd "$PROJECT_ROOT"
 LOG_DIR="${PROJECT_ROOT}/logs"
 mkdir -p "$LOG_DIR"
 
+# shellcheck source=/dev/null
+source "${PROJECT_ROOT}/mlops/_lock.sh"
+if ! mlops_acquire_lock "${LOG_DIR}/.daily_workflow.lockd"; then
+  echo "⚠️  daily_workflow już trwa — pomijam"
+  exit 0
+fi
+
+# shellcheck source=/dev/null
+source "${PROJECT_ROOT}/mlops/_network.sh"
+mlops_wait_for_network 12
+
 TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
 echo "======================================================================"
@@ -67,13 +78,13 @@ fi
 
 run_pv_forecast_stack daily
 
-run_step "Bateria — poranek (tanio do 6:00 / prognoza PV)" \
+run_soft "Bateria — poranek (tanio do 6:00 / prognoza PV)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/battery_advisor_report.py" --context morning
 
-run_step "Sugestie baterii → notifications (T4.20)" \
+run_soft "Sugestie baterii → notifications (T4.20)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/generate_battery_suggestions.py" --context morning
 
-run_step "Bateria — plan sterowania (dry-run)" \
+run_soft "Bateria — plan sterowania (dry-run)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/foxess_control.py" --context morning
 
 echo ""

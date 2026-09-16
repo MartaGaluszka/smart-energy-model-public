@@ -6,6 +6,7 @@
 #   ./mlops/install_launchd.sh --status  # status
 #   ./mlops/install_launchd.sh --remove
 #   ./mlops/install_launchd.sh --test-daily   # natychmiastowy test joba 5:00
+#   ./mlops/install_launchd.sh --schedule-wake  # sudo: budź Maca 04:15 (przed train/daily)
 
 set -euo pipefail
 
@@ -22,11 +23,12 @@ LABELS=(
   "pl.smart-energy-model.peak"
   "pl.smart-energy-model.evening"
   "pl.smart-energy-model.evening-dynamic"
+  "pl.smart-energy-model.morning-hold"
   "pl.smart-energy-model.train"
 )
 
 usage() {
-  echo "Użycie: $0 [--status|--remove|--test-daily]"
+  echo "Użycie: $0 [--status|--remove|--test-daily|--schedule-wake]"
 }
 
 render_plist() {
@@ -53,6 +55,8 @@ install_launchd() {
     "${PROJECT_ROOT}/mlops/peak_arrival.sh" \
     "${PROJECT_ROOT}/mlops/evening_closeout.sh" \
     "${PROJECT_ROOT}/mlops/evening_closeout_dynamic.sh" \
+    "${PROJECT_ROOT}/mlops/catchup_missed_runs.sh" \
+    "${PROJECT_ROOT}/mlops/morning_hold.sh" \
     "${PROJECT_ROOT}/mlops/forecast_cs4_shadow.sh" \
     "${PROJECT_ROOT}/mlops/forecast_xgb_ts_shadow.sh" \
     "${PROJECT_ROOT}/mlops/train_dual_weekly.sh"
@@ -77,10 +81,12 @@ install_launchd() {
   echo "   05:00 codziennie  → daily_workflow.sh (16 + CS4 + XGB+TS)"
   echo "   12:00 codziennie  → midday_forecast.sh (16 + CS4 + XGB+TS)"
   echo "   16:00 codziennie  → peak_arrival.sh (16 + CS4 + XGB+TS)"
-  echo "   co 10 min         → evening_closeout_dynamic.sh (domyka dzień ~30 min po zachodzie słońca — zmienne latem/zimą)"
+  echo "   co 10 min         → evening_closeout_dynamic.sh (closeout + catch-up daily/train po śnie/DNS)"
   echo "   22:42 codziennie  → evening_closeout.sh (siatka bezpieczeństwa, gdyby dynamiczny nie zadziałał)"
+  echo "   04:15 codziennie  → morning_hold.sh (nie usypiaj + sam train 04:30 nd + daily 05:00)"
   echo "   04:30 niedziela   → train_dual_weekly.sh (retrening 16 + CS4 + XGB+TS; przed daily 05:00)"
   echo ""
+  echo "Budzenie śpiącego Maca (hasło admina): $0 --schedule-wake"
   echo "Logi: ${LOG_DIR}/cron.log"
   echo "Status: $0 --status"
 }
@@ -114,10 +120,22 @@ test_daily() {
   echo "✅ OK — sprawdź: tail -30 ${LOG_DIR}/cron.log"
 }
 
+schedule_wake() {
+  echo "Ustawiam powtarzane budzenie: codziennie 04:15 (przed train 04:30 i daily 05:00)."
+  echo "Mac i tak usypia po 1 min bezczynności — bez tego job o 04:15 nie wstanie ze snu."
+  sudo pmset repeat wakeorpoweron MTWRFSU 04:15:00
+  echo ""
+  echo "Opcjonalnie (zalecane na zasilaniu — ekran może gasnąć, system nie):"
+  echo "  sudo pmset -c sleep 0"
+  echo ""
+  pmset -g sched
+}
+
 case "${1:-}" in
   --status) show_status ;;
   --remove) remove_launchd ;;
   --test-daily) test_daily ;;
+  --schedule-wake) schedule_wake ;;
   --help|-h) usage ;;
   "") install_launchd ;;
   *) usage; exit 1 ;;

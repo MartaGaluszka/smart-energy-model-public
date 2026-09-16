@@ -1,6 +1,8 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { RefresherCustomEvent, ViewWillEnter } from '@ionic/angular';
 import { Chart, registerables } from 'chart.js';
+import { addIcons } from 'ionicons';
+import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
 import { Subscription } from 'rxjs';
 import { ForecastValidationDailyRow, ForecastValidationHourlyRow } from '../services/api.service';
 import { ForecastDataService, ForecastState } from '../services/forecast-data.service';
@@ -110,7 +112,9 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
   /** Domyślnie wg godziny zegara; użytkownik może przełączyć ręcznie. */
   selectedRunLabel: string = defaultRunLabelForHour();
 
-  constructor(private readonly forecastData: ForecastDataService) {}
+  constructor(private readonly forecastData: ForecastDataService) {
+    addIcons({ chevronBackOutline, chevronForwardOutline });
+  }
 
   ngAfterViewInit(): void {
     this.sub = this.forecastData.getState().subscribe((state) => {
@@ -180,11 +184,11 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
     if (!formatted) return '…';
     const day = this.normalizedDay(this.state.day);
     const today = todayIsoLocal();
-    if (day === today) return `Dziś · ${formatted}`;
+    if (day === today) return `Dziś - ${formatted}`;
     const jutro = shiftIsoDate(today, 1);
     const pojutrze = shiftIsoDate(today, MAX_FUTURE_DAYS);
-    if (day === jutro) return `Jutro · ${formatted}`;
-    if (day === pojutrze) return `Pojutrze · ${formatted}`;
+    if (day === jutro) return `Jutro - ${formatted}`;
+    if (day === pojutrze) return `Pojutrze - ${formatted}`;
     return formatted;
   }
 

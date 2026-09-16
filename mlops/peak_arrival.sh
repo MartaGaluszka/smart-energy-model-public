@@ -44,13 +44,13 @@ fi
 
 run_pv_forecast_stack peak
 
-run_step "Bateria — szczyt wieczorny 16–22" \
+run_soft "Bateria — szczyt wieczorny 16–22" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/battery_advisor_report.py" --context peak
 
-run_step "Sugestie baterii → notifications (T4.20)" \
+run_soft "Sugestie baterii → notifications (T4.20)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/generate_battery_suggestions.py" --context peak
 
-run_step "Bateria — plan sterowania (dry-run)" \
+run_soft "Bateria — plan sterowania (dry-run)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/foxess_control.py" --context peak
 
 echo "=== Peak arrival OK ==="

@@ -20,6 +20,21 @@ _ensemble_primary_enabled() {
   esac
 }
 
+# Shadow / routing nie mogą skasować primary (DNS o 05:00).
+run_soft() {
+  local label="$1"
+  shift
+  echo ""
+  echo "--- ${label} ---"
+  if "$@"; then
+    echo "✓ ${label} — OK"
+    return 0
+  fi
+  local code=$?
+  echo "⚠️  ${label} — błąd (kod ${code}) — kontynuuję" >&2
+  return 0
+}
+
 # $1 = run label bazowy (daily|midday|peak)
 run_pv_forecast_stack() {
   local label="${1:?run label}"
@@ -28,17 +43,23 @@ run_pv_forecast_stack() {
 
   if _ensemble_primary_enabled; then
     echo "★ ENSEMBLE_PRIMARY=1 — ICON+UKMO = primary, ICON = shadow"
-    run_step "Prognoza ICON (shadow)" \
+    run_soft "Prognoza ICON (shadow)" \
       bash "${root}/mlops/forecast_icon_shadow.sh" "${label}"
 
-    run_step "Prognoza CS4 (shadow)" \
+    run_soft "Prognoza CS4 (shadow)" \
       bash "${root}/mlops/forecast_cs4_shadow.sh" "${label}"
 
-    run_step "Prognoza XGB+TS (shadow)" \
+    run_soft "Prognoza XGB+TS (shadow)" \
       bash "${root}/mlops/forecast_xgb_ts_shadow.sh" "${label}"
 
-    run_step "Sync pogody ensemble ICON+UKMO" \
-      "$python_bin" "${root}/mlops/sync_ensemble_weather.py"
+    # DNS o 05:00 nie może skasować Porannej: primary idzie z cache ensemble, jeśli sync padnie.
+    echo ""
+    echo "--- Sync pogody ensemble ICON+UKMO ---"
+    if "$python_bin" "${root}/mlops/sync_ensemble_weather.py"; then
+      echo "✓ Sync pogody ensemble ICON+UKMO — OK"
+    else
+      echo "⚠️  Sync ensemble nie powiódł się — primary z cache weather_data" >&2
+    fi
 
     run_step "Prognoza PV PRIMARY (ensemble)" \
       env WEATHER_FORECAST_SOURCE_LIKE='%ensemble%' \
@@ -52,16 +73,16 @@ run_pv_forecast_stack() {
     run_step "Prognoza PV + harmonogram urządzeń (ICON primary)" \
       "$python_bin" "${root}/mlops/forecast_pv.py" --days 3 --top 5 --run-label "${label}"
 
-    run_step "Prognoza CS4 (shadow)" \
+    run_soft "Prognoza CS4 (shadow)" \
       bash "${root}/mlops/forecast_cs4_shadow.sh" "${label}"
 
-    run_step "Prognoza XGB+TS (shadow)" \
+    run_soft "Prognoza XGB+TS (shadow)" \
       bash "${root}/mlops/forecast_xgb_ts_shadow.sh" "${label}"
 
-    run_step "Prognoza ensemble ICON+UKMO (shadow)" \
+    run_soft "Prognoza ensemble ICON+UKMO (shadow)" \
       bash "${root}/mlops/forecast_ensemble_shadow.sh" "${label}"
   fi
 
-  run_step "Routing pick (shadow porównanie ENS vs CS4)" \
+  run_soft "Routing pick (shadow porównanie ENS vs CS4)" \
     "$python_bin" "${root}/scripts/analysis/routing_decision.py" --date today --also-next 2
 }

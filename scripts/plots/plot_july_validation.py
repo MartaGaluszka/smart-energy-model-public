@@ -287,12 +287,33 @@ def build_july_error_summary(
             if pd.notna(r.ape_raw_morning)
         )
     )
+    mid_valid = m[m['ape_raw_midday'].notna()]
+    if not mid_valid.empty:
+        worst_mid = mid_valid.nlargest(3, 'ape_raw_midday')
+        lines.append(
+            '- **Najgorszy raw 12:00:** '
+            + ', '.join(
+                f"{_fmt_day(r.target_day)} ({r.ape_raw_midday:.1f}% · {r.weather_type}, "
+                f"actual {r.actual_pv_total:.1f} kWh)"
+                for r in worst_mid.itertuples()
+            )
+        )
+        rec = mid_valid.loc[mid_valid['ape_raw_midday'].idxmax()]
+        lines.append(
+            f'- **Rekord |APE| (cała seria 14.07–{ _fmt_day(m["target_day"].max()) }):** '
+            f'**{_fmt_day(rec.target_day)}** raw 12:00 **{rec.ape_raw_midday:.1f}%** '
+            f'(Fox **{rec.actual_pv_total:.1f}** kWh vs prognoza midday '
+            f'**{getattr(rec, "predicted_midday_raw", getattr(rec, "predicted_midday", float("nan"))):.1f}** kWh) — '
+            f'wyżej niż dotychczasowy outlier **25.08** (152,7% midday). '
+            f'Accu reżim **CS4** OK; miss = poziom kWh, nie klasyfikacja.'
+        )
     lines.append('')
     lines.append(
         '- **Wzorzec:** na dniach **jasnych / wysokiej produkcji** raw bywa lekko **za niski** '
         '(NWP za chmurny vs Accu) — błąd umiarkowany w %, duży w kWh. '
-        'Na dniach **słabych / burzowych** raw często **zawyża** — wtedy |APE| % bywa największy. '
-        'Od **02.09** primary to **ENS (ICON+UKMO)** zamiast ICON solo — ten sam RF16, inna pogoda.'
+        'Na dniach **słabych / burzowych** raw często **zawyża** — wtedy |APE| % eksploduje przy '
+        'niskim Fox (**11.09** rekord **174,8%**; wcześniej klasa **25.08** ~153%). '
+        'Od **02.09** primary to **ENS (ICON+UKMO)** — ten sam RF16, inna pogoda.'
     )
     lines.append('')
 
@@ -421,7 +442,14 @@ def build_july_error_summary(
                 f'(raw 5:00 {r.ape_raw_morning:.1f}%)'
             )
         else:
-            recent_parts.append(_fmt_day(r.target_day))
+            mid = getattr(r, 'ape_raw_midday', float('nan'))
+            if pd.notna(mid):
+                recent_parts.append(
+                    f'{_fmt_day(r.target_day)} **{r.actual_pv_total:.1f}** '
+                    f'(brak daily @05; raw 12:00 {mid:.1f}%)'
+                )
+            else:
+                recent_parts.append(_fmt_day(r.target_day))
     recent = ', '.join(recent_parts)
     lines.append(
         f'- Zakres closeoutów: **{_fmt_day(m.target_day.min())}–{_fmt_day(m.target_day.max())}** '
@@ -448,6 +476,25 @@ def build_july_error_summary(
             f'{icon_dual["ape_raw_midday"].mean():.1f}%**.'
         )
     lines.append(f'- Ostatnie closeouty (actual · |APE| raw 5:00): {recent}.')
+    lines.append('')
+    lines.append('#### Jak czytać PNG')
+    lines.append('')
+    lines.append(
+        '- **`july_validation_plot.png`:** góra = kWh dnia (czarne = FoxESS; niebieski = raw 5:00; '
+        'pomarańczowy = raw 12:00; fiolet/czerwień = hybryda). Dół = **|APE| %** — wysoki słupek '
+        'to dzień, w którym model był daleko od faktu (zwykle słaby / deszczowy).'
+    )
+    lines.append(
+        '- **`production_validation_plot.png`:** góra = tylko **5:00** (raw ≈ hybryda, mało FoxESS). '
+        'Dół = 5:00 i 12:00 razem. Tło od **02.09** = **ENS (ICON+UKMO)**.'
+    )
+    lines.append(
+        '- Dni **bez Porannej @05** (launchd / Mac spał) nie mają niebieskiej kropki 5:00 — '
+        'oceniaj po **pomarańczowej** (12:00) lub **Popołudniowej** w app. **|APE| %** na '
+        'bardzo niskim Fox (2–5 kWh) bywa ogromny przy błędzie kilku kWh — **11.09** to '
+        '**najwyższy słupek |APE| w całej serii** (**174,8%** raw 12:00; wcześniejszy rekord '
+        '**25.08** ~153%). Kontrast **12.09**: Fox **13,1** vs midday **13,47** (**−2,8%**).'
+    )
     lines.append('')
     return '\n'.join(lines)
 

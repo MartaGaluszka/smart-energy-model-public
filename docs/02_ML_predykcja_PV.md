@@ -427,15 +427,31 @@ Skrypt: [`scripts/plots/plot_production_accuracy.py`](../scripts/plots/plot_prod
 
 ![Weryfikacja produkcyjna](images/ml/production_validation.png)
 
-**Raw vs hybryda dnia** (closeouty launchd **14.07–05.09**; od **02.09** tło ENS primary):
+**Raw vs hybryda dnia** — closeouty launchd **14.07–12.09** (n=**61**); od **02.09** tło **ENS primary**.  
+**Odświeżenie wykresów:** **13.09.2026** (po closeoucie **12.09**).
 
-| Plik | Skrypt |
-|------|--------|
-| [`july_validation_plot.png`](images/ml/july_validation_plot.png) | `scripts/plots/plot_july_validation.py` |
-| [`production_validation_plot.png`](images/ml/production_validation_plot.png) | `scripts/plots/plot_production_validation.py` |
+![Walidacja closeoutów: kWh + |APE| %](images/ml/july_validation_plot.png)
+
+| Plik | Panel górny | Panel dolny | Skrypt |
+|------|-------------|-------------|--------|
+| [`july_validation_plot.png`](images/ml/july_validation_plot.png) | **Czarne** = FoxESS (actual) · **niebieski** = raw RF **5:00** · **pomarańczowy** = raw **12:00** · fiolet/czerwień = hybryda dnia | **|APE| %** = \|actual − prognoza\| / actual — wysoki słupek = dzień słaby/deszczowy lub outlier (np. **11.09**) | `plot_july_validation.py` |
+| [`production_validation_plot.png`](images/ml/production_validation_plot.png) | Tylko prognoza **5:00** (raw ≈ hybryda — przed wschodem mało FoxESS) | **5:00 + 12:00** razem; tło zielone od **02.09** = era **ENS (ICON+UKMO)** | `plot_production_validation.py` |
+
+**Legenda er na osi X:** pionowe linie = **ICON** od 18.07 · **kalibracja dual** od 26.07 · **ENS primary** od 02.09.
+
+**Ostatnie closeouty (operacyjnie):**
+
+| Dzień | Fox actual | Prognoza (raw) | \|APE\| | Uwaga |
+|-------|----------:|---------------:|--------:|-------|
+| **10.09** | **18,8** | peak **18,31** | **−2,6%** | brak Porannej @05 |
+| **11.09** | **3,1** | midday **8,52** | **+174,8%** | **rekord |APE|** w całej serii (14.07–12.09); Accu **CS4** reżim OK, miss = kWh |
+| **12.09** | **13,1** | midday **13,47** · peak **11,94** | **−2,8%** / **+0,7%** | brak Porannej @05; Accu **CS4** ✓ · PM słońce |
+
+**MAPE er (raw):** dual ICON **27.07–01.09** n=37 → **15,6% / 15,8%** · ENS **02.09–12.09** n=11 → **9,2% / 24,3%** (12:00 podbija **11.09**) · całość **14.07–12.09** → **16,9% / 18,5%**.
 
 - **Raw** = sam RF na cały dzień · **Hybryda** = FoxESS (minione) + RF (przyszłe) — **nie** `FORECAST_OPERATIONAL_ADJUST`
-- Regeneracja: `MPLBACKEND=Agg PYTHONPATH=$PWD python scripts/plots/plot_july_validation.py` (i analogicznie `plot_production_validation.py`)
+- Regeneracja: `MPLBACKEND=Agg PYTHONPATH=$PWD python scripts/analysis/refresh_notebook05_report.py`
+- Pełna analiza błędów (pogoda, hybryda, tabele MAPE): [`july_validation_summary.md`](images/ml/july_validation_summary.md)
 
 ### 5.3 Automatyzacja — launchd (zalecane na macOS)
 
@@ -550,8 +566,9 @@ python mlops/forecast_pv.py --days 3 --sync --top 5
 | `data/processed/academic_evaluation_metrics.csv` | Metryki wykresów akademickich (4 fazy) |
 | `images/ml/calendar_ablation_comparison.png` | Kalendarz vs Pogoda+Słońce vs Produkcja |
 | `images/ml/production_validation.png` | Predykcja vs FoxESS (operacyjnie, VI → **23.07**) |
-| `images/ml/july_validation_plot.png` | Lipiec: actual vs **raw** / **hybryda** (5:00 i 12:00) |
-| `images/ml/production_validation_plot.png` | Od 14.07: stabilność raw vs hybryda |
+| `images/ml/july_validation_plot.png` | Closeouty **14.07–12.09** (n=61): góra kWh, dół \|APE\| % · odświeżone **13.09** |
+| `images/ml/production_validation_plot.png` | Góra **5:00**, dół 5:00+12:00 · tło ENS od **02.09** · do **12.09** |
+| `images/ml/july_validation_summary.md` | Opis błędów: pogoda, hybryda, MAPE er, ostatnie dni (**12.09** −2,8%) |
 | `images/ml/monthly_model_comparison.png` | Porównanie modeli — MAE miesięczne *(archiwum)* |
 | `prediction_vs_actual_train_vs_holdout.png` | Porównanie modeli (TRAIN \| HOLDOUT; ★ RF na holdoucie) |
 | `prediction_vs_actual_deployed_train_vs_holdout.png` | (artefakt opcjonalny — nie w narracji prezentacji; ★ RF już na wykresie porównania) |

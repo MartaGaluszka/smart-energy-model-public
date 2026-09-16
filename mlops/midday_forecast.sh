@@ -45,13 +45,13 @@ fi
 
 run_pv_forecast_stack midday
 
-run_step "Bateria — przed oknem tanio 13:00–15:00" \
+run_soft "Bateria — przed oknem tanio 13:00–15:00" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/battery_advisor_report.py" --context pre_cheap
 
-run_step "Sugestie baterii → notifications (T4.20)" \
+run_soft "Sugestie baterii → notifications (T4.20)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/generate_battery_suggestions.py" --context pre_cheap
 
-run_step "Bateria — plan sterowania (dry-run)" \
+run_soft "Bateria — plan sterowania (dry-run)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/foxess_control.py" --context pre_cheap
 
 echo "=== Midday refresh OK ==="

@@ -23,6 +23,10 @@ mkdir -p "${PROJECT_ROOT}/logs"
 # shellcheck source=/dev/null
 source "${PROJECT_ROOT}/mlops/_venv.sh"
 
+# Nadrób daily / weekly train, jeśli Mac spał o 05:00 albo DNS urwał Poranną.
+# exit 0 zawsze — closeout nie zależy od catch-up.
+"${PROJECT_ROOT}/mlops/catchup_missed_runs.sh" || true
+
 # Margines po zachodzie słońca — patrz decyzja w docs/ZADANIA_IMPLEMENTACJA_MOBILNA.md (T1.17):
 # 30 min, nie 15 — bufor na resztkową produkcję o zmierzchu + opóźnienie sync FoxESS.
 MARGIN_MINUTES="${EVENING_CLOSEOUT_MARGIN_MINUTES:-30}"

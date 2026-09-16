@@ -6,14 +6,16 @@ Metryka: **|APE| %** = `|actual − prognoza| / actual × 100`. Pogoda: średnie
 
 | Typ dnia (cloud) | n | MAPE raw 5:00 | MAPE raw 12:00 | Dni |
 |---|---:|---:|---:|---|
-| słoneczny / mało chmur | 12 | 6.5% | 6.0% | 20.07, 26.07, 30.07, 04.08, 05.08, 06.08, 09.08, 12.08, 13.08, 14.08, 15.08, 27.08 |
-| mieszany | 18 | 12.0% | 14.1% | 16.07, 17.07, 25.07, 28.07, 29.07, 31.07, 03.08, 08.08, 16.08, 20.08, 22.08, 23.08, 24.08, 28.08, 29.08, 30.08, 01.09, 02.09 |
-| pochmurny / deszczowy | 24 | 26.7% | 23.6% | 14.07, 15.07, 18.07, 19.07, 21.07, 22.07, 23.07, 24.07, 27.07, 01.08, 02.08, 07.08, 10.08, 11.08, 17.08, 18.08, 19.08, 21.08, 25.08, 26.08, 31.08, 03.09, 04.09, 05.09 |
+| słoneczny / mało chmur | 14 | 6.8% | 6.8% | 20.07, 26.07, 30.07, 04.08, 05.08, 06.08, 09.08, 12.08, 13.08, 14.08, 15.08, 27.08, 08.09, 09.09 |
+| mieszany | 19 | 12.4% | 14.0% | 16.07, 17.07, 25.07, 28.07, 29.07, 31.07, 03.08, 08.08, 16.08, 20.08, 22.08, 23.08, 24.08, 28.08, 29.08, 30.08, 01.09, 02.09, 06.09 |
+| pochmurny / deszczowy | 28 | 25.9% | 27.3% | 14.07, 15.07, 18.07, 19.07, 21.07, 22.07, 23.07, 24.07, 27.07, 01.08, 02.08, 07.08, 10.08, 11.08, 17.08, 18.08, 19.08, 21.08, 25.08, 26.08, 31.08, 03.09, 04.09, 05.09, 07.09, 10.09, 11.09, 12.09 |
 
 - **Najtrafniejszy raw 5:00:** 30.07 (0.6% · słoneczny / mało chmur, cloud~31%, actual 33.5 kWh), 03.08 (0.7% · mieszany, cloud~48%, actual 33.5 kWh), 05.08 (1.2% · słoneczny / mało chmur, cloud~9%, actual 34.9 kWh)
 - **Najgorszy raw 5:00:** 25.08 (149.8% · pochmurny / deszczowy, cloud~100%, actual 4.5 kWh), 24.07 (100.7% · pochmurny / deszczowy, cloud~86%, actual 10.7 kWh), 15.07 (59.5% · pochmurny / deszczowy, cloud~94%, actual 10.9 kWh)
+- **Najgorszy raw 12:00:** 11.09 (174.8% · pochmurny / deszczowy, actual 3.1 kWh), 25.08 (152.7% · pochmurny / deszczowy, actual 4.5 kWh), 24.07 (79.7% · pochmurny / deszczowy, actual 10.7 kWh)
+- **Rekord |APE| (cała seria 14.07–12.09):** **11.09** raw 12:00 **174.8%** (Fox **3.1** kWh vs prognoza midday **8.5** kWh) — wyżej niż dotychczasowy outlier **25.08** (152,7% midday). Accu reżim **CS4** OK; miss = poziom kWh, nie klasyfikacja.
 
-- **Wzorzec:** na dniach **jasnych / wysokiej produkcji** raw bywa lekko **za niski** (NWP za chmurny vs Accu) — błąd umiarkowany w %, duży w kWh. Na dniach **słabych / burzowych** raw często **zawyża** — wtedy |APE| % bywa największy. Od **02.09** primary to **ENS (ICON+UKMO)** zamiast ICON solo — ten sam RF16, inna pogoda.
+- **Wzorzec:** na dniach **jasnych / wysokiej produkcji** raw bywa lekko **za niski** (NWP za chmurny vs Accu) — błąd umiarkowany w %, duży w kWh. Na dniach **słabych / burzowych** raw często **zawyża** — wtedy |APE| % eksploduje przy niskim Fox (**11.09** rekord **174,8%**; wcześniej klasa **25.08** ~153%). Od **02.09** primary to **ENS (ICON+UKMO)** — ten sam RF16, inna pogoda.
 
 #### Kiedy hybryda dnia pomaga, a kiedy szkodzi
 
@@ -21,7 +23,7 @@ Porównanie **midday (12:00)**: hybryda = FoxESS na minione godziny + RF na resz
 
 - **Hybryda pomaga (12:00):** 18.07 (↓14.1 pp, pochmurny / deszczowy); 21.07 (↓18.9 pp, pochmurny / deszczowy); 23.07 (↓10.8 pp, pochmurny / deszczowy); 24.07 (↓55.0 pp, pochmurny / deszczowy)
 - **Hybryda szkodzi (12:00):** 20.07 (↑13.2 pp, słoneczny / mało chmur); 22.07 (↑11.2 pp, pochmurny / deszczowy); 25.07 (↑16.7 pp, mieszany); 28.07 (↑11.3 pp, mieszany); 29.07 (↑13.4 pp, mieszany)
-- **Remis / szum (<1 pp):** 14.07, 15.07, 16.07, 17.07, 19.07, 26.07, 27.07, 30.07, 31.07, 01.08, 02.08, 03.08, 04.08, 05.08, 06.08, 07.08, 08.08, 09.08, 10.08, 11.08, 12.08, 13.08, 14.08, 15.08, 16.08, 17.08, 18.08, 19.08, 20.08, 21.08, 22.08, 23.08, 24.08, 25.08, 26.08, 27.08, 28.08, 29.08, 30.08, 31.08, 01.09, 02.09, 03.09, 04.09, 05.09
+- **Remis / szum (<1 pp):** 14.07, 15.07, 16.07, 17.07, 19.07, 26.07, 27.07, 30.07, 31.07, 01.08, 02.08, 03.08, 04.08, 05.08, 06.08, 07.08, 08.08, 09.08, 10.08, 11.08, 12.08, 13.08, 14.08, 15.08, 16.08, 17.08, 18.08, 19.08, 20.08, 21.08, 22.08, 23.08, 24.08, 25.08, 26.08, 27.08, 28.08, 29.08, 30.08, 31.08, 01.09, 02.09, 03.09, 04.09, 05.09, 06.09, 07.09, 08.09, 09.09, 10.09, 11.09, 12.09
 
 - **O 5:00:** hybryda ≈ raw (pomaga 1 dni / szkodzi 1) — przed wschodem prawie nie ma FoxESS do podmiany.
 
@@ -40,15 +42,21 @@ Podział według **zmian logiki / targetu / cech** (nie każdy niedzielny odświ
 | 14.07–18.07 | przed targetem PVE (skala mieszana; GPS/ICON 17.07) | 5 | 22.8% | 20.6% |
 | 19.07–26.07 | po PVE 18.07 ~16:32 — przed dual 26.07 | 8 | 26.5% | 21.7% |
 | 27.07–01.09 | era dual ICON primary (po 26.07; weekly = odświeżenie wag) | 37 | 15.6% | 15.8% |
-| 02.09–05.09 | era ENS primary (ICON+UKMO; gate 01.09, daily od 02.09) | 4 | 7.7% | 8.4% |
-| 19.07–05.09 | **era PVE łącznie** (bez 14–18) | 49 | **16.8%** | **16.1%** |
+| 02.09–12.09 | era ENS primary (ICON+UKMO; gate 01.09, daily od 02.09) | 11 | 9.2% | 24.3% |
+| 19.07–12.09 | **era PVE łącznie** (bez 14–18) | 56 | **16.3%** | **18.3%** |
 
-_Zakres całość: 14.07–05.09 (54 closeoutów) · MAPE raw 5:00 = **17.3%** · MAPE raw 12:00 = **16.5%**._
+_Zakres całość: 14.07–12.09 (61 closeoutów) · MAPE raw 5:00 = **16.9%** · MAPE raw 12:00 = **18.5%**._
 
-#### Notatka odświeżenia 06.09.2026
+#### Notatka odświeżenia 13.09.2026
 
-- Zakres closeoutów: **14.07–05.09** (n=54). PNG + ten plik wygenerowane **06.09**.
+- Zakres closeoutów: **14.07–12.09** (n=61). PNG + ten plik wygenerowane **13.09**.
 - Linie na wykresie: **ICON** od **18.07** (wdrożenie 17.07 wieczór) · **kalibracja dual** od **26.07** · **ENS primary** od **02.09**.
-- **ENS primary** od **02.09** (gate 01.09, pierwszy daily 5:00) — n=4 closeoutów · MAPE raw **7.7% / 8.4%**.
+- **ENS primary** od **02.09** (gate 01.09, pierwszy daily 5:00) — n=11 closeoutów · MAPE raw **9.2% / 24.3%**.
 - Era dual ICON **27.07–01.09** (n=37): MAPE raw **15.6% / 15.8%**.
-- Ostatnie closeouty (actual · |APE| raw 5:00): 29.08 **21.1** (raw 5:00 1.8%), 30.08 **33.2** (raw 5:00 15.0%), 31.08 **24.6** (raw 5:00 19.7%), 01.09 **32.4** (raw 5:00 9.8%), 02.09 **31.0** (raw 5:00 11.2%), 03.09 **27.5** (raw 5:00 11.6%), 04.09 **18.9** (raw 5:00 6.5%), 05.09 **20.2** (raw 5:00 1.3%).
+- Ostatnie closeouty (actual · |APE| raw 5:00): 05.09 **20.2** (raw 5:00 1.3%), 06.09 **23.4** (raw 5:00 20.0%), 07.09 **26.3** (raw 5:00 5.8%), 08.09 **33.3** (raw 5:00 8.7%), 09.09 **32.2** (raw 5:00 8.2%), 10.09 **18.8** (brak daily @05; raw 12:00 16.6%), 11.09 **3.1** (brak daily @05; raw 12:00 174.8%), 12.09 **13.1** (brak daily @05; raw 12:00 2.8%).
+
+#### Jak czytać PNG
+
+- **`july_validation_plot.png`:** góra = kWh dnia (czarne = FoxESS; niebieski = raw 5:00; pomarańczowy = raw 12:00; fiolet/czerwień = hybryda). Dół = **|APE| %** — wysoki słupek to dzień, w którym model był daleko od faktu (zwykle słaby / deszczowy).
+- **`production_validation_plot.png`:** góra = tylko **5:00** (raw ≈ hybryda, mało FoxESS). Dół = 5:00 i 12:00 razem. Tło od **02.09** = **ENS (ICON+UKMO)**.
+- Dni **bez Porannej @05** (launchd / Mac spał) nie mają niebieskiej kropki 5:00 — oceniaj po **pomarańczowej** (12:00) lub **Popołudniowej** w app. **|APE| %** na bardzo niskim Fox (2–5 kWh) bywa ogromny przy błędzie kilku kWh — **11.09** to **najwyższy słupek |APE| w całej serii** (**174,8%** raw 12:00; wcześniejszy rekord **25.08** ~153%). Kontrast **12.09**: Fox **13,1** vs midday **13,47** (**−2,8%**).
