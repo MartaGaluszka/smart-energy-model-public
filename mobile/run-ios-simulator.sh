@@ -5,6 +5,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 PORT="${MOBILE_DEV_PORT:-8100}"
+if [[ -z "${MOBILE_DEV_HOST:-}" ]]; then
+  MOBILE_DEV_HOST="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)"
+fi
 HOST="${MOBILE_DEV_HOST:-127.0.0.1}"
 TARGET="${IOS_SIMULATOR_TARGET:-}"
 
