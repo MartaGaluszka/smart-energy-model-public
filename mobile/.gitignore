@@ -20,6 +20,7 @@ log.txt
 # Ionic
 /.ionic
 /www
+/src/environments/simulator-api-host.ts
 /platforms
 /plugins
 

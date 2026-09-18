@@ -4,10 +4,11 @@
   "author": "Ionic Framework",
   "homepage": "https://ionicframework.com/",
   "scripts": {
+    "postinstall": "node scripts/ensure-simulator-api-host.mjs",
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "build:sim": "ng build --configuration development",
+    "build:sim": "node scripts/sync-simulator-api-host.mjs && ng build --configuration development",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint"
