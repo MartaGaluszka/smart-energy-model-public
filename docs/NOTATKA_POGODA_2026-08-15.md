@@ -7,6 +7,19 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-17 ~08:19** | **Oneshot** RF I/U **8,9/9,7** ½**9,3≈ENS 9,6** · **18.09** **I 17/U 26** ½**21,7≈ENS 25,5** · **19.09** ICON **24,1** U skip · Accu **CS4/CS4/RF** — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
+| **2026-09-18 ~08:49** | **Closeout 17.09** modele vs Fox **10,2** · ENS **9,64** (5,5%) · ½ **9,31** · **XGB @16 10,31** (1,1%) · archiwum ½ **~10,4** · profil zły/suma OK — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
+| **2026-09-18 ~08:45** | **Oneshot** **18–20** · **18.09** I **18,4** U **26,0** ½ **22,2** vs ENS **24,8** · **19.09** klaster **~26** · **20.09** **~21** mm **2,6** wieczór — [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) |
+| **2026-09-18 ~08:41** | **MB** meteogram+MM+ens **18–20** · **18** mgła→słońce **0 mm** · **19** **100%** słońce · **20** deszcz **~21h** · vs Accu burze/**CS4** **watch** — [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) |
+| **2026-09-18 ~08:40** | Accu **18.09** **4**/ **76%**/ **0,3** burze **33%** mgła **21–10** → **CS4** · **19.09** **8**/ **45%**/0 → **mix→RF** (chmurzej vs **9%**) · **20.09** **4**/ **78%**/0 → **CS4** · Poranna **ENS 24,8 / 25,7 / 19,4** — [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) |
+| **2026-09-17 ~18:08** | **Closeout ~:** Fox **10,2** vs prog **9,22** vs ENS **9,64** (**+5,8%**) · **15h=2,5** · profil ≠ suma — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
+| **2026-09-17 ~16:54** | **Walidacja UI:** Fox **9,1** vs prog **9,22** · **15h=2,5 kWh** (under model godz.) · PM clearing **ratuje** sumę vs południowy dołek — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
+| **2026-09-17 ~14:56** | **Teren:** chwilowe PV **~3,64 kW** (clearing PM nabiera) — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
+| **2026-09-17 ~14:52** | **Teren:** wyszło słońce · **~1,7 kW** chwilowo · MB „clearing PM” częściowo · closeout revize **~7–8** (ENS **9,64** nadal over) — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
+| **2026-09-17 ~13:26** | **Dashboard:** Fox **4,4 kWh** @13 · prognoza UI **9,39** · **12:00** Δ **~0,9** (model **~1,7** vs **0,8**) · outlook dzienny raczej **~6–7** nie **~9,6** — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
+| **2026-09-17 ~08:21** | **Obserwacja dach:** deszcz do **~7:30** · **duże zachmurzenie** · subiektywnie **trudniej niż 14.09** (Fox **10,4**) · ryzyko **≤ ~9–10 kWh** bez PM clearing — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
+| **2026-09-17 ~08:15** | **MB** meteogram+ens+MM **17–19** · **17.09** deszcz AM **~6 mm/h** · **18–19** sucho słońce · **I=U** deszcz dziś · **18** Accu burze vs MB **0 mm watch** — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
+| **2026-09-17 ~08:13** | Accu **17.09** **3**/ **68%/** **1,2** · susza → **CS4** · **18.09** **5**/ **76%/** **1,0** burze **33%** → **CS4** (bez driftu) · **19.09** **9**/ **9%**/0 → **jasny→RF** · Poranna **@05** ENS **9,6/25,5/21,9** — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
 | **2026-09-16 ~10:03** | **MB** MM + ens + meteogram (16–18.09) · **16.09** **26°** sucho · ½ **27,6≈ENS 27,5** · **17.09** deszcz AM **~4 mm/h** · **I=U** · ½ **10,1≈ENS 11,2** · **18.09** **21°** · **U rad skip** · ICON **23,9** vs ENS **26,9** — [`NOTATKA_2026-09-16.md`](NOTATKA_2026-09-16.md) |
 | **2026-09-16 ~09:57** | Accu **16.09** **8**/ **31%**/0 → **mix→RF** (vs **9/14%** jasny) · **17.09** **2**/ **69%/** **1,0** → **CS4** **17°** · **18.09** **5**/ **76%/** **1,0** Pburz33% → **CS4** · brak @05 · catch-up **~06:51** ENS **28,32/10,17/26,69** · closeout **14** CS4 **−0,01%** · **15** **+2,3%** — [`NOTATKA_2026-09-16.md`](NOTATKA_2026-09-16.md) |
 | **2026-09-14 ~10:18** | **MB** MM + ens + meteogram (14–16.09) · **14.09** mokry **19°** gusty **~30** · OM **I≠U** (97/88%) · oneshot ½ **13,6** vs ENS **11,25** · **15.09** słońce PM **20°** · ½ **21,9≈RF** · **16.09** **25°** · ENS **28,08** · **U rad skip** — [`NOTATKA_2026-09-14.md`](NOTATKA_2026-09-14.md) |
@@ -161,6 +174,99 @@ UV: 13.09 = **3** · 14.09 = **2**. Godziny opadów 14.09: **1,5 h**.
 | **14.09** | — (MB deszcz PM) | **3/77%/1,2** P84% Pburz17% | nowy outlook → **CS4** |
 
 **Wniosek:** **13.09** paper **CS4** bez zmian reżimu; ciemniej niż piątek. **14.09** mokry sygnał — zgodne z MB +1 z 11.09. Dzień: [`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md).
+
+---
+
+## Meteoblue — 18.09 ~08:41 (obecny run)
+
+| | 18.09 (dziś) | 19.09 | 20.09 |
+|--|-------------|-------|-------|
+| **Meteogram T** | **~21°** · mgła/chmury rano → **PM słońce** · **0 mm** | **~22°** · słońce · **0 mm** | **~24°** · słońce **AM** → chmury · deszcz **~20h+** |
+| **MM ICON/UKMO** | **słońce** **10–16** (zgoda) | **100%** słońce | słońce **AM** · deszcz **wieczór** |
+| **Ensemble cloud** | **100→~25%** PM · RH **100→45%** | **85→~12%** PM | rosnące **→100%** wieczór |
+| **Poranna ENS/I/C4/XGB** | **24,8 / 20,5 / 19,1 / 21,4** | **25,7 / 25,7 / 24,6 / 25,8** | **19,4 / 19,0 / 17,4 / 16,9** |
+| **Oneshot ½ / U** | **22,2 / 26,0** | **26,5 / 25,7** | **20,8 / 20,8** |
+| **vs Accu** | Accu **CS4** burze vs MB **sucho** | Accu **45%** vs MB **jasno** | Accu **78%** · deszcz MB **PM** |
+
+**Wniosek MB:** **18.09** — **Accu pesymistyczny** (jak **16–17.09 outlook**); **ENS/UKMO ~25** vs reżim **CS4** · **mgła do 10** · **nie** solo ICON **~20**. **19.09** — pełna zgoda **RF** · **~26 kWh**. **20.09** — produkcja **do południa**, wieczór **deszcz** · **ENS ~19**. `weather_notes` `#185`. Dzień: [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md).
+
+---
+
+## Oneshot shadow — 18.09 ~08:45 (18–20.09)
+
+| Dzień | OM I/U cloud · mm | RF×I | RF×U | ½ | **ENS** ld | CS4×I | **XGB** | Accu |
+|-------|-------------------|-----:|-----:|--:|-----------:|------:|--------:|------|
+| **18.09** | **79/57%** · **0** | **18,38** | **25,98** | **22,18** | **24,80** | **20,50** | **21,37** | **CS4** watch |
+| **19.09** | **51/30%** · **0** | **27,25** | **25,70** | **26,47** | **25,73** | **27,26** | **25,84** | **RF** ✓ |
+| **20.09** | **88/88%** · **2,6** | **20,84** | **20,84** | **20,84** | **19,39** | **23,08** | **16,89** | **CS4** watch |
+
+**Wniosek:** **18.09** **I≠U** · **ENS≈U** > **½** > **ICON ld** · **19.09** **I≈U≈ENS**. **20.09** **I=U** · wieczorne mm · CS4 os > ENS ld. CSV gitignored. Dzień: [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md).
+
+---
+
+## AccuWeather — 18.09 ~08:40 (obecny run)
+
+| Dzień | T max | Lumen | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
+|-------|------:|------:|------:|------:|------------------|----------------|--------------|
+| **18.09** pt. | **22°C** | **4** Przyćm. | **76%** | **0,3 mm** | **55%** / **33%** | WSW **9** / **26** | **CS4** · burze · **mgła 21–10** · **susza** |
+| **19.09** sb. | **23°C** | **8** Jasne | **45%** | **0,0 mm** | **3%** / **0%** | WSW **13** / **33** | **mix→RF** · częściowo słonecznie |
+| **20.09** nd. | **24°C** | **4** Przyćm. | **78%** | **0,0 mm** | **6%** / **0%** | WSW **19** / **37** | **CS4** · rosnące zachmurzenie |
+
+### Drift vs Accu 17.09 ~08:13
+
+| Dzień | 17.09 outlook | **18.09 ~08:40** | Werdykt |
+|-------|---------------|------------------|---------|
+| **18.09** | **5 / 76% / 1,0** | **4 / 76% / 0,3** · **0,5 h** | **CS4** · Lumen ↓ · mm ↓ |
+| **19.09** | **9 / 9% / 0** | **8 / 45% / 0** | **mix** · chmurzej |
+| **20.09** | — | **4 / 78% / 0** | **CS4** · nowy |
+
+**Wniosek Accu:** **18.09** paper **CS4** bez zmian reżimu · **ENS ~24,8** (**watch** vs MB sucho). **19.09** nadal **RF**, ale **45%** chmury — **kWh** bliżej **ENS ~26** niż czysty jasny. **20.09** **CS4** + niski **ENS ~19**. `weather_notes` `#182`–`#184`. Dzień: [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md).
+
+---
+
+## AccuWeather — 17.09 ~08:13 (archiwum)
+
+| Dzień | T max | Lumen | Cloud | Opady | P deszcz / burza | Wiatr / porywy | Reżim / opis |
+|-------|------:|------:|------:|------:|------------------|----------------|--------------|
+| **17.09** cz. | **19°C** | **3** Przyćm. | **68%** | **1,2 mm** | **59%** / **12%** | W **11** / **20** | **CS4** · chłodniej · **susza** |
+| **18.09** pt. | **22°C** | **5** Średnie | **76%** | **1,0 mm** | **55%** / **33%** | SW **9** / **24** | **CS4** · burze części obszaru |
+| **19.09** sb. | **23°C** | **9** B. jasne | **9%** | **0,0 mm** | **7%** / **0%** | W **11** / **19** | **jasny→RF** · słonecznie |
+
+### Drift vs Accu 16.09 ~09:57
+
+| Dzień | 16.09 outlook | **17.09 ~08:13** | Werdykt |
+|-------|---------------|------------------|---------|
+| **17.09** | **2 / 69% / 1,0 · 17°** | **3 / 68% / 1,2 · 19°** | **CS4** · cieplej · mm ↑ |
+| **18.09** | **5 / 76% / 1,0 · burze 33%** | **bez zmian** | **CS4** |
+| **19.09** | — | **9 / 9% / 0** | **RF** · nowy dzień w oknie |
+
+**Wniosek Accu:** **17.09** reżim **CS4** zgodny z Poranną (**~8,8–9,6 kWh**). **18.09** Accu nadal pochmurny, ale **ENS ~25** — jak **16.09** outlook na **18.09** (**watch** kWh vs reżim). **19.09** pierwszy **jasny** w horyzoncie · klaster **~20–22**. `weather_notes` `#178`–`#180`. Dzień: [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md).
+
+---
+
+## Meteoblue — 17.09 ~08:15 (obecny run)
+
+| | 17.09 (dziś) | 18.09 | 19.09 |
+|--|-------------|-------|-------|
+| **Meteogram T** | **~18°** · deszcz **06–12** · peak **~6 mm/h** | **21°** · mgła rano → słońce | **22°** · słońce |
+| **MM zgoda** | deszcz AM → mix PM | **100%** słońce | **100%** słońce |
+| **Ensemble** | cloud **100→20%** · porywy **~30** | sucho · RH **~40%** min PM | sucho · porywy **~30** PM |
+| **Poranna ENS/ICON/CS4** | **9,6 / 9,6 / 8,8** | **25,5 / 22,4 / 21,1** | **21,9 / 20,9 / 20,0** |
+| **vs Accu** | mokry AM · **CS4** ✓ | Accu **burze** vs MB **sucho** | **RF** ✓ |
+
+**Wniosek MB:** **17.09** front zgodny z Accu **CS4** i niskim kWh. **18.09** **Accu pesymistyczny** (chmury/burze) vs **MB/ENS jasny dzień** — kontynuacja sporu z outlook **16.09**. **19.09** pełna zgoda słońce. `weather_notes` `#181`. Dzień: [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md).
+
+---
+
+## Oneshot shadow — 17.09 ~08:19 (17–19.09)
+
+| Dzień | OM I/U cloud · mm | RF×ICON | RF×UKMO | ½ | **ENS** ld | CS4×I | Accu |
+|-------|-------------------|--------:|--------:|--:|-----------:|------:|------|
+| **17.09** | **76/69%** · **7,8/2,4** | **8,90** | **9,71** | **9,31** | **9,64** | **8,29** | **CS4** ✓ |
+| **18.09** | **86/59%** · **0/0** | **17,11** | **26,26** | **21,69** | **25,47** | **16,39** | **CS4** watch |
+| **19.09** | **38/42%** · **0** · U rad skip | **24,12** | skip | — | **21,93** | **22,97** | **RF** |
+
+**Wniosek:** **17.09** **½≈ENS** · **18.09** **ENS≈UKMO** (Accu reżim CS4 vs kWh **~25**) · **19.09** **ICON os ~24** vs ENS **~22**. CSV gitignored. Dzień: [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md).
 
 ---
 

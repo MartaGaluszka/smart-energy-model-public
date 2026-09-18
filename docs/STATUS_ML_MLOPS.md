@@ -48,6 +48,8 @@ Ostatnie closeouty: **28.08** **34,2** · **29.08** **21,1** (CS4 ✓) · **30.0
 
 Wykresy (do **12.09**, odświeżone **13.09**): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png) (góra kWh, dół |błąd| %), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) (góra tylko 5:00, dół 5:00+12:00) · opis błędów: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
 
+**Review sobotni (przed retreningiem):** [`images/ml/weekly_model_weather_review.md`](images/ml/weekly_model_weather_review.md) — MAPE × typ dnia × **ENS / ICON / CS4 / XGB** · `./mlops/weekly_model_review.sh` · launchd **sob 10:00** (`install_launchd.sh`).
+
 ---
 
 ## MLOps (skrót)
