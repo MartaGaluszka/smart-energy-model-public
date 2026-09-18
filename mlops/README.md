@@ -16,6 +16,7 @@ Aktualne metryki modelu / live: [`docs/STATUS_ML_MLOPS.md`](../docs/STATUS_ML_ML
 | **16:00** | `./mlops/peak_arrival.sh` | sync + peak (16 + shadow) |
 | **wieczór** | `./mlops/evening_closeout.sh` | walidacja vs app → `forecast_validation.csv` (stała 22:42 i/lub dynamicznie po zachodzie) |
 | **04:15** | `./mlops/morning_hold.sh` | `caffeinate` ~75 min (okno train + daily + retry DNS) |
+| **sobota 10:00** | `./mlops/weekly_model_review.sh` | MAPE × pogoda × model → [`weekly_model_weather_review.md`](../docs/images/ml/weekly_model_weather_review.md) (przed retreningiem) |
 | **niedziela 04:30** | `./mlops/train_dual_weekly.sh` | retrain **16 + CS4 + XGB+TS** (przed daily 05:00) |
 | **co 10 min** | `./mlops/catchup_missed_runs.sh` | nadrabia `daily` / weekly, gdy sen albo DNS urwały 05:00 / 04:30 |
 

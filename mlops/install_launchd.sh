@@ -24,6 +24,7 @@ LABELS=(
   "pl.smart-energy-model.evening"
   "pl.smart-energy-model.evening-dynamic"
   "pl.smart-energy-model.morning-hold"
+  "pl.smart-energy-model.weekly-review"
   "pl.smart-energy-model.train"
 )
 
@@ -84,6 +85,7 @@ install_launchd() {
   echo "   co 10 min         → evening_closeout_dynamic.sh (closeout + catch-up daily/train po śnie/DNS)"
   echo "   22:42 codziennie  → evening_closeout.sh (siatka bezpieczeństwa, gdyby dynamiczny nie zadziałał)"
   echo "   04:15 codziennie  → morning_hold.sh (nie usypiaj + sam train 04:30 nd + daily 05:00)"
+  echo "   10:00 sobota      → weekly_model_review.sh (MAPE × pogoda × model; przed retreningiem)"
   echo "   04:30 niedziela   → train_dual_weekly.sh (retrening 16 + CS4 + XGB+TS; przed daily 05:00)"
   echo ""
   echo "Budzenie śpiącego Maca (hasło admina): $0 --schedule-wake"

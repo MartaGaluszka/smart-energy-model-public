@@ -138,6 +138,26 @@ Accu+MB **CS4** · okno białe 80–90% + breaks · app daily **17,68**.
 > SoC pełna od **12:38** → eksport (do 14:00 już **4,1**). Nocny FC 24→75% **za agresywny** ex post.  
 > Wieczór **27–28**: **nie** ForceCharge.
 
+### 2026-09-17 — DZIEŃ (w toku @~15:15)
+
+Accu **CS4** · ENS **9,64** · MB deszcz AM + clearing PM (częściowo **~14:52**). PV **under** prognozy; Fox wykres + app.
+
+| Moment | SoC | PV / uwagi |
+|--------|----:|------------|
+| rano | **~65%** | deszcz do **~7:30** · duże zachmurzenie |
+| **~7:30** | **~45%** | dołek SoC (obciążenie / brak PV) |
+| **~09–10** | rośnie | krótkie okno **~1,2 / 1,0 kWh/h** |
+| **~12:30** | **~95%** | szczyt SoC · **bez 100%** (niski PV vs jasne dni) |
+| **~14:30** (wykres) | spadek | load **~2,8 kW** (AGD/dom) |
+| **~14:52** (teren) | | słońce · **~1,7 kW** chwilowo |
+| **~14:56** (teren) | | **~3,64 kW** chwilowo |
+| **~15:00** (wykres) | ↓ | rozładowanie baterii **~4 kW** — load > chwilowe PV mimo clearing PM |
+| **~16:54** (app/UI) | | Fox **9,1 kWh** · godz. **15=2,5** · **16=1,2** |
+| **~18:08** (closeout ~) | | Fox **10,2 kWh** · **17=0,9** · **18=0,1** · Δ ENS **+5,8%** |
+| closeout | | zużycie / sieć / SoC EOD *(uzupełnij wieczór)* |
+
+**Werdykt dzień (~18:08):** **MB clearing PM** uratował dobę — **10,2** vs ENS **9,64** · profil **11–14** under / **15–17** over w modelu · SoC **~95%** w południe OK.
+
 ---
 
 ## Szablon (noc + dzień)
