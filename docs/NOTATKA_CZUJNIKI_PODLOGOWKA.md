@@ -41,6 +41,54 @@ Z1 w X–XI 2026 **może spaść** przez baterię nawet przy load/HDD bez zmian.
 
 ---
 
+## Obserwacja 18.09.2026 — wrzesień 2025 vs 2026 (przed testem X–XI)
+
+**Kontekst:** formalny werdykt czujników = **load/HDD** w **X–XI 2026 vs X–XI 2025** (§D). Poniżej — **jakość + wczesny sygnał Fox**, żeby nie mylić „pamięci o grzaniu” z samą pogodą zewnętrzną.
+
+### Obserwacja terenowa
+
+| | **IX 2025** | **IX 2026** |
+|--|-------------|-------------|
+| **Czujniki w pokojach** | **nie** (od **~2.12.2025**) | **tak** (~10 mies.) |
+| **Podłogówka** | wieczorem **ciepłe podłogi**, subiektywnie **za gorąco** | regulacja na **T pokoju** (komfort; efekt kWh → load/HDD jesienią) |
+| **Sterowanie** | harmonogram / T zewn. **bez** feedbacku z pokoi | setpointy + możliwość **ograniczyć dojazd / przegrzewanie** |
+
+Wrażenie „już grzaliśmy rok temu we wrześniu” **nie musi** oznaczać chłodniejszej aury — częściej **inercja podłogi + brak pokojowych czujników** (dojazd ciepła po zapotrzebowaniu).
+
+### Pogoda (`weather_data`, okolice Krakowa)
+
+| Okres | T śr. | T min (w oknie) | Uwaga |
+|-------|------:|----------------:|-------|
+| **2025-09-01 → 17** | **~17,6 °C** | **~9,1 °C** (18.09) | pierwsza połowa IX **cieplejsza** niż 2026 w tym samym kalendarzu |
+| **2026-09-01 → 17** | **~16,7 °C** | **~5,5 °C** (07.09) | chłodniejsze **noce** w wybranych dniach |
+| **2025-09-19 → 30** | **~13,2 °C** | **~3,5 °C** | **koniec IX 2025** — tu ogrzewanie **obiektywnie** uzasadnione |
+
+Pełniejszy kontekst PV / bilans: [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) §Dashboard Fox + Accu kalendarz ~09:13.
+
+### Fox — proxy ciepła / obciążenia (nie rozdziela CO od bojlera)
+
+Źródło: `foxess_report_daily` (`loads`), `foxess_data` (`load_power_kw`). Fox widzi tylko **`loads`** — wnioski o podłogówce = **heurystyka** (noc + HDD), nie licznik CO.
+
+| Metryka | **2025-09-01 → 17** | **2026-09-01 → 17** |
+|---------|---------------------:|---------------------:|
+| **Load Σ (loads)** | **~221 kWh** | **~196 kWh** |
+| **Load / dzień** | **~13,0 kWh** | **~11,5 kWh** |
+| **Śr. load 00–05** | **~0,35 kW** | **~0,17 kW** |
+| **Śr. load 22–06** | **~0,32 kW** | **~0,20 kW** |
+| **Śr. load 18–23** | **~0,30 kW** | **~0,36 kW** |
+
+**Wniosek:** rok temu **wyższy nocny load** mimo **cieplejszej** średniej T w **1–17.09** — spójne z **dłuższym / mniej regulowanym** ogrzewaniem (podłoga), nie z „zimniejszym wrześniem” w pierwszej połowie miesiąca. W **2026** wieczór nieco wyższy (AGD, bojler — [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md)), **noc spokojniejsza**.
+
+**HDD września** na potrzeby load/HDD liczyć dopiero w **X–XI** (próg 15 °C); sam IX często **poniżej progu grzania sezonowego** w danych — obserwacja jakościowa **uzupełnia**, nie zastępuje §D.
+
+### Hipoteza do weryfikacji X–XI 2026
+
+1. **Komfort:** czujniki → mniej epizodów „za gorąco” przy podobnym HDD (log T pokoi opcjonalnie obok Fox).
+2. **Energia:** **load/HDD** vs X–XI 2025 — dopiero **≤ −10%** = twardy efekt czujników (§ werdykt).
+3. **Mieszanie:** od **7.01.2026** import / Z1 = bateria — **nie** przypisywać spadku sieci czujnikom bez load/HDD.
+
+---
+
 ## A. Baseline — bez świadomego FC
 
 | Okres | Czujniki | FC | n | T śr. | HDD | Load kWh | Load/d | **Load/HDD** | Import Fox | Peak load kWh | Peak/HDD |
@@ -117,6 +165,7 @@ Zł w dół przy load/HDD ≈ 0 i Z1 w dół → **nie przypisywać czujnikom**.
 
 - Obecność / wyjazd (jak kajaki 5.09) — `household_events`  
 - Start grzania (pierwszy tydzień z load/HDD ~2,2)  
-- Czy grzałka bufora dostała blokadę 15–22 pn–pt (osobny efekt)
+- Czy grzałka bufora dostała blokadę 15–22 pn–pt (osobny efekt)  
+- [x] **18.09.2026** — obserwacja podłogi IX 2025 vs czujniki IX 2026 + Fox/pogoda (§ Obserwacja 18.09.2026)
 
-Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md)
+Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md)
