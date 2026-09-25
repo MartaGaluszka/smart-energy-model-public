@@ -136,6 +136,11 @@ export class ForecastDataService {
     this.requestedDay$.next(todayIso());
   }
 
+  /** Dolna zakładka Prognoza — ten sam efekt co goToday (wywoływane z TabsPage). */
+  focusPrognozaTab(): void {
+    this.goToday();
+  }
+
   loadDay(day: string): void {
     this.requestedDay$.next(day);
   }

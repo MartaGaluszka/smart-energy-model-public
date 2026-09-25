@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-09-13  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 13.09**) · `forecast_validation.csv` (closeouty do **12.09**) · [`NOTATKA_WEEKLY_2026-09-13.md`](NOTATKA_WEEKLY_2026-09-13.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
+**Stan na:** 2026-09-20 (offline weekly) · live closeouty w tabeli poniżej do **12.09** (do odświeżenia po closeoutach 13–19.09)  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 20.09**) · `forecast_validation.csv` (closeouty do **12.09**) · [`NOTATKA_WEEKLY_2026-09-20.md`](NOTATKA_WEEKLY_2026-09-20.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -21,14 +21,14 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 
 | Metryka | Wartość |
 |---------|---------|
-| Okno | 2025-06-01 → **2026-09-12** |
-| Test MAE | **0.666** kWh/h |
-| Gap train–test | **0.071** |
-| Daily MAE | **3.38** kWh/d |
-| Daily R² | **0.859** |
+| Okno | 2025-06-01 → **2026-09-19** |
+| Test MAE | **0.652** kWh/h |
+| Gap train–test | **0.054** |
+| Daily MAE | **3.24** kWh/d |
+| Daily R² | **0.855** |
 | Werdykt | nie przeuczony |
 
-Gate vs weekly **06.09** (0.686): Δ **−0.020** → **ACCEPT** (lepszy).
+Gate vs weekly **13.09** (0.666): Δ **−0.014** → **ACCEPT** (lepszy).
 
 ### Live (closeout vs app)
 
@@ -78,6 +78,8 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
 | Pogoda 15.08–11.09 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · dzień [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
+| Oś retreningów / wdrożeń | [`NOTATKA_RETRENINGI_I_WDROZENIA.md`](NOTATKA_RETRENINGI_I_WDROZENIA.md) |
+| Weekly **20.09** | [`NOTATKA_WEEKLY_2026-09-20.md`](NOTATKA_WEEKLY_2026-09-20.md) |
 | Weekly **13.09** | [`NOTATKA_WEEKLY_2026-09-13.md`](NOTATKA_WEEKLY_2026-09-13.md) |
 | Weekly **06.09** | [`NOTATKA_WEEKLY_2026-09-06.md`](NOTATKA_WEEKLY_2026-09-06.md) |
 | Weekly **30.08** | [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md) |
@@ -85,7 +87,7 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Weekly 16.08 | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
 | Dzień 19.08–11.09 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · … · [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md) · [`NOTATKA_2026-09-10.md`](NOTATKA_2026-09-10.md) · [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
 | Oneshot shadow | [`NOTATKA_ONESHOT_2026-08-17.md`](NOTATKA_ONESHOT_2026-08-17.md) |
-| Paper-trade Accu→RF/CS4 | paper-trade — tylko repo prywatne |
+| Paper-trade Accu→RF/CS4 | paper-trade (repo prywatne) |
 | Routing test 28–31.08 | [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md) · plan [`PLAN_ENSEMBLE_NWP_2026.md`](PLAN_ENSEMBLE_NWP_2026.md) E1.6 |
 | Reguła apki: SoC↓ + pochmurno → ładuj 22:00 | [`NOTATKA_REGULA_BATERIA_POCHMURNO_22.md`](NOTATKA_REGULA_BATERIA_POCHMURNO_22.md) |
 | Log SoC / ForceCharge / AGD | [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) |

@@ -93,4 +93,4 @@ Szerszy opis: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · 
 | **2026-08-16** | **0.643** | 0.637 | 0.626 | ACCEPT (Δ +0.019) |
 | **2026-08-23** | **0.658** | 0.664 | 0.618 | **ACCEPT** (Δ +0.015) |
 
-Pełna historia wdrożeń: [`NOTATKA_RETRENINGI_LIPIEC_2026.md`](NOTATKA_RETRENINGI_LIPIEC_2026.md) · status: [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md).
+Pełna historia wdrożeń: [`NOTATKA_RETRENINGI_I_WDROZENIA.md`](NOTATKA_RETRENINGI_I_WDROZENIA.md) · status: [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md).

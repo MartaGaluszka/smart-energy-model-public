@@ -2,7 +2,7 @@
 
 **Stan na 2026-08-02:** GPS + ICON + target PVE · **dual: 16 + CS4 + XGB+TS shadow** · korekta **OFF** · ocena na **raw** · UKMO = obserwacja ręczna · geometria **park** · **EA:** skala chmur + FI (backlog).
 
-Powiązane: [NOTATKA_RETRENINGI_LIPIEC_2026.md](NOTATKA_RETRENINGI_LIPIEC_2026.md) · [UPDATE_2026-07-26_cs4-dual.md](UPDATE_2026-07-26_cs4-dual.md) · [UPDATE_2026-08-02_error-analysis-cloud-fi.md](UPDATE_2026-08-02_error-analysis-cloud-fi.md) · [CHANGELOG_ML.md](CHANGELOG_ML.md)
+Powiązane: [NOTATKA_RETRENINGI_I_WDROZENIA.md](NOTATKA_RETRENINGI_I_WDROZENIA.md) · [UPDATE_2026-07-26_cs4-dual.md](UPDATE_2026-07-26_cs4-dual.md) · [UPDATE_2026-08-02_error-analysis-cloud-fi.md](UPDATE_2026-08-02_error-analysis-cloud-fi.md) · [CHANGELOG_ML.md](CHANGELOG_ML.md)
 
 ---
 
