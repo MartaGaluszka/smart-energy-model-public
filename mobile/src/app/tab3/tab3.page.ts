@@ -1,8 +1,8 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
-import { RefresherCustomEvent, ViewWillEnter } from '@ionic/angular';
+import { RefresherCustomEvent, ViewDidEnter } from '@ionic/angular';
 import { Chart, registerables } from 'chart.js';
 import { addIcons } from 'ionicons';
-import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
+import { chevronBackOutline, chevronForwardOutline, gitCompareOutline, homeOutline } from 'ionicons/icons';
 import { Subscription } from 'rxjs';
 import { ForecastValidationDailyRow, ForecastValidationHourlyRow } from '../services/api.service';
 import { ForecastDataService, ForecastState } from '../services/forecast-data.service';
@@ -75,7 +75,7 @@ export function defaultRunLabelForViewedDay(
   styleUrls: ['tab3.page.scss'],
   standalone: false,
 })
-export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
+export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
   @ViewChild('forecastCanvas') private canvasRef?: ElementRef<HTMLCanvasElement>;
 
   state: ForecastState = {
@@ -97,9 +97,6 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
 
   private chart?: Chart;
   private sub?: Subscription;
-  /** Pierwsze wejście dostaje dane już pobrane przez konstruktor serwisu (singleton) —
-   *  unikamy zbędnego podwójnego zapytania przy starcie apki. */
-  private hasEnteredBefore = false;
   /** Ostatni dzień, dla którego zsynchronizowano zakładkę okna — reset przy zmianie dnia. */
   private syncedRunDay = '';
 
@@ -113,7 +110,7 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
   selectedRunLabel: string = defaultRunLabelForHour();
 
   constructor(private readonly forecastData: ForecastDataService) {
-    addIcons({ chevronBackOutline, chevronForwardOutline });
+    addIcons({ chevronBackOutline, chevronForwardOutline, gitCompareOutline, homeOutline });
   }
 
   ngAfterViewInit(): void {
@@ -125,18 +122,19 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
   }
 
   /**
-   * Ionic zachowuje taby "przy życiu" w tle — bez tego hooka dane pobrane raz przy starcie
-   * apki (np. tylko poranny run 05:00) zostałyby na ekranie bezterminowo, mimo że w ciągu
-   * dnia dochodzą kolejne runy (12:00/16:00) i nowe synchronizacje FoxESS. Odśwież przy
-   * każdym powrocie na tę zakładkę, żeby dane uzupełniały się automatycznie.
+   * ionViewDidEnter (nie WillEnter) — przy przełączaniu dolnych zakładek Ionic
+   * nie zawsze woła WillEnter; DidEnter działa przy każdym wejściu na Prognozę.
+   * Zawsze wracamy na Dziś + domyślne okno (Poranna/Południowa/Popołudniowa).
    */
-  ionViewWillEnter(): void {
-    if (!this.hasEnteredBefore) {
-      this.hasEnteredBefore = true;
-      return;
-    }
-    this.resetRunTabForCurrentDay();
-    this.forecastData.reload();
+  ionViewDidEnter(): void {
+    this.resetToTodayView();
+  }
+
+  private resetToTodayView(): void {
+    const today = todayIsoLocal();
+    this.forecastData.goToday();
+    this.syncedRunDay = today;
+    this.selectedRunLabel = defaultRunLabelForViewedDay(today);
   }
 
   doRefresh(event: RefresherCustomEvent): void {
@@ -213,13 +211,6 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewWillEnter {
     if (!day || day === this.syncedRunDay) return;
     this.syncedRunDay = day;
     this.selectedRunLabel = defaultRunLabelForViewedDay(day);
-  }
-
-  /** Powrót na tab Prognoza: nie trzymaj Popołudniowej z poprzedniego wejścia. */
-  private resetRunTabForCurrentDay(): void {
-    const day = this.normalizedDay(this.state.day);
-    this.selectedRunLabel = defaultRunLabelForViewedDay(day);
-    if (day) this.syncedRunDay = day;
   }
 
   get isSelectedRunScheduled(): boolean {

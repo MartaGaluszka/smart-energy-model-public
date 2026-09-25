@@ -90,4 +90,4 @@ Dzień 6.09 (po train, closeout): Accu mix→**RF** ✓ · Fox **23,3** · midda
 | **2026-08-30** | **0.668** | 0.672 | 0.654 | ACCEPT (Δ +0.010) |
 | **2026-09-06** | **0.686** | 0.688 | 0.665 | **ACCEPT** (Δ +0.018) |
 
-Pełna historia: [`NOTATKA_RETRENINGI_LIPIEC_2026.md`](NOTATKA_RETRENINGI_LIPIEC_2026.md) · status: [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md) · poprzedni: [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md).
+Pełna historia: [`NOTATKA_RETRENINGI_I_WDROZENIA.md`](NOTATKA_RETRENINGI_I_WDROZENIA.md) · status: [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md) · poprzedni: [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md).

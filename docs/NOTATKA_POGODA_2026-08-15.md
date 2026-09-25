@@ -7,6 +7,7 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-25 ~15:22** | **MB** meteogram+MM+ens+RH **25–27** · deszcz AM **~0,6 mm/h** → **PM clearing** · **26–27** słońce **19–21°** · Accu **25** **2/89%/3,3→CS4** · **26** **6/62%→mix** · oneshot **8,7/14,1** ½**11,4** · UI ENS **~12,8** · **watch PM** — [`NOTATKA_2026-09-25.md`](NOTATKA_2026-09-25.md) |
 | **2026-09-17 ~08:19** | **Oneshot** RF I/U **8,9/9,7** ½**9,3≈ENS 9,6** · **18.09** **I 17/U 26** ½**21,7≈ENS 25,5** · **19.09** ICON **24,1** U skip · Accu **CS4/CS4/RF** — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
 | **2026-09-18 ~08:49** | **Closeout 17.09** modele vs Fox **10,2** · ENS **9,64** (5,5%) · ½ **9,31** · **XGB @16 10,31** (1,1%) · archiwum ½ **~10,4** · profil zły/suma OK — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
 | **2026-09-18 ~08:45** | **Oneshot** **18–20** · **18.09** I **18,4** U **26,0** ½ **22,2** vs ENS **24,8** · **19.09** klaster **~26** · **20.09** **~21** mm **2,6** wieczór — [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) |
@@ -114,6 +115,98 @@
 | **2026-08-21 ~09:12** | **MB MultiModel + meteogram + ensemble** (pt.–nd.+) |
 | **2026-08-22 ~18:04** | AccuWeather dziś-na-dziś (22) / jutro (23) / +2 (24) |
 | **2026-08-22 ~18:05** | **MB MultiModel + meteogram + ensemble** (sob.–pon.) |
+| **2026-09-25** | **Matryca porównawcza** (Accu · MB · ICON · UKMO · ENS · CS4 · oneshot) — sekcja §Matryca poniżej · closeout **12–17.09** w paper-trade (repo prywatne) |
+
+---
+
+## Meteoblue — 25.09 ~15:22 (obecny run)
+
+Update **2026-09-25 ~15:22** · okolice Krakowa (GPS w `.env`).
+
+| | **25.09** (dziś) | **26.09** | **27.09** |
+|--|------------------|-----------|-----------|
+| **Meteogram** | T **~14–15°** · deszcz **do ~18** · **PM słońce** | **~19°** słońce+chmura | **~21°** słońce |
+| **MM** | ICON/UKMO/… **deszcz AM** · **PM** słońce | konsensus **słońce** | konsensus **słońce** |
+| **Ensemble** | opad **~1,6 mm** (spread) · cloud **100→~20% PM** | sucho · cloud nisko | niedziela chmury **spike** → sucho |
+| **Wiatr/RH** | **SW** · porywy **~22** · RH min **~68%** | porywy **~25** · RH **~50%** | porywy **~18** · RH spread szeroki |
+| **vs Accu** | **89%/3,3 mm** vs **0 mm PM** | **62%** vs MB **czyste słońce** | brak Accu · MB **jasny** |
+
+Pełna tabela kWh + oneshot: [`NOTATKA_2026-09-25.md`](NOTATKA_2026-09-25.md) §Porównanie.
+
+---
+
+## AccuWeather — 25.09 ~15:16 (obecny run)
+
+| Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
+|-------|------:|------:|------:|------:|--------------|
+| **25.09** pt. | **15°C** | **2** Ciemny | **89%** | **3,3 mm** | **pochmurny→CS4** — przelotne |
+| **26.09** sb. | **20°C** | **6** Przyćm. | **62%** | **0,0 mm** | **mix→RF** — cieplej |
+
+`weather_notes` `#173` · `#174`. Drift vs **24.09:** **81%/1,7 → 89%/3,3** (25) · **87% → 62%** (26).
+
+---
+
+## Matryca porównawcza — Accu · Meteoblue · Open-Meteo · modele kWh
+
+**Cel:** jeden schemat na run pogodowy — **reżim / niebo** (Accu + MB) obok **kWh** (ICON, UKMO, ensemble, CS4, oneshot). Primary prod **nie zmieniamy** tutaj (`RF16 × ICON+UKMO` od **02.09**).
+
+### Warstwy — co z czym porównujemy
+
+| Warstwa | Źródło | Typowe pola | Rola w decyzji | Prod? |
+|---------|--------|-------------|----------------|-------|
+| **AccuWeather** | app / kalendarz | Lumen, cloud %, mm, P deszcz/burza, opis | **Paper-trade reżim** (CS4 vs RF) · drift outlook→dziś | nie |
+| **Meteoblue** | meteogram + **MultiModel (MM)** + **ensemble** | T, pion chmur, mm/h, RH, porywy, zgoda modeli | **Operacyjny „niebo”** gdy Accu za szary/za suchy · **watch mix** | nie |
+| **ICON** | Open-Meteo `icon_seamless` | cloud 6–20, mm, shortwave rad | Pogoda pod **RF16/CS4** · **launchd ICON** (shadow) | shadow ld |
+| **UKMO** | Open-Meteo `ukmo_seamless` | j.w. · czasem **rad skip/NaN** | Solo **UKMO** w oneshot; często jaśniejszy niż ICON | shadow os |
+| **ICON+UKMO (ENS)** | uśrednione cechy w DB + launchd | daily / midday / peak @05/@12/@16 | **Primary kWh** (`pv_forecast.csv`, app) | **tak** |
+| **CS4** | ten sam RF + reguły **clearness** | daily ld + oneshot CS4×I / CS4×U | Pochmurne dni · paper **pick CS4** | shadow |
+| **Oneshot shadow** | `scripts/analysis/oneshot_rf_icon_vs_ukmo.py` | RF×ICON, RF×UKMO, **½**, CS4×I/U | Ten sam joblib co prod, **świeża** pogoda z forecast API — **≠ ENS** | **nie** |
+| **XGB+TS** | launchd shadow | @05 / peak | Intraday / peak (np. **17.09 @16**) | shadow |
+
+**½ I+U (oneshot)** = średnia arytmetyczna RF×ICON + RF×UKMO z tego samego runu — **nie** to samo co ENS (inna ścieżka: osobne fetch ICON vs UKMO vs ensemble w `weather_data`).
+
+### Szablon runu (wklej do `NOTATKA_YYYY-MM-DD.md`)
+
+1. **Accu** — tabela 3 dni (dziś + outlook) + reżim paper.  
+2. **MB** — meteogram + wiersz MM/ensemble + **vs Accu**.  
+3. **Porównanie kWh** — kolumny poniżej + wiersz **Accu vs MB (operacyjnie)**.  
+4. **Oneshot** — CSV w `data/processed/oneshot_shadow_icon_ukmo_*.csv` (gitignored).  
+5. **Closeout** (wieczorem) — Fox vs @05 ENS / ½ os / CS4 ld / opcjonalnie archiwum I vs U.
+
+#### Tabela kWh (standard)
+
+| Dzień | **ICON** ld | **UKMO** os | **½** os | **ENS** ld | **CS4** ld | **CS4×I** os | **CS4×U** os | Accu paper | MB oper. |
+|-------|------------:|------------:|---------:|-----------:|-----------:|-------------:|-------------:|------------|----------|
+
+Przykład w repo: [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) §Porównanie modeli · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) §Porównanie ICON…
+
+#### Tabela nieba Open-Meteo (oneshot fetch, sumy dzienne)
+
+| Dzień | **I** cloud / mm / rad | **U** cloud / mm / rad | Werdykt |
+|-------|------------------------|-------------------------|---------|
+
+Godziny produkcyjne **6–20** jak w feature pipeline. **UKMO rad skip** → nie liczyć ½; patrz ICON ld / ENS.
+
+### Accu vs Meteoblue vs OM — reguły operacyjne
+
+| Sytuacja | Accu | MB / MM | OM ICON vs UKMO | Paper / kWh |
+|----------|------|---------|-----------------|-------------|
+| Deszcz AM, clearing PM | często **CS4** (cloud↑) | meteogram **0 mm PM** | **I=U** mokro rano · **I≠U** po południu | reżim **CS4** · kWh **ENS/½/U** jeśli MB trafi clearing (**17–18.09**) |
+| Accu **≥70%** cloud, MB słońce | za szary | **watch mix** / jaśniejszy PM | ICON **92%** ≈ Accu, MB **17–21°** słońce | paper **CS4** formalnie · **nie** obniżać do CS4 ld jeśli MB+U mówią jaśniej (**12–13.09**) |
+| Jasny dzień, Accu mix | cloud **30–50%** | słońce konsensus | I≈U **~30** | **RF** · undershoot RF typowy (**6–8.09**) |
+| Mokry dzień, obie za wysoko | **CS4** ✓ typ | zgoda mm | oneshot **~8–10** vs Fox **3** (**11.09**) | reżim OK · **poziom** zawyżony (jak **25.08**) |
+| Mgła / burze Accu, MB sucho | **CS4** + P burze | **0 mm**, RH↓ PM | **I os nisko**, **U/ENS ~25** (**18.09**) | **watch** — **ENS/U**, nie solo ICON os |
+
+### Skrypty i pliki
+
+| Co | Gdzie |
+|----|--------|
+| Oneshot RF I/U + CS4 | [`scripts/analysis/oneshot_rf_icon_vs_ukmo.py`](../scripts/analysis/oneshot_rf_icon_vs_ukmo.py) |
+| Paper Accu→RF/CS4 | [`scripts/analysis/paper_trade_accu_regime.py`](../scripts/analysis/paper_trade_accu_regime.py) · log paper-trade (repo prywatne) (prywatne) |
+| Runy launchd | `data/processed/forecasts/forecast_history.csv` · walidacja [`forecast_validation.csv`](../data/processed/forecasts/forecast_validation.csv) |
+| MAPE zbiorcze (bez Accu/MB) | [`docs/images/ml/weekly_model_weather_review.md`](images/ml/weekly_model_weather_review.md) · PNG walidacji [`july_validation_summary.md`](images/ml/july_validation_summary.md) |
+
+**Primary:** `ENSEMBLE_PRIMARY=1` → daily = **RF16 × pogoda ICON+UKMO**. Shadow: ICON solo, CS4, XGB — kolumny w tabelach powyżej.
 
 ---
 

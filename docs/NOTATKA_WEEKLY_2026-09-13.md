@@ -81,4 +81,4 @@ Kontekst launchd: **12.09** brak Porannej (flock/bash) · **morning-hold + fix**
 | **2026-09-06** | **0,686** | 0,688 | 0,665 | ACCEPT (Δ +0,018) |
 | **2026-09-13** | **0,666** | 0,659 | 0,644 | **ACCEPT** (Δ **−0,020** vs 06.09) |
 
-Pełna historia: [`NOTATKA_RETRENINGI_LIPIEC_2026.md`](NOTATKA_RETRENINGI_LIPIEC_2026.md) · status: [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md) · poprzedni: [`NOTATKA_WEEKLY_2026-09-06.md`](NOTATKA_WEEKLY_2026-09-06.md).
+Pełna historia: [`NOTATKA_RETRENINGI_I_WDROZENIA.md`](NOTATKA_RETRENINGI_I_WDROZENIA.md) · status: [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md) · poprzedni: [`NOTATKA_WEEKLY_2026-09-06.md`](NOTATKA_WEEKLY_2026-09-06.md).

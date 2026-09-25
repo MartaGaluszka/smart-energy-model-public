@@ -80,78 +80,37 @@
       </ion-card-content>
     </ion-card>
 
-    <!-- T1.20: kiedy włączyć AGD (progi mocy + top godziny) -->
-    <ng-container *ngIf="!state.error && (state.applianceThresholds.length || state.applianceTips.length)">
-      <div class="se-section-title">
-        <ion-icon name="home-outline"></ion-icon>
-        <span>Kiedy włączyć AGD</span>
-      </div>
-      <ion-card class="se-card se-agd">
-        <ion-card-content>
-          <p class="se-agd__intro">
-            Sugestia doradcza — jedna kombinacja AGD mieszcząca się w prognozowanej mocy
-            z dachu (suma ≤ prognoza). Progi poniżej = moc pojedynczego urządzenia.
-          </p>
-          <div class="se-agd__thresholds" *ngIf="state.applianceThresholds.length">
-            <span class="se-agd__chip" *ngFor="let t of state.applianceThresholds">
-              {{ t.label }} ≥ {{ t.minKw | number: '1.1-1' }}&nbsp;kW
-            </span>
-          </div>
-          <table class="se-hourly-table se-agd__table" *ngIf="state.applianceTips.length">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Godz.</th>
-                <th>Prognoza</th>
-                <th>Kombinacja</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let tip of state.applianceTips">
-                <td>{{ tip.rank }}</td>
-                <td>{{ tip.hour }}:00</td>
-                <td>{{ tip.predictedKwh | number: '1.1-2' }}</td>
-                <td>
-                  <ng-container *ngIf="tip.appliances.length; else tooLow">
-                    {{ tip.appliances.join(' + ') }}
-                    <span class="se-agd__load">({{ tip.loadKw | number: '1.1-1' }}&nbsp;kW)</span>
-                  </ng-container>
-                  <ng-template #tooLow>
-                    <span class="se-agd__low">za mało PV</span>
-                  </ng-template>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p class="se-agd__empty" *ngIf="!state.applianceTips.length">
-            Brak okien z sensowną produkcją w pozostałych godzinach.
-          </p>
-        </ion-card-content>
-      </ion-card>
-    </ng-container>
-
     <!-- Sekcja analityczna: okna modelu (zakładki) + szczegóły godzinowe wybranej zakładki -->
     <div class="se-section-title">
       <ion-icon name="git-compare-outline"></ion-icon>
       <span>Prognoza vs rzeczywistość</span>
     </div>
 
-    <!-- Zawsze 3 zakładki (Poranna / Południowa / Popołudniowa) — niezależnie od tego,
-         ile runów zwróciło API; brak danych = pusty stan per zakładka. -->
-    <ng-container *ngIf="!state.loading">
-      <ion-segment
-        class="se-run-seg"
-        [value]="selectedRunLabel"
-        (ionChange)="onRunTabChange($event.detail.value)"
+    <!-- Zawsze 3 okna (nie zależą od tego, ile runów zwróciło API). Natywne przyciski zamiast
+         ion-segment — *ngFor w segmencie na iOS często pokazywał tylko aktywną zakładkę. -->
+    <div class="se-run-tabs" role="tablist" aria-label="Okno prognozy">
+      <button
+        type="button"
+        role="tab"
+        class="se-run-tab"
+        *ngFor="let tab of runTabs"
+        [class.se-run-tab--active]="selectedRunLabel === tab.value"
+        [attr.aria-selected]="selectedRunLabel === tab.value"
+        (click)="onRunTabChange(tab.value)"
       >
-        <ion-segment-button *ngFor="let tab of runTabs" [value]="tab.value">
-          <ion-label>
-            {{ tab.name }}
-            <span class="se-run-seg__time">{{ tab.time }}</span>
-          </ion-label>
-        </ion-segment-button>
-      </ion-segment>
+        <span class="se-run-tab__name">{{ tab.name }}</span>
+        <span class="se-run-tab__time">{{ tab.time }}</span>
+      </button>
+    </div>
 
+    <ion-card class="se-card se-daily-row" *ngIf="state.loading">
+      <ion-card-content class="se-run-loading">
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>Ładowanie okna {{ runLabelName(selectedRunLabel) }}…</span>
+      </ion-card-content>
+    </ion-card>
+
+    <ng-container *ngIf="!state.loading">
       <ng-container *ngIf="selectedDaily as d; else missingRun">
         <ion-card class="se-card se-daily-row">
           <ion-card-content>
@@ -209,6 +168,56 @@
           </ion-card-content>
         </ion-card>
       </ng-template>
+    </ng-container>
+
+    <!-- T1.20: kiedy włączyć AGD (progi mocy + top godziny) -->
+    <ng-container *ngIf="!state.error && (state.applianceThresholds.length || state.applianceTips.length)">
+      <div class="se-section-title">
+        <ion-icon name="home-outline"></ion-icon>
+        <span>Kiedy włączyć AGD</span>
+      </div>
+      <ion-card class="se-card se-agd">
+        <ion-card-content>
+          <p class="se-agd__intro">
+            Sugestia doradcza — jedna kombinacja AGD mieszcząca się w prognozowanej mocy
+            z dachu (suma ≤ prognoza). Progi poniżej = moc pojedynczego urządzenia.
+          </p>
+          <div class="se-agd__thresholds" *ngIf="state.applianceThresholds.length">
+            <span class="se-agd__chip" *ngFor="let t of state.applianceThresholds">
+              {{ t.label }} ≥ {{ t.minKw | number: '1.1-1' }}&nbsp;kW
+            </span>
+          </div>
+          <table class="se-hourly-table se-agd__table" *ngIf="state.applianceTips.length">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Godz.</th>
+                <th>Prognoza</th>
+                <th>Kombinacja</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tip of state.applianceTips">
+                <td>{{ tip.rank }}</td>
+                <td>{{ tip.hour }}:00</td>
+                <td>{{ tip.predictedKwh | number: '1.1-2' }}</td>
+                <td>
+                  <ng-container *ngIf="tip.appliances.length; else tooLow">
+                    {{ tip.appliances.join(' + ') }}
+                    <span class="se-agd__load">({{ tip.loadKw | number: '1.1-1' }}&nbsp;kW)</span>
+                  </ng-container>
+                  <ng-template #tooLow>
+                    <span class="se-agd__low">za mało PV</span>
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="se-agd__empty" *ngIf="!state.applianceTips.length">
+            Brak okien z sensowną produkcją w pozostałych godzinach.
+          </p>
+        </ion-card-content>
+      </ion-card>
     </ng-container>
 
     <p class="se-demo-note">

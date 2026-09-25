@@ -80,7 +80,7 @@ WEATHER_ERAS: list[dict] = [
 ]
 
 # Okna closeoutów po wdrożeniu / retreningu (pierwszy dzień = pierwsza
-# prognoza daily 5:00 na nowym artefakcie — patrz docs/NOTATKA_RETRENINGI_LIPIEC_2026.md).
+# prognoza daily 5:00 na nowym artefakcie — patrz docs/NOTATKA_RETRENINGI_I_WDROZENIA.md).
 # start/end włącznie (YYYY-MM-DD).
 # Okna = zmiany logiki / targetu / cech (nie każdy niedzielny odśwież wag).
 RETRAIN_SEGMENTS: list[tuple[str, str, str]] = [
@@ -392,7 +392,7 @@ def build_july_error_summary(
         'Weekly retreningi wchodzą w erę dual od 27.07. '
         f'Od **{_fmt_day(ENS_PRIMARY_START)}** primary NWP = ensemble ICON+UKMO '
         '(pionowa linia / tło na wykresie). '
-        'Szczegóły: `docs/NOTATKA_RETRENINGI_LIPIEC_2026.md` · gate `docs/NOTATKA_TEST_ROUTING_28-31_08.md`.'
+        'Szczegóły: `docs/NOTATKA_RETRENINGI_I_WDROZENIA.md` · gate `docs/NOTATKA_TEST_ROUTING_28-31_08.md`.'
     )
     lines.append('')
     lines.append(

@@ -2,7 +2,7 @@
 
 **Zakres:** GPS dach · Open-Meteo **ICON** · (metodologia) baseline rad×yield
 
-Powiązane: [CHANGELOG_ML.md](CHANGELOG_ML.md) · [NOTATKA_RETRENINGI_LIPIEC_2026.md](NOTATKA_RETRENINGI_LIPIEC_2026.md) · [UPDATE_2026-07-16_korekta-operacyjna.md](UPDATE_2026-07-16_korekta-operacyjna.md) · [UPDATE_2026-07-18_target-pve.md](UPDATE_2026-07-18_target-pve.md)
+Powiązane: [CHANGELOG_ML.md](CHANGELOG_ML.md) · [NOTATKA_RETRENINGI_I_WDROZENIA.md](NOTATKA_RETRENINGI_I_WDROZENIA.md) · [UPDATE_2026-07-16_korekta-operacyjna.md](UPDATE_2026-07-16_korekta-operacyjna.md) · [UPDATE_2026-07-18_target-pve.md](UPDATE_2026-07-18_target-pve.md)
 
 ---
 

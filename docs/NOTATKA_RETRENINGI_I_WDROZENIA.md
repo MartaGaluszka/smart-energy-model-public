@@ -1,10 +1,10 @@
-# Notatka — retreningi i wdrożenia (lipiec 2026)
+# Notatka — retreningi i wdrożenia
 
-Krótka oś czasu: **kiedy** był retrening `.joblib`, **co** weszło do produkcji.  
+Krótka oś czasu (od **2026-07**): **kiedy** był retrening `.joblib`, **co** weszło do produkcji. Cotygodniowe odświeżenia wag → [`NOTATKA_WEEKLY_*.md`](NOTATKA_WEEKLY_2026-09-20.md).  
 Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 
 **Model produkcyjny teraz:** dual — `pv_hourly_model.joblib` (**16**) + `pv_hourly_model_cs4.joblib` (**CS4**)  
-**Stan na 2026-09-13:** GPS dach · **ENS** primary (od 02.09) · target **ΔPVEnergyTotal** · Test MAE **0.666** (16) / **0.659** (CS4) · **nieprzeuczone** · weekly: [`NOTATKA_WEEKLY_2026-09-13.md`](NOTATKA_WEEKLY_2026-09-13.md)
+**Stan na 2026-09-20:** GPS dach · **ENS** primary (od 02.09) · target **ΔPVEnergyTotal** · Test MAE **0.652** (16) / **0.658** (CS4) · **nieprzeuczone** · weekly: [`NOTATKA_WEEKLY_2026-09-20.md`](NOTATKA_WEEKLY_2026-09-20.md)
 
 ---
 
@@ -25,6 +25,8 @@ Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 | **2026-08-23** | 04:30 | Weekly (okno → 22.08) | tak (16 + CS4 + XGB+TS) | **0.658** / **0.664** / **0.618** | (nadpisanie `.joblib`) |
 | **2026-08-30** | 04:30 | Weekly (okno → 29.08) | tak (16 + CS4 + XGB+TS) | **0.668** / **0.672** / **0.654** | (nadpisanie `.joblib`) |
 | **2026-09-06** | 04:31 | Weekly (okno → 05.09); primary nadal RF16+ENS | tak (16 + CS4 + XGB+TS) | **0.686** / **0.688** / **0.665** | (nadpisanie `.joblib`) |
+| **2026-09-13** | 04:30 | Weekly (okno → 12.09) | tak (16 + CS4 + XGB+TS) | **0.666** / **0.659** / **0.644** | (nadpisanie `.joblib`) |
+| **2026-09-20** | 04:30 | Weekly (okno → 19.09) | tak (16 + CS4 + XGB+TS) | **0.652** / **0.658** / **0.648** | (nadpisanie `.joblib`) |
 
 \*Test MAE z summary w momencie treningu — **nie porównuj 0.666 z 0.582 wprost** (inna skala targetu: ∫pvPower vs PVE).
 

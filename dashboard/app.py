@@ -633,7 +633,7 @@ Brutto (44,30 / 53,18) służy tylko do kontroli; **Razem brutto** bierz z poz. 
                 power_fee_monthly=power_fee if save_tariff else None,
                 oze_fee_kwh=oze_fee if save_tariff else None,
                 cogenerative_fee_kwh=cog_fee if save_tariff else None,
-                tariff_notes=tariff_notes or None,
+                tariff_notes = st.text_input("Uwagi do taryfy (opcjonalnie)", value="")
             )
             try:
                 result = save_invoice(payload)
@@ -820,7 +820,7 @@ with tab_about:
 
 ### Uruchomienie
 ```bash
-cd /path/to/smart-energy-model
+cd /Users/martusia/smart-energy-model
 source venv/bin/activate
 pip install streamlit   # raz
 streamlit run dashboard/app.py
