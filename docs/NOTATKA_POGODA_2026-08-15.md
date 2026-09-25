@@ -202,7 +202,7 @@ Godziny produkcyjne **6–20** jak w feature pipeline. **UKMO rad skip** → nie
 | Co | Gdzie |
 |----|--------|
 | Oneshot RF I/U + CS4 | [`scripts/analysis/oneshot_rf_icon_vs_ukmo.py`](../scripts/analysis/oneshot_rf_icon_vs_ukmo.py) |
-| Paper Accu→RF/CS4 | [`scripts/analysis/paper_trade_accu_regime.py`](../scripts/analysis/paper_trade_accu_regime.py) · log paper-trade (repo prywatne) (prywatne) |
+| Paper Accu→RF/CS4 | [`scripts/analysis/paper_trade_accu_regime.py`](../scripts/analysis/paper_trade_accu_regime.py) · log paper-trade (repo prywatne) |
 | Runy launchd | `data/processed/forecasts/forecast_history.csv` · walidacja [`forecast_validation.csv`](../data/processed/forecasts/forecast_validation.csv) |
 | MAPE zbiorcze (bez Accu/MB) | [`docs/images/ml/weekly_model_weather_review.md`](images/ml/weekly_model_weather_review.md) · PNG walidacji [`july_validation_summary.md`](images/ml/july_validation_summary.md) |
 
