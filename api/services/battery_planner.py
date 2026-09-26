@@ -604,34 +604,25 @@ def get_night_charge_advice() -> dict:
     }
 
 
-def get_shadow_savings(period_from: str, period_to: str) -> dict:
-    """MVP: przybliżenie shadow_savings_pln (patrz dokstring w schemas/battery.py).
+def get_shadow_savings(period_from: str, period_to: str, db, user_id: int) -> dict:
+    """Oszczędność z symulatora rachunku, ten sam licznik i te same stawki.
 
-    Pełna kontrfaktyczna symulacja "co gdyby wykonano plan doradczy godzina po
-    godzinie" wymaga replayu SoC na historycznych danych — poza budżetem czasowym
-    tej fazy (Faza 0). Odsyła do T4.15/T4.17 (Faza 4) jako follow-up.
+    Pełna symulacja „co gdyby wykonano plan doradczy godzina po godzinie” (replay SoC)
+    zostaje poza tym endpointem. Tu jest faktyczny rachunek bez PV minus rachunek z PV.
     """
-    from src.financial.roi_calculator import FinancialAnalyzer
+    from api.services.bill_simulator import simulate_bill
 
-    settings = get_settings()
-    analyzer = FinancialAnalyzer(db_path=settings.DATABASE_PATH)
-    try:
-        roi_data = analyzer.calculate_roi(period_from, period_to, use_forecast_baseline=False)
-    finally:
-        analyzer.close()
-
-    # VAT 23% na energię elektryczną (zgodnie z symulator/bill)
-    vat_rate = 1.23
-    savings_netto = roi_data['savings_pln']
-    baseline_netto = roi_data['baseline_cost_pln']
-    actual_netto = roi_data['actual_cost_pln']
-
+    bill = simulate_bill(period_from, period_to, db=db, user_id=user_id)
     return {
         'period_from': period_from,
         'period_to': period_to,
-        'shadow_savings_pln': round(savings_netto * vat_rate, 2),
-        'baseline_cost_pln': round(baseline_netto * vat_rate, 2),
-        'actual_cost_pln': round(actual_netto * vat_rate, 2),
+        'shadow_savings_pln': float(bill['savings_gross_pln']),
+        'baseline_cost_pln': float(bill['cost_no_pv_gross_pln']),
+        'actual_cost_pln': float(bill['cost_with_pv_gross_pln']),
+        'method_note': (
+            'Ta sama oszczędność co w symulatorze rachunku: brutto, koszt bez paneli minus koszt z PV. '
+            'Symulacja planu baterii godzina po godzinie jest osobno.'
+        ),
     }
 
 

@@ -28,6 +28,10 @@ const routes: Routes = [
         loadChildren: () => import('../simulator/simulator.module').then(m => m.SimulatorPageModule)
       },
       {
+        path: 'roi',
+        loadChildren: () => import('../roi/roi.module').then(m => m.RoiPageModule)
+      },
+      {
         path: 'battery',
         loadChildren: () => import('../battery/battery.module').then(m => m.BatteryPageModule)
       },

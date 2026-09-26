@@ -315,7 +315,7 @@ export class ApiService {
           return throwError(
             () =>
               new HttpErrorResponse({
-                error: 'Brak sesji JWT — logowanie demo do API nie powiodło się',
+                error: 'API niedostępne — logowanie nie powiodło się (uruchom API na Macu)',
                 status: 0,
                 statusText: 'Auth failed',
                 url: `${this.baseUrl}/api/v1/auth/login`,
@@ -517,4 +517,54 @@ export class ApiService {
       }),
     );
   }
+
+  getRoiAssumptions(): Observable<RoiAssumptions> {
+    return this.authed((token) =>
+      this.http.get<RoiAssumptions>(`${this.baseUrl}/api/v1/roi/assumptions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  putRoiAssumptions(body: RoiAssumptions): Observable<RoiAssumptions> {
+    return this.authed((token) =>
+      this.http.put<RoiAssumptions>(`${this.baseUrl}/api/v1/roi/assumptions`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  calculateRoi(periodStart: string, periodEnd: string): Observable<RoiCalculateResponse> {
+    return this.authed((token) =>
+      this.http.post<RoiCalculateResponse>(
+        `${this.baseUrl}/api/v1/roi/calculate`,
+        { period_start: periodStart, period_end: periodEnd },
+        { headers: { Authorization: `Bearer ${token}` } },
+      ),
+    );
+  }
+}
+
+export interface RoiAssumptions {
+  capex_pln: number;
+  battery_capex_pln: number | null;
+  opex_pln_year: number;
+  inflation_pct: number;
+  seller_baseline_pln_year: number | null;
+}
+
+export interface RoiCalculateResponse {
+  period_start: string;
+  period_end: string;
+  savings_pln_period: number;
+  deposit_pln_period: number;
+  opex_pln_period: number;
+  cash_gain_pln_period: number;
+  recovered_pln: number;
+  remaining_pln: number;
+  remaining_years: number | null;
+  savings_pln_year_annualized: number;
+  roi_percent: number | null;
+  payback_years: number | null;
+  payback_reached_in_period: boolean;
 }

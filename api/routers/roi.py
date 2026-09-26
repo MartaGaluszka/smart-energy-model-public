@@ -68,4 +68,6 @@ def calculate(
         'opex_pln_year': row.opex_pln_year,
         'inflation_pct': row.inflation_pct,
     }
-    return RoiCalculateResponse(**roi_service.calculate_roi(body.period_start, body.period_end, assumptions))
+    return RoiCalculateResponse(**roi_service.calculate_roi(
+        body.period_start, body.period_end, assumptions, db=db, user_id=current_user.id,
+    ))

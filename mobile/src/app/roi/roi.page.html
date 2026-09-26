@@ -1,0 +1,241 @@
+<ion-header [translucent]="true" class="se-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/more" text="Więcej"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="font-serif">Kalkulator ROI</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="se-roi">
+  <div class="se-page">
+
+    <div class="se-center" *ngIf="loading">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+
+    <ng-container *ngIf="!loading">
+      <div class="se-section-title">
+        <ion-icon name="cash-outline"></ion-icon>
+        <span>Koszty początkowe</span>
+        <ion-icon name="information-circle-outline" class="se-info-icon" id="roi-capex-info"></ion-icon>
+        <ion-popover trigger="roi-capex-info" triggerAction="click" class="se-capex-popover">
+          <ng-template>
+            <ion-content class="se-popover-content">
+              <p>
+                Suma to panele plus falownik, magazyn, AZR i licznik.
+                Mój Prąd: do 50% kosztów, nie więcej niż 7 000 zł na PV
+                i 16 000 zł na magazyn (razem max 23 000 zł).
+                Ulga termomodernizacyjna to 32% od reszty.
+                Ładowarka EV i klimatyzacja nie wchodzą w ten zwrot.
+              </p>
+            </ion-content>
+          </ng-template>
+        </ion-popover>
+      </div>
+      <ion-card class="se-card">
+        <ion-card-content>
+          <div class="se-form-grid">
+            <ion-item lines="none" class="se-field">
+              <ion-label position="stacked">Panele [zł]</ion-label>
+              <ion-input type="number" inputmode="decimal" [value]="panels"
+                (ionChange)="onNumber('panels', $any($event.target).value)"></ion-input>
+            </ion-item>
+            <ion-item lines="none" class="se-field">
+              <ion-label position="stacked">Falownik, magazyn, AZR, licznik [zł]</ion-label>
+              <ion-input type="number" inputmode="decimal" [value]="inverterBattery"
+                (ionChange)="onNumber('inverterBattery', $any($event.target).value)"></ion-input>
+            </ion-item>
+          </div>
+          <p class="se-sum">Koszty początkowe: <strong>{{ formatPln(grossCapex) }} zł</strong></p>
+        </ion-card-content>
+      </ion-card>
+
+      <div class="se-section-title">
+        <ion-icon name="gift-outline"></ion-icon>
+        <span>Ulgi i dotacje</span>
+      </div>
+      <ion-card class="se-card">
+        <ion-card-content>
+          <p class="se-hint">
+            Domyślnie z kosztów (50% + limity), potem 32% ulgi. Możesz wpisać własne kwoty.
+          </p>
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">
+              Mój Prąd [zł]
+              <ion-icon name="information-circle-outline" class="se-info-icon" id="roi-moj-prad-info"></ion-icon>
+            </ion-label>
+            <ion-popover trigger="roi-moj-prad-info" triggerAction="click" class="se-capex-popover">
+              <ng-template>
+                <ion-content class="se-popover-content">
+                  <p>
+                    Z kosztów początkowych: 50% paneli (max {{ formatPln(mojPradPvCap) }} zł)
+                    + 50% magazynu (max {{ formatPln(mojPradStorageCap) }} zł).
+                  </p>
+                  <p>
+                    PV {{ formatPln(suggestedMojPradPv) }} zł
+                    + magazyn {{ formatPln(suggestedMojPradStorage) }} zł
+                    = {{ formatPln(suggestedMojPrad) }} zł
+                  </p>
+                </ion-content>
+              </ng-template>
+            </ion-popover>
+            <ion-input type="number" inputmode="decimal" [value]="mojPrad"
+              (ionChange)="onNumber('mojPrad', $any($event.target).value)"></ion-input>
+          </ion-item>
+          <p class="se-hint" *ngIf="mojPrad !== suggestedMojPrad">
+            Z kosztów: {{ formatPln(suggestedMojPrad) }} zł
+          </p>
+          <ion-item lines="none" class="se-field">
+            <ion-label position="stacked">Ulga termomodernizacyjna 32% [zł]</ion-label>
+            <ion-input type="number" inputmode="decimal" [value]="taxRelief"
+              (ionChange)="onNumber('taxRelief', $any($event.target).value)"></ion-input>
+          </ion-item>
+          <p class="se-hint" *ngIf="taxRelief !== suggestedTaxRelief">
+            Z kosztów (32% od reszty): {{ formatPln(suggestedTaxRelief) }} zł
+          </p>
+          <ion-button fill="clear" size="small" class="se-reset-btn"
+            (click)="resetSubsidiesFromCapex()">
+            Przelicz z kosztów początkowych
+          </ion-button>
+          <p class="se-net">
+            Realny koszt po odliczeniach: <strong>{{ formatPln(netCapex) }} zł</strong>
+          </p>
+        </ion-card-content>
+      </ion-card>
+
+      <div class="se-section-title">
+        <ion-icon name="construct-outline"></ion-icon>
+        <span>Parametry</span>
+      </div>
+      <ion-card class="se-card se-card--compact">
+        <ion-card-content>
+          <div class="se-form-grid se-form-grid--params">
+            <ion-item lines="none" class="se-field se-field--compact">
+              <ion-label position="stacked">
+                Przegląd [zł/rok]
+                <ion-icon name="information-circle-outline" class="se-info-icon" id="roi-opex-info"></ion-icon>
+              </ion-label>
+              <ion-popover trigger="roi-opex-info" triggerAction="click" class="se-capex-popover">
+                <ng-template>
+                  <ion-content class="se-popover-content">
+                    <p>Rezerwa na przegląd paneli i instalacji raz na 5 lat. To nie rachunek za prąd — prąd jest już w oszczędności.</p>
+                  </ion-content>
+                </ng-template>
+              </ion-popover>
+              <ion-input type="number" inputmode="decimal" [value]="opex"
+                placeholder="120"
+                (ionChange)="onNumber('opex', $any($event.target).value)"></ion-input>
+            </ion-item>
+            <div class="se-horizon">
+              <div class="se-horizon__label">Horyzont <strong>{{ horizon }} lat</strong></div>
+              <ion-range class="se-horizon__range" [min]="5" [max]="25" [step]="1"
+                [value]="horizon" [pin]="true"
+                (ionChange)="onHorizon(+$any($event).detail.value)"></ion-range>
+            </div>
+            <ion-item lines="none" class="se-field se-field--compact">
+              <ion-label position="stacked">Od</ion-label>
+              <ion-datetime-button datetime="dtRoiStart"></ion-datetime-button>
+            </ion-item>
+            <ion-item lines="none" class="se-field se-field--compact">
+              <ion-label position="stacked">Do</ion-label>
+              <ion-datetime-button datetime="dtRoiEnd"></ion-datetime-button>
+            </ion-item>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-button expand="block" class="se-btn-primary" [disabled]="calculating" (click)="calculate()">
+        <ion-spinner *ngIf="calculating" name="crescent" slot="start"></ion-spinner>
+        Oblicz realne ROI
+      </ion-button>
+      <p class="se-chart-error" *ngIf="error">{{ error }}</p>
+
+      <ng-container *ngIf="result as r">
+        <div class="se-section-title">
+          <ion-icon name="analytics-outline"></ion-icon>
+          <span>Wynik</span>
+        </div>
+
+        <ion-card class="se-card se-payback" [class.se-payback--ok]="withinHorizon"
+          [class.se-payback--late]="!withinHorizon && r.remaining_years != null">
+          <ion-card-content>
+            <p class="se-payback__label">Zostało</p>
+            <p class="se-payback__value font-serif">
+              {{ r.remaining_years != null ? (r.remaining_years | number:'1.1-1') : '—' }}
+              <small *ngIf="r.remaining_years != null">lat</small>
+            </p>
+            <p class="se-payback__lead" *ngIf="r.remaining_years != null">
+              Przy obecnym tempie oszczędności ok.&nbsp;{{ formatPln(r.savings_pln_year_annualized) }}&nbsp;zł rocznie.
+            </p>
+            <p class="se-payback__lead se-payback__lead--soft" *ngIf="withinHorizon">
+              Mieści się w horyzoncie {{ horizon }} lat.
+            </p>
+            <p class="se-payback__lead se-payback__lead--soft" *ngIf="!withinHorizon && r.remaining_years != null">
+              Przekracza horyzont {{ horizon }} lat.
+            </p>
+            <p class="se-payback__lead se-payback__lead--soft"
+              *ngIf="r.remaining_years == null && r.payback_years == null">
+              Brak zwrotu: zysk w okresie nie pokrywa przeglądu albo koszty początkowe wynoszą 0.
+            </p>
+
+            <div class="se-progress" *ngIf="r.recovered_pln != null || r.remaining_pln != null">
+              <div class="se-progress__track" aria-hidden="true">
+                <div class="se-progress__fill" [style.width.%]="recoveryPct"></div>
+              </div>
+              <div class="se-progress__meta">
+                <div class="se-progress__col">
+                  <span class="se-progress__value se-progress__value--moss">{{ formatPln(r.recovered_pln) }}&nbsp;zł</span>
+                  <span class="se-progress__label">Już spłacone</span>
+                </div>
+                <div class="se-progress__col se-progress__col--end">
+                  <span class="se-progress__value">{{ formatPln(r.remaining_pln) }}&nbsp;zł</span>
+                  <span class="se-progress__label">Zostało</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="se-vat-note">
+              Rachunek {{ formatPln(r.savings_pln_period) }} zł
+              + depozyt {{ formatPln(r.deposit_pln_period) }} zł
+              − przegląd {{ formatPln(r.opex_pln_period) }} zł
+              · {{ r.period_start }} – {{ r.period_end }}.
+            </p>
+          </ion-card-content>
+        </ion-card>
+      </ng-container>
+    </ng-container>
+  </div>
+
+  <ion-modal [keepContentsMounted]="true">
+    <ng-template>
+      <ion-datetime
+        id="dtRoiStart"
+        presentation="date"
+        locale="pl-PL"
+        [firstDayOfWeek]="1"
+        [showDefaultButtons]="true"
+        doneText="Gotowe"
+        cancelText="Anuluj"
+        [value]="periodStart"
+        (ionChange)="onPeriodStart($any($event.target).value)"
+      ></ion-datetime>
+    </ng-template>
+  </ion-modal>
+
+  <ion-modal [keepContentsMounted]="true">
+    <ng-template>
+      <ion-datetime
+        id="dtRoiEnd"
+        presentation="date"
+        locale="pl-PL"
+        [firstDayOfWeek]="1"
+        [showDefaultButtons]="true"
+        doneText="Gotowe"
+        cancelText="Anuluj"
+        [value]="periodEnd"
+        (ionChange)="onPeriodEnd($any($event.target).value)"
+      ></ion-datetime>
+    </ng-template>
+  </ion-modal>
+</ion-content>

@@ -86,8 +86,7 @@ class ShadowSavingsResponse(BaseModel):
     baseline_cost_pln: float  # brutto (z VAT 23%)
     actual_cost_pln: float  # brutto (z VAT 23%)
     method_note: str = (
-        'Kwoty brutto (z VAT 23%). Oszczędność = koszt bez PV minus koszt z PV/baterią. '
-        'MVP: przybliżenie autokonsumpcji; pełna symulacja SoC godzina po godzinie to Faza 4.'
+        'Ta sama oszczędność co w symulatorze rachunku: brutto, koszt bez paneli minus koszt z PV.'
     )
     is_hypothetical: bool = False
 

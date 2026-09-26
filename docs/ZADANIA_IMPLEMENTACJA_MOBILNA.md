@@ -177,7 +177,7 @@ Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 lin
 |----|-----|---------|-----|
 | T3.1 | P0 | `[x]` Tabela `roi_assumptions` (CAPEX, OPEX, inflacja, założenie sprzedawcy) | `db/init/002_app_tables.sql` + GET/PUT `/roi/assumptions` (TA.7) |
 | T3.2 | P0 | `[x]` `POST /api/v1/roi/calculate` — oszczędność roczna, ROI %, payback | `api/services/roi_service.py` → `FinancialAnalyzer` |
-| T3.3 | P0 | `[ ]` UI: pola CAPEX/OPEX + big number payback | Moss tylko przy pozytywnym ROI |
+| T3.3 | P0 | `[x]` UI: pola CAPEX/OPEX + big number payback | 2026-09-25: `/tabs/roi`. CAPEX brutto (panele + falownik/magazyn) minus dotacja i ulga → `capex_pln` netto. Oszczędność z `POST /roi/calculate` (okres), nie z ręcznego pola. Moss gdy payback ≤ horyzont. |
 | T3.4 | P0 | `[ ]` Wykres skumulowanych oszczędności vs CAPEX (punkt zwrotu) | Czytelna legenda |
 | T3.5 | P1 | Tryb „12 miesięcy” vs „annualizacja z dostępnych miesięcy” | Jasny komunikat o jakości danych |
 | T3.6 | P2 | Rozdział CAPEX: PV vs bateria | Dwa paybacki opcjonalnie |
@@ -335,7 +335,7 @@ Aktualizuj status w tej tabeli przy domknięciu fazy:
 | T1.7 Sync inkrementalny + migracja PG | `[x]` | 2026-07-26 | Patrz `docs/UPDATE_2026-07-26_foxess-incremental-sync.md` — migracja historii SQLite→Postgres + `POST /foxess/sync` liczy brakujący odcinek automatycznie, z cooldownem. |
 | 1 Shell + sync + prognoza | `[x]` | 2026-07-28 | P0 zamknięte: Ionic Solar Graphite, 4 taby, Home KPI + sync Fox + banner §9.6 + sugestie, Prognoza z wykresem Chart.js + porównaniem błędu % vs rzeczywistość (T1.14, patrz wyżej). Screenshoty: `mobile/docs/screenshots/`. **Korekta 2026-07-28:** T1.13 był błędnie oznaczony jako gotowy 2026-07-27 — ekran Prognoza był w rzeczywistości placeholderem; dobudowany teraz razem z T1.14. **T1.10** `[x]` 2026-09-03 (40402 → 429 + karta na tab2). **T1.21–T1.24** `[x]` 2026-09-03 — UX Home: jeden baner doradczy, widget PLAN, CTA oszczędności, PLAN 24H + dedupe sugestii. Otwarte P1: T1.6 splash. P2: T1.11 pull-refresh, T1.15 cache prognoz (świadomie odłożone). |
 | 2 Symulator | `[~]` | 2026-07-29 | Backend (T2.1–T2.3) + **UI P0** (T2.4 formularz stawek, T2.5 wykres słupkowy) + **P1** (T2.6 mini tabela kWh, T2.7 netto/brutto VAT, T2.10 przebudowa UX + polski `ion-datetime`) na `/tabs/simulator`. Otwarte P2: T2.8 depozyt, T2.9 prefill z tauron_bills. |
-| 3 ROI | `[~]` | 2026-07-27 | **Backend gotowy** (T3.1–T3.2, TA.7). **Brakuje UI mobilnego** (T3.3–T3.4 P0). Zależność: wynik symulatora (Faza 2). |
+| 3 ROI | `[~]` | 2026-09-25 | **T3.3** ekran `/tabs/roi` (CAPEX netto, payback, ROI %). Zostaje **T3.4** wykres punktu zwrotu. |
 | 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-09-03 | Refaktor drill-down T4.25–T4.30 + domknięcie UX (scroll, shared SCSS, wykres 24h, shadow 3×1, sezon segment). **T4.28a** kalkulator AC `[x]`. T4.5 AC: Home skrót + Analityka pełny widget. Brak: FCM (T4.22); kalendarz UI (T4.8); profil domu / obciążenia (backlog — docelowe miejsce mocy AC). |
 | 5 ML advice (bez control) | `[ ]` | | |
 | 6 Sterowanie Fox (po ~roku) | `[ ]` | | poza MVP |
