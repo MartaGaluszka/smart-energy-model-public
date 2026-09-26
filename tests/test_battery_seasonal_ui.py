@@ -496,6 +496,21 @@ def test_summer_plan_night_fc_only_when_pv_weak():
     assert 13 not in fc and 14 not in fc
 
 
+def test_autumn_weekend_fc_not_all_day():
+    """Sobota G12w = cała doba tania, ale FC tylko 22–6 + 13–15 (nie 24h → płaskie 80%)."""
+    from api.services.battery_planner import _force_charge_hours_for_season
+
+    pv = [0.0] * 6 + [1.0, 2.0, 3.0, 3.2, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5, 0.2, 0.0] + [0.0] * 6
+    fc = _force_charge_hours_for_season(
+        season='autumn',
+        d=date(2026, 9, 26),  # sobota
+        pv_forecast=pv,
+        all_day_cheap=True,
+    )
+    assert fc == [0, 1, 2, 3, 4, 5, 13, 14, 22, 23]
+    assert 12 not in fc and 16 not in fc
+
+
 def test_battery_settings_put_schedule_roundtrip(client, auth_headers):
     """PUT/GET /battery/settings — toggle + tryby + preset jak w UI."""
     payload = {

@@ -396,6 +396,13 @@ def _hourly_pv_for_plan(target_date: str, request=None) -> list[float]:
     return pv
 
 
+def _is_preferred_fc_hour(hour: int, *, allow_afternoon: bool) -> bool:
+    """Preferowane okna FC (nie cała doba tania w weekend)."""
+    if hour >= 22 or hour < 6:
+        return True
+    return allow_afternoon and 13 <= hour < 15
+
+
 def _force_charge_hours_for_season(
     *,
     season: str,
@@ -403,15 +410,20 @@ def _force_charge_hours_for_season(
     pv_forecast: list[float],
     all_day_cheap: bool,
 ) -> list[int]:
-    """Godziny FC w symulacji planu — zgodne z reżimem doradczym, nie „wszystkie tanie”."""
+    """Godziny FC w symulacji planu — zgodne z reżimem doradczym, nie „wszystkie tanie”.
+
+    Weekend/święto G12w = cała doba tania, ale FC tylko w oknach 22–6 (+13–15 zimą/jesienią).
+    Inaczej symulacja trzyma SoC na celie przez 24h → płaska linia 80% na PLAN 24H.
+    """
     from src.optimization.g12w_tariff import classify_zone
 
     total_pv = sum(pv_forecast)
     hours: list[int] = []
 
     if season in ('winter', 'autumn'):
-        # Zima/jesień: tanie okna (noc + 13–15 pn–pt)
         for h in range(24):
+            if not _is_preferred_fc_hour(h, allow_afternoon=True):
+                continue
             zone = classify_zone(datetime.combine(d, time(h, 0)))
             if all_day_cheap or zone == 2:
                 hours.append(h)
@@ -420,7 +432,7 @@ def _force_charge_hours_for_season(
     # Lato/wiosna: FC tylko gdy dzień słaby; wyłącznie noc G12w (nie popołudnie 13–15)
     if total_pv < 15.0:
         for h in range(24):
-            if not (h >= 22 or h < 6):
+            if not _is_preferred_fc_hour(h, allow_afternoon=False):
                 continue
             zone = classify_zone(datetime.combine(d, time(h, 0)))
             if all_day_cheap or zone == 2:

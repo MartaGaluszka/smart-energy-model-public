@@ -1023,7 +1023,9 @@ def evaluate_soc16_hold_reserve(
     Od 16:00: jeśli SoC@16 < próg → trzymaj rezerwę do 22:00, ładuj 22–6.
     """
     as_of = as_of or datetime.now()
-    min_evening = _soc_min_evening() if min_evening is None else min_evening
+    min_evening = (
+        seasonal_min_evening_percent(as_of.date()) if min_evening is None else min_evening
+    )
     reserve_percent = (
         seasonal_soc_reserve(as_of.date()) if reserve_percent is None else reserve_percent
     )
@@ -1056,10 +1058,16 @@ def evaluate_soc16_hold_reserve(
     else:
         rec = 'NISKI SOC@16 — TRZYMAJ REZERWĘ'
         title = 'Sugestia: niski SoC na wieczór'
+        season = resolve_calendar_season(as_of.date())
+        aft = (
+            ' Zalecane ładowanie 22–6; jutro ewentualnie okno 13–15.'
+            if season in ('winter', 'autumn')
+            else ' Zalecane ładowanie 22–6 przy słabym PV jutro.'
+        )
         body = (
             f'SoC o 16:00 wynosi {soc_percent:.0f}% (próg {min_evening:.0f}%). '
-            f'Nie rozładowuj poniżej rezerwy {reserve_percent:.0f}% do 22:00. '
-            f'Zalecane ładowanie 22–6; jutro okno 13–15. Sugestia doradcza, bez automatyki.'
+            f'Nie rozładowuj poniżej rezerwy {reserve_percent:.0f}% do 22:00.'
+            f'{aft} Sugestia doradcza, bez automatyki.'
         )
     return Soc16HoldReserveRule(
         triggered=True,
