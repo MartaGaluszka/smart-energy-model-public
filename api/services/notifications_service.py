@@ -38,6 +38,22 @@ def suggestion_context_for_hour(hour: int | None = None) -> SuggestionContext:
     return 'peak'
 
 
+def _pretty_g12w_window(label: str) -> str:
+    """'13–15' / '22-6' / '13:00–15:00' → '13:00–15:00' / '22:00–6:00'."""
+    raw = (label or '').replace('–', '-').replace('—', '-')
+    parts = [p.strip() for p in raw.split('-') if p.strip()]
+    if len(parts) != 2:
+        return label
+    hours: list[str] = []
+    for part in parts:
+        head = part.split(':', 1)[0]
+        digits = ''.join(c for c in head if c.isdigit())
+        if not digits:
+            return label
+        hours.append(f'{int(digits)}:00')
+    return f'{hours[0]}–{hours[1]}'
+
+
 def _payload_day(payload_json: str | None) -> str | None:
     if not payload_json:
         return None
@@ -45,6 +61,25 @@ def _payload_day(payload_json: str | None) -> str | None:
         return json.loads(payload_json).get('day')
     except json.JSONDecodeError:
         return None
+
+
+def _mark_unread_type_read(db: Session, user_id: int, notif_type: str) -> int:
+    """Zamyka nieprzeczytane karty danego typu (np. gdy reguła już nie trigguje)."""
+    now = datetime.utcnow()
+    rows = (
+        db.query(Notification)
+        .filter(
+            Notification.user_id == user_id,
+            Notification.notif_type == notif_type,
+            Notification.read_at.is_(None),
+        )
+        .all()
+    )
+    for row in rows:
+        row.read_at = now
+    if rows:
+        db.commit()
+    return len(rows)
 
 
 def _upsert_day_notification(
@@ -66,22 +101,30 @@ def _upsert_day_notification(
         .order_by(Notification.created_at.desc())
         .all()
     )
+    now = datetime.utcnow()
+    matched: Notification | None = None
     for row in existing:
         if _payload_day(row.payload_json) == day_key:
-            row.title = title
-            row.body = body
-            row.payload_json = payload
-            db.commit()
-            db.refresh(row)
-            record_advice_event(
-                db,
-                user_id,
-                event_date=day_key,
-                advice_type=notif_type,
-                payload_json=payload,
-                was_actionable=True,
-            )
-            return row
+            matched = row
+        elif row.read_at is None:
+            # Nowa predykcja nadpisuje stare karty tego samego typu (bez duplikatu 13–15).
+            row.read_at = now
+    if matched is not None:
+        matched.title = title
+        matched.body = body
+        matched.payload_json = payload
+        matched.read_at = None
+        db.commit()
+        db.refresh(matched)
+        record_advice_event(
+            db,
+            user_id,
+            event_date=day_key,
+            advice_type=notif_type,
+            payload_json=payload,
+            was_actionable=True,
+        )
+        return matched
 
     notif = Notification(
         user_id=user_id,
@@ -121,7 +164,7 @@ def maybe_upsert_cheap_window(
             next_cheap_window_label,
             seasonal_soc_reserve,
         )
-        from src.optimization.g12w_tariff import is_cheap_zone, tariff_summary
+        from src.optimization.g12w_tariff import is_cheap_zone
     except Exception:
         return None
 
@@ -143,6 +186,7 @@ def maybe_upsert_cheap_window(
         today_pv_until_13 = today_pv
     today_actual = get_today_pv_observed_kwh(day_key)
     nxt = next_cheap_window_label(as_of)
+    window = _pretty_g12w_window(nxt)
     in_cheap = is_cheap_zone(as_of)
     evening_note = format_evening_battery_plan_note(
         soc_percent=snap.soc_percent,
@@ -152,36 +196,27 @@ def maybe_upsert_cheap_window(
         reserve_percent=reserve,
         today_pv_actual_kwh=today_actual,
     )
+    pv_line = (
+        f'Prognoza PV na dziś: ~{today_pv:.0f} kWh. '
+        'Jeśli SoC jest niski, rozważ doładowanie z sieci.'
+    )
 
     if wait.triggered:
-        title = wait.title
-        body = f'{wait.body} {evening_note}'.strip()
+        title = f'🔔 Zbliża się tanie okno ({window})'
+        body = pv_line
     elif context == 'morning':
-        title = 'Sugestia: tania strefa G12w (rano)'
-        body = (
-            f'Sugestia doradcza — {tariff_summary()} '
-            f'Najbliższe tanie okno: {nxt}. '
-            f'Prognoza PV dziś ~{today_pv:.0f} kWh, jutro ~{tomorrow_pv:.0f} kWh. '
-            f'Rozważ ładowanie magazynu w taniej strefie — bez automatyki.'
-        )
+        title = f'🔔 Tanie okno G12w ({window})'
+        body = pv_line
     elif context == 'pre_cheap':
-        title = 'Sugestia: zbliża się okno 13:00–15:00'
+        title = f'🔔 Zbliża się tanie okno ({window})'
         body = (
-            f'Sugestia doradcza — za chwilę tania G12w 13–15 (pn–pt). '
-            f'Najbliższe okno: {nxt}. '
-            f'Prognoza PV dziś do 13:00 ~{today_pv_until_13:.0f} kWh '
-            f'(cały dzień ~{today_pv:.0f} kWh). '
-            f'Jeśli SoC niski, rozważ doładowanie w tanim oknie — decyzja należy do Ciebie.'
+            f'Prognoza PV na dziś: ~{today_pv:.0f} kWh'
+            f' (do 13:00 ~{today_pv_until_13:.0f} kWh). '
+            'Jeśli SoC jest niski, rozważ doładowanie z sieci.'
         )
     else:
-        title = 'Sugestia: szczyt wieczorny — plan na noc'
-        body = (
-            f'Sugestia doradcza — droga G12w do 22:00. '
-            f'Trzymaj rezerwę; tanie ładowanie nocne od 22:00 ({nxt}). '
-            f'Prognoza PV dziś ~{today_pv:.0f} kWh; jutro ~{tomorrow_pv:.0f} kWh. '
-            f'{evening_note} '
-            f'System tylko doradza.'
-        ).strip()
+        title = f'🔔 Tanie ładowanie nocne ({window})'
+        body = pv_line
 
     payload = json.dumps(
         {
@@ -272,6 +307,7 @@ def maybe_upsert_soc16_reserve(db: Session, user_id: int) -> Notification | None
             evaluate_soc16_hold_reserve,
             get_battery_snapshot,
             get_soc_at_hour,
+            seasonal_min_evening_percent,
             seasonal_soc_reserve,
         )
     except Exception:
@@ -285,12 +321,16 @@ def maybe_upsert_soc16_reserve(db: Session, user_id: int) -> Notification | None
     else:
         soc = snap.soc_percent
     reserve = seasonal_soc_reserve(as_of.date())
+    min_evening = seasonal_min_evening_percent(as_of.date())
     rule = evaluate_soc16_hold_reserve(
         soc_percent=soc,
         as_of=as_of,
         reserve_percent=reserve,
+        min_evening=min_evening,
     )
     if not rule.triggered:
+        # Sezon/próg się zmienił albo SoC już OK — zdejmij starą kartę (np. lato 50%/20%).
+        _mark_unread_type_read(db, user_id, NOTIF_TYPE_SOC16_RESERVE)
         return None
 
     day_key = as_of.date().isoformat()
