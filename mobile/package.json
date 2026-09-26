@@ -9,6 +9,8 @@
     "start": "ng serve",
     "build": "ng build",
     "build:sim": "node scripts/sync-simulator-api-host.mjs && ng build --configuration development",
+    "deploy:sim": "npm run build:sim && npx cap sync ios && npx cap run ios --target-name \"iPhone 17\"",
+    "cap:ios": "npm run deploy:sim",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint"

@@ -44,6 +44,23 @@
   letter-spacing: 0.04em;
 }
 
+.se-offline-hint {
+  --background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.se-offline-hint__text {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
+
+  code {
+    font-size: 12px;
+    color: var(--text);
+  }
+}
+
 .se-error-title--home {
   margin: 0 0 8px;
   font-size: 16px;

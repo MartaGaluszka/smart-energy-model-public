@@ -272,6 +272,10 @@ export class HomeDataService {
 
   private formatHttpError(err: unknown, fallback: string): string {
     if (err instanceof HttpErrorResponse) {
+      // Status 0 = brak sieci / zły host (np. placeholder production) — bez surowego stacka.
+      if (err.status === 0) {
+        return 'API niedostępne na Macu (sprawdź docker compose / build:sim).';
+      }
       const parts: string[] = [];
       if (err.status) {
         parts.push(`HTTP ${err.status}${err.statusText ? ` ${err.statusText}` : ''}`);
@@ -285,11 +289,14 @@ export class HomeDataService {
         if (typeof detail === 'string' && detail.trim()) parts.push(detail.trim());
         else if (detail != null) parts.push(String(detail));
       }
-      if (err.message && !parts.some((p) => p.includes(err.message))) parts.push(err.message);
-      if (err.url) parts.push(err.url);
       return parts.length ? parts.join(' · ') : fallback;
     }
-    if (err instanceof Error && err.message) return err.message;
+    if (err instanceof Error && err.message) {
+      if (/example\.com|Auth failed|sesji JWT/i.test(err.message)) {
+        return 'API niedostępne na Macu (sprawdź docker compose / build:sim).';
+      }
+      return err.message;
+    }
     if (typeof err === 'string' && err.trim()) return err.trim();
     return fallback;
   }

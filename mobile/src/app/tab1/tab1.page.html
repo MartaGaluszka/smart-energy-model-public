@@ -49,11 +49,15 @@
       </ion-card-content>
     </ion-card>
 
-    <ion-card color="danger" *ngIf="(sync$ | async)?.offline && (sync$ | async)?.apiError as apiErr">
+    <ion-card class="se-card se-offline-hint" *ngIf="(sync$ | async)?.offline">
       <ion-card-content>
-        <p class="se-error-title se-error-title--home">Błąd połączenia z API</p>
-        <p class="se-error-body se-error-body--home"><strong>{{ apiErr }}</strong></p>
-        <ion-button color="light" (click)="homeData.refreshAll(true)">Spróbuj ponownie</ion-button>
+        <p class="se-offline-hint__text">
+          Brak połączenia z API na Macu. Po restarcie / braku prądu poczekaj chwilę
+          albo uruchom: <code>docker compose up -d db api</code>
+        </p>
+        <ion-button fill="outline" size="small" (click)="homeData.refreshAll(true)">
+          Spróbuj ponownie
+        </ion-button>
       </ion-card-content>
     </ion-card>
 

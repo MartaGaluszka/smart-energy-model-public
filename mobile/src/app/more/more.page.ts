@@ -1,4 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
+import { addIcons } from 'ionicons';
+import {
+  batteryChargingOutline,
+  calculatorOutline,
+  cashOutline,
+  flashOutline,
+  partlySunnyOutline,
+  receiptOutline,
+  trendingUpOutline,
+} from 'ionicons/icons';
 
 @Component({
   selector: 'app-more',
@@ -6,11 +16,16 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./more.page.scss'],
   standalone: false,
 })
-export class MorePage implements OnInit {
-
-  constructor() { }
-
-  ngOnInit() {
+export class MorePage {
+  constructor() {
+    addIcons({
+      calculatorOutline,
+      trendingUpOutline,
+      batteryChargingOutline,
+      flashOutline,
+      partlySunnyOutline,
+      cashOutline,
+      receiptOutline,
+    });
   }
-
 }

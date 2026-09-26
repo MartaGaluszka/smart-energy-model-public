@@ -76,8 +76,10 @@ def night_charge_advice() -> NightChargeAdviceResponse:
 def shadow_savings(
     from_: str = Query(..., alias='from', description='YYYY-MM-DD'),
     to: str = Query(..., description='YYYY-MM-DD'),
+    current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> ShadowSavingsResponse:
-    return ShadowSavingsResponse(**battery_planner.get_shadow_savings(from_, to))
+    return ShadowSavingsResponse(**battery_planner.get_shadow_savings(from_, to, db=db, user_id=current_user.id))
 
 
 @router.get('/policy', response_model=BatteryPolicyResponse, summary='Treść polityki advise-only (§9.6) — automation_enabled=false')
