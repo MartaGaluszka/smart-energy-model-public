@@ -61,7 +61,7 @@ Pierwsze daily po tym retrainie: **2026-09-20** @05 — sumy w archiwum prognozy
 
 1. Nic nie zmieniać w launchd / primary (RF16 + ENS).  
 2. Closeouty **13.09–19.09** — dopisać do [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md) po serii wieczornych runów.  
-3. Kolejny weekly: **2026-09-27 ~04:30**.  
+3. Kolejny weekly: **2026-09-27 ~04:30** → **wykonany** — [`NOTATKA_WEEKLY_2026-09-27.md`](NOTATKA_WEEKLY_2026-09-27.md) (**REVIEW** Δ +0,025).  
 4. Watch: jesień / krótszy dzień — gap nadal OK; Δ vs 13.09 **−0,014** (zapas względem progu REVIEW **+0,02**).
 
 ---
