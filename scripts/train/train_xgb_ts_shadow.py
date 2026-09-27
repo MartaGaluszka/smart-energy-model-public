@@ -5,6 +5,9 @@ Trening XGB + TS (16 production + 8 NWP TS) → shadow joblib.
 Zwycięzca walk-forward v2 — NIE nadpisuje produkcji RF 16.
 Zapis: models/pv_hourly_model_xgb_ts.joblib
 
+Dual report: shuffle Test MAE + chronological L30 (soft gate, bez REJECT).
+Prod fit: pełne expanding do train_end (jak dotychczas).
+
 Uruchomienie:
     python scripts/train/train_xgb_ts_shadow.py
     python scripts/train/train_xgb_ts_shadow.py --model-path models/pv_hourly_model_xgb_ts.joblib
@@ -26,7 +29,6 @@ load_dotenv(ROOT / '.env')
 os.environ.setdefault('MPLCONFIGDIR', '/tmp/mpl')
 os.environ.setdefault('MPLBACKEND', 'Agg')
 
-import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import GroupShuffleSplit
@@ -46,10 +48,20 @@ from src.models.pv_hourly_predictor import (
     _metrics,
     _overfit_verdict,
 )
+from src.models.weekly_dual_metrics import (
+    append_dual_history,
+    chronological_l30_masks,
+    evaluate_holdout_pipeline,
+    load_prev_shuffle_mae,
+    print_dual_report,
+    shuffle_gate_vs_prev,
+    soft_gate_l30,
+)
 
 FEATURE_COLUMNS = list(HOURLY_FEATURE_COLUMNS_PRODUCTION) + list(TS_FEATURE_COLUMNS)
 DEFAULT_MODEL_PATH = 'models/pv_hourly_model_xgb_ts.joblib'
 SPLIT_RANDOM_STATE = 42
+FEATURE_SET = 'xgb_ts'
 
 
 def _xgb_pipe() -> Pipeline:
@@ -83,6 +95,7 @@ def main() -> None:
     print('=== XGB+TS shadow train ===')
     print(f'Okno: {format_train_window(train_start, train_end)}')
     print(f'Cechy: {len(FEATURE_COLUMNS)} (production 16 + TS 8)')
+    print('Dual: shuffle 80/20 + L30 | prod fit=full expanding')
 
     frame = load_hourly_training_frame_extended(
         start_date=train_start,
@@ -118,6 +131,31 @@ def main() -> None:
     daily_mae = mean_absolute_error(daily_true, daily_pred)
     daily_r2 = r2_score(daily_true, daily_pred) if len(daily_true) > 1 else float('nan')
 
+    chrono_tr, chrono_te, hold_start, hold_end = chronological_l30_masks(
+        frame['day'], train_end,
+    )
+    l30 = evaluate_holdout_pipeline(
+        _xgb_pipe(),
+        frame,
+        FEATURE_COLUMNS,
+        TARGET_COLUMN,
+        chrono_tr,
+        chrono_te,
+    )
+    soft = soft_gate_l30(l30.get('test_mae'))
+    prev_shuf = load_prev_shuffle_mae(FEATURE_SET)
+    shuf_gate = shuffle_gate_vs_prev(te['mae'], prev_shuf)
+    print_dual_report(
+        feature_set=FEATURE_SET,
+        shuffle_mae=te['mae'],
+        shuffle_daily_mae=daily_mae,
+        l30=l30,
+        hold_start=hold_start,
+        hold_end=hold_end,
+        soft=soft,
+        shuffle_gate=shuf_gate,
+    )
+
     # Refit na całym oknie treningowym (produkcyjny shadow)
     full_pipe = _xgb_pipe()
     full_pipe.fit(X, y)
@@ -141,6 +179,23 @@ def main() -> None:
         n_test=len(y_te),
     )
 
+    hist_path = append_dual_history({
+        'feature_set': FEATURE_SET,
+        'train_start': train_start,
+        'train_end': train_end,
+        'shuffle_test_mae': te['mae'],
+        'shuffle_daily_mae': daily_mae,
+        'l30_test_mae': l30.get('test_mae'),
+        'l30_daily_mae': l30.get('daily_mae'),
+        'l30_hold_start': hold_start,
+        'l30_hold_end': hold_end,
+        'soft_gate_l30': soft['status'],
+        'shuffle_gate': shuf_gate['status'],
+        'shuffle_gate_delta': shuf_gate.get('delta'),
+        'model_path': args.model_path,
+    })
+    print(f'✓ dual history → {hist_path}')
+
     if args.no_save:
         print('Pominięto zapis (--no-save)')
         return
@@ -152,7 +207,22 @@ def main() -> None:
     predictor.longitude = lon
     predictor.location = os.getenv('WEATHER_LOCATION')
     predictor.report = report
-    path = predictor.save()
+    path = predictor.save(extra_metadata={
+        'feature_set': FEATURE_SET,
+        'train_start': train_start,
+        'train_end': train_end,
+        'prod_fit': 'full_expanding_window',
+        'dual_report': {
+            'shuffle_test_mae': te['mae'],
+            'shuffle_daily_mae': daily_mae,
+            'l30_test_mae': l30.get('test_mae'),
+            'l30_daily_mae': l30.get('daily_mae'),
+            'l30_hold_start': hold_start,
+            'l30_hold_end': hold_end,
+            'soft_gate_l30': soft,
+            'shuffle_gate': shuf_gate,
+        },
+    })
     print(f'✓ Shadow XGB+TS → {path}')
 
 

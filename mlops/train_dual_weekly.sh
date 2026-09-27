@@ -50,6 +50,11 @@ echo "--- [3/3] XGB+TS shadow → pv_hourly_model_xgb_ts.joblib ---"
 "$PYTHON" "${PROJECT_ROOT}/scripts/train/train_xgb_ts_shadow.py" \
   --model-path models/pv_hourly_model_xgb_ts.joblib
 
+echo ""
+echo "--- Dual gate summary (shuffle + L30 soft) ---"
+"$PYTHON" "${PROJECT_ROOT}/scripts/train/weekly_dual_gate_report.py" \
+  || echo "⚠️  dual gate report — pominięty / błąd (train OK)"
+
 date '+%Y-%m-%d' > "${PROJECT_ROOT}/logs/.weekly_train_ok"
 
 echo ""
@@ -57,3 +62,4 @@ echo "✅ Train OK | produkcja RF 16 + shadow CS4 + shadow XGB+TS"
 echo "   Primary:  models/pv_hourly_model.joblib"
 echo "   CS4:      models/pv_hourly_model_cs4.joblib"
 echo "   XGB+TS:   models/pv_hourly_model_xgb_ts.joblib"
+echo "   Dual:     data/processed/weekly_dual_metrics.csv (shuffle + L30 soft gate)"

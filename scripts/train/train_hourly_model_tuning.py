@@ -57,6 +57,15 @@ from src.models.pv_hourly_predictor import (
     _metrics,
     _overfit_verdict,
 )
+from src.models.weekly_dual_metrics import (
+    append_dual_history,
+    chronological_l30_masks,
+    evaluate_holdout_pipeline,
+    load_prev_shuffle_mae,
+    print_dual_report,
+    shuffle_gate_vs_prev,
+    soft_gate_l30,
+)
 
 MLFLOW_EXPERIMENT = 'pv-hourly-forecast'
 
@@ -381,6 +390,33 @@ def run_tuning(
     verdict = _overfit_verdict(best['gap'], test_minus_cv, best['test_mae'])
     print(f'   {verdict}')
 
+    # Dual reporting: L30 chrono (osobny fit na past→holdout) — nie zmienia prod okna
+    print('\n[4b] Chronological holdout L30 (dual report)...')
+    chrono_tr, chrono_te, hold_start, hold_end = chronological_l30_masks(
+        frame['day'], train_end,
+    )
+    l30 = evaluate_holdout_pipeline(
+        best['pipeline'],
+        frame,
+        list(feature_columns),
+        TARGET_COLUMN,
+        chrono_tr,
+        chrono_te,
+    )
+    soft = soft_gate_l30(l30.get('test_mae'))
+    prev_shuf = load_prev_shuffle_mae(feature_key)
+    shuf_gate = shuffle_gate_vs_prev(best['test_mae'], prev_shuf)
+    print_dual_report(
+        feature_set=feature_key,
+        shuffle_mae=best['test_mae'],
+        shuffle_daily_mae=best['daily_mae'],
+        l30=l30,
+        hold_start=hold_start,
+        hold_end=hold_end,
+        soft=soft,
+        shuffle_gate=shuf_gate,
+    )
+
     print('\n[5] Cross-validation wybranego modelu...')
     cv_scores = []
     for fold, (tr, va) in enumerate(gkf.split(X_train, y_train, groups=groups), 1):
@@ -394,12 +430,19 @@ def run_tuning(
     cv_std = float(np.std(cv_scores))
     print(f'   CV średnie: {cv_mean:.3f} ± {cv_std:.3f} kWh/h')
 
+    # Prod joblib: refit na CAŁYM expanding (start→train_end) — L30 nie ucina treningu
+    print('\n[5b] Refit produkcyjny na pełnym oknie expanding...')
+    full_pipe = clone(best['pipeline'])
+    full_pipe.fit(frame[feature_columns], frame[TARGET_COLUMN])
+    print(f'   Fit na {frame["day"].nunique()} dni / {len(frame)} h '
+          f'({train_start} → {train_end})')
+
     saved_path = None
     if save_model:
         print('\n[6] Zapis modelu .joblib...')
         predictor = PVHourlyPredictor(model_path=model_path)
         predictor.feature_columns = list(feature_columns)
-        predictor.pipeline = best['pipeline']
+        predictor.pipeline = full_pipe
         predictor.latitude = latitude
         predictor.longitude = longitude
         predictor.location = os.getenv('WEATHER_LOCATION')
@@ -423,6 +466,17 @@ def run_tuning(
             'split_random_state': SPLIT_RANDOM_STATE,
             'tuning_strategy': 'hourly_gridsearch_min_gap',
             'target': TARGET_COLUMN,
+            'prod_fit': 'full_expanding_window',
+            'dual_report': {
+                'shuffle_test_mae': best['test_mae'],
+                'shuffle_daily_mae': best['daily_mae'],
+                'l30_test_mae': l30.get('test_mae'),
+                'l30_daily_mae': l30.get('daily_mae'),
+                'l30_hold_start': hold_start,
+                'l30_hold_end': hold_end,
+                'soft_gate_l30': soft,
+                'shuffle_gate': shuf_gate,
+            },
         })
         print(f'✓ {saved_path}')
         print(f'✓ {saved_path.replace(".joblib", ".metadata.json")}')
@@ -447,15 +501,43 @@ def run_tuning(
         'cv_std': cv_std,
         'daily_mae': best['daily_mae'],
         'daily_r2': best['daily_r2'],
+        'l30_test_mae': l30.get('test_mae'),
+        'l30_daily_mae': l30.get('daily_mae'),
+        'l30_gap': l30.get('gap'),
+        'l30_hold_start': hold_start,
+        'l30_hold_end': hold_end,
+        'l30_n_test_days': l30.get('n_test_days'),
+        'soft_gate_l30': soft['status'],
+        'soft_gate_hard_reject': soft['hard_reject'],
+        'shuffle_gate': shuf_gate['status'],
+        'shuffle_gate_delta': shuf_gate.get('delta'),
         'verdict': verdict,
         'cv_tolerance': CV_TOLERANCE,
         'split_random_state': SPLIT_RANDOM_STATE,
         'train_start': train_start,
         'train_end': train_end,
+        'prod_fit': 'full_expanding_window',
     }])
     summary_path = f'data/processed/hourly_model_tuning_summary_{summary_suffix}.csv'
     summary.to_csv(summary_path, index=False)
     print(f'✓ {summary_path}')
+
+    hist_path = append_dual_history({
+        'feature_set': feature_key,
+        'train_start': train_start,
+        'train_end': train_end,
+        'shuffle_test_mae': best['test_mae'],
+        'shuffle_daily_mae': best['daily_mae'],
+        'l30_test_mae': l30.get('test_mae'),
+        'l30_daily_mae': l30.get('daily_mae'),
+        'l30_hold_start': hold_start,
+        'l30_hold_end': hold_end,
+        'soft_gate_l30': soft['status'],
+        'shuffle_gate': shuf_gate['status'],
+        'shuffle_gate_delta': shuf_gate.get('delta'),
+        'model_path': saved_path or model_path,
+    })
+    print(f'✓ dual history → {hist_path}')
 
     grid_export = []
     for c in candidates:
@@ -509,6 +591,10 @@ def run_tuning(
         'cv_std': cv_std,
         'daily_mae': best['daily_mae'],
         'daily_r2': best['daily_r2'],
+        'l30_test_mae': l30.get('test_mae'),
+        'l30_daily_mae': l30.get('daily_mae'),
+        'soft_gate_l30': soft['status'],
+        'shuffle_gate': shuf_gate['status'],
         'verdict': verdict,
         'model_path': saved_path,
         **{f'rf_{k}': v for k, v in rf.items()},
@@ -652,7 +738,8 @@ def main() -> None:
         train_end=args.train_end,
         rolling_window_months=args.train_months,
     )
-    print(f'Okno treningowe: {format_train_window(train_start, train_end)} | shuffle 80/20')
+    print(f'Okno treningowe: {format_train_window(train_start, train_end)} | '
+          f'shuffle 80/20 + L30 dual report | prod fit=full expanding')
 
     if args.compare:
         feature_keys = tuple(k.strip() for k in args.compare_features.split(',') if k.strip())
