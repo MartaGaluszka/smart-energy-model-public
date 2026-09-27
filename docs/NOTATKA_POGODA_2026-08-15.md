@@ -7,6 +7,8 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-09-27 ~10:35** | **Oneshot** RF I/U **19,3/22,9** ½**21,1≈ENS 22,7** · **28** **I=U≈27,5** · **29** **U rad skip** → ICON/ENS **~27** · CS4×I/U dziś **22/25** (nie pick) · closeout **26** os **~18** vs Fox **30** — [`NOTATKA_2026-09-27.md`](NOTATKA_2026-09-27.md) |
+| **2026-09-27 ~10:27** | **MB** meteogram+MM+ens **27–29** · **słońce / 0 mm** · T **~20–21°** · dziś clearing AM · **28–29** ~0% cloud · MM ICON/UKMO **100%** · ENS **~23/28/27** · **watch undershoot** — [`NOTATKA_2026-09-27.md`](NOTATKA_2026-09-27.md) |
 | **2026-09-25 ~15:22** | **MB** meteogram+MM+ens+RH **25–27** · deszcz AM **~0,6 mm/h** → **PM clearing** · **26–27** słońce **19–21°** · Accu **25** **2/89%/3,3→CS4** · **26** **6/62%→mix** · oneshot **8,7/14,1** ½**11,4** · UI ENS **~12,8** · **watch PM** — [`NOTATKA_2026-09-25.md`](NOTATKA_2026-09-25.md) |
 | **2026-09-17 ~08:19** | **Oneshot** RF I/U **8,9/9,7** ½**9,3≈ENS 9,6** · **18.09** **I 17/U 26** ½**21,7≈ENS 25,5** · **19.09** ICON **24,1** U skip · Accu **CS4/CS4/RF** — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
 | **2026-09-18 ~08:49** | **Closeout 17.09** modele vs Fox **10,2** · ENS **9,64** (5,5%) · ½ **9,31** · **XGB @16 10,31** (1,1%) · archiwum ½ **~10,4** · profil zły/suma OK — [`NOTATKA_2026-09-17.md`](NOTATKA_2026-09-17.md) |
@@ -115,7 +117,23 @@
 | **2026-08-21 ~09:12** | **MB MultiModel + meteogram + ensemble** (pt.–nd.+) |
 | **2026-08-22 ~18:04** | AccuWeather dziś-na-dziś (22) / jutro (23) / +2 (24) |
 | **2026-08-22 ~18:05** | **MB MultiModel + meteogram + ensemble** (sob.–pon.) |
-| **2026-09-25** | **Matryca porównawcza** (Accu · MB · ICON · UKMO · ENS · CS4 · oneshot) — sekcja §Matryca poniżej · closeout **12–17.09** w paper-trade (repo prywatne) |
+| **2026-09-25** | **Matryca porównawcza** (Accu · MB · ICON · UKMO · ENS · CS4 · oneshot) — sekcja §Matryca poniżej · closeout **12–17.09** — paper-trade tylko repo prywatne |
+
+---
+
+## Meteoblue — 27.09 ~10:27 (obecny run)
+
+Update **2026-09-27 ~10:27** · okolice Krakowa (GPS w `.env`).
+
+| | **27.09** (dziś) | **28.09** | **29.09** |
+|--|------------------|-----------|-----------|
+| **Meteogram** | T **~7–20°** · **słońce** · AM wysokie chmury → **clearing** · **0 mm** | **~8–21°** · **0%** cloud · **0 mm** | **~7–21°** · **0%** cloud · **0 mm** |
+| **MM** | **100%** słońce (dzień) | **100%** | **100%** |
+| **Ensemble** | cloud **~60%→&lt;20% PM** · opad **0** | spike ~50% świt → **0%** dzień · **0 mm** | **0–10%** · **0 mm** (deszcz ~**02–03.10**) |
+| **Wiatr/RH** | S/SE · porywy **~18** · RH dzień **~40–50%** | porywy **~22** · RH **~45%** | porywy **~30** · RH **~40%** |
+| **vs ENS / oneshot** | ENS **~22,7** · ½ **21,1** · U jaśniej (cloud **35%** vs I **50%**) · Fox **~5,6@10** | ENS/½ **~27,5** · **I=U** | ENS/ICON **~27** · **U rad skip** |
+
+Closeout **26.09:** Fox **30,2** vs ENS **17,1 (−43%)**. Oneshot + matryca: [`NOTATKA_2026-09-27.md`](NOTATKA_2026-09-27.md) §Porównanie.
 
 ---
 
@@ -202,7 +220,7 @@ Godziny produkcyjne **6–20** jak w feature pipeline. **UKMO rad skip** → nie
 | Co | Gdzie |
 |----|--------|
 | Oneshot RF I/U + CS4 | [`scripts/analysis/oneshot_rf_icon_vs_ukmo.py`](../scripts/analysis/oneshot_rf_icon_vs_ukmo.py) |
-| Paper Accu→RF/CS4 | [`scripts/analysis/paper_trade_accu_regime.py`](../scripts/analysis/paper_trade_accu_regime.py) · log paper-trade (repo prywatne) |
+| Paper Accu→RF/CS4 | tylko repo prywatne |
 | Runy launchd | `data/processed/forecasts/forecast_history.csv` · walidacja [`forecast_validation.csv`](../data/processed/forecasts/forecast_validation.csv) |
 | MAPE zbiorcze (bez Accu/MB) | [`docs/images/ml/weekly_model_weather_review.md`](images/ml/weekly_model_weather_review.md) · PNG walidacji [`july_validation_summary.md`](images/ml/july_validation_summary.md) |
 

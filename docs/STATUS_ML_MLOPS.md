@@ -28,7 +28,7 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 | Daily R² | **0.856** |
 | Werdykt | nie przeuczony |
 
-Gate vs weekly **20.09** (0.652): Δ **+0.025** → **REVIEW** (próg remisu ≤ +0.02). Primary bez zmian (RF16 + ENS). Szczegóły: [`NOTATKA_WEEKLY_2026-09-27.md`](NOTATKA_WEEKLY_2026-09-27.md).
+Gate vs weekly **20.09** (0.652): Δ **+0.025** → **REVIEW** (próg remisu ≤ +0.02). Primary bez zmian (RF16 + ENS). Od **04.10** dual report: shuffle + **L30 soft** ([`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md)). Szczegóły: [`NOTATKA_WEEKLY_2026-09-27.md`](NOTATKA_WEEKLY_2026-09-27.md).
 
 ### Live (closeout vs app)
 
@@ -77,10 +77,11 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Decyzje (PVE, ICON, 16 cech) | [`03_ZALOZENIA_I_DECYZJE.md`](03_ZALOZENIA_I_DECYZJE.md) |
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
-| Pogoda 15.08–11.09 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · dzień [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
+| Pogoda 15.08–27.09 | [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · dzień [`NOTATKA_2026-09-27.md`](NOTATKA_2026-09-27.md) (MB+oneshot **27–29**; closeout **26** Fox **30,2** vs ENS **17,1**) |
 | Oś retreningów / wdrożeń | [`NOTATKA_RETRENINGI_I_WDROZENIA.md`](NOTATKA_RETRENINGI_I_WDROZENIA.md) |
 | Weekly **20.09** | [`NOTATKA_WEEKLY_2026-09-20.md`](NOTATKA_WEEKLY_2026-09-20.md) |
 | Weekly **27.09** | [`NOTATKA_WEEKLY_2026-09-27.md`](NOTATKA_WEEKLY_2026-09-27.md) |
+| Gate dual L30 (soft X 2026) | [`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md) |
 | Weekly **13.09** | [`NOTATKA_WEEKLY_2026-09-13.md`](NOTATKA_WEEKLY_2026-09-13.md) |
 | Weekly **06.09** | [`NOTATKA_WEEKLY_2026-09-06.md`](NOTATKA_WEEKLY_2026-09-06.md) |
 | Weekly **30.08** | [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md) |
@@ -88,7 +89,7 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Weekly 16.08 | [`NOTATKA_WEEKLY_2026-08-16.md`](NOTATKA_WEEKLY_2026-08-16.md) |
 | Dzień 19.08–11.09 | [`NOTATKA_2026-08-19.md`](NOTATKA_2026-08-19.md) · … · [`NOTATKA_2026-09-09.md`](NOTATKA_2026-09-09.md) · [`NOTATKA_2026-09-10.md`](NOTATKA_2026-09-10.md) · [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) |
 | Oneshot shadow | [`NOTATKA_ONESHOT_2026-08-17.md`](NOTATKA_ONESHOT_2026-08-17.md) |
-| Paper-trade Accu→RF/CS4 | [`NOTATKA_PAPER_TRADE_ACCU_REGIME.md`](NOTATKA_PAPER_TRADE_ACCU_REGIME.md) |
+| Paper-trade Accu→RF/CS4 | tylko repo prywatne |
 | Routing test 28–31.08 | [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md) · plan [`PLAN_ENSEMBLE_NWP_2026.md`](PLAN_ENSEMBLE_NWP_2026.md) E1.6 |
 | Reguła apki: SoC↓ + pochmurno → ładuj 22:00 | [`NOTATKA_REGULA_BATERIA_POCHMURNO_22.md`](NOTATKA_REGULA_BATERIA_POCHMURNO_22.md) |
 | Log SoC / ForceCharge / AGD | [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) |
