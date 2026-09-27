@@ -65,8 +65,15 @@ Closeout Fox vs ENS/CS4 — dopisać wieczorem.
 
 1. Primary **bez zmian** (RF16 + ENS).  
 2. Paper Accu→CS4 kontynuować (szare dni Fox≲15) — UI routing **nie** w tej rundzie.  
-3. Kolejny weekly: **2026-10-04 ~04:30**.  
+3. Kolejny weekly: **2026-10-04 ~04:30** — **dual już podpięte** w `train_dual_weekly.sh` (launchd); w logu bloki `DUAL REPORT` + `weekly_dual_gate_report.py`. Komendy: [`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md) §Komendy · [`QUICK_START.md`](../QUICK_START.md) §retrening.
 4. Watch gap RF16 (**0,079**) — nadal „nie przeuczony”, ale wyżej niż 20.09.
+
+```bash
+# za tydzień / ręcznie — to samo co launchd
+./mlops/train_dual_weekly.sh
+# tylko tabela dual z CSV
+PYTHONPATH=$PWD ./venv/bin/python scripts/train/weekly_dual_gate_report.py
+```
 
 ---
 

@@ -110,27 +110,33 @@ crontab -e
 ```
 
 ```cron
-0 5 * * * ~/smart-energy-model/mlops/daily_workflow.sh >> ~/smart-energy-model/logs/cron.log 2>&1
+0 5 * * * /path/to/smart-energy-model/mlops/daily_workflow.sh >> /path/to/smart-energy-model/logs/cron.log 2>&1
 ```
 
 **CRON — opcjonalnie południe (12:00): odświeżenie pogody + prognoza**
 
 ```cron
-0 12 * * * ~/smart-energy-model/mlops/midday_forecast.sh >> ~/smart-energy-model/logs/cron.log 2>&1
+0 12 * * * /path/to/smart-energy-model/mlops/midday_forecast.sh >> /path/to/smart-energy-model/logs/cron.log 2>&1
 ```
 
-**Retrening niedzielny (macOS — launchd, zalecane):** `pl.smart-energy-model.train` → **`mlops/train_dual_weekly.sh`** (~**04:30**): RF **16** (produkcja) + shadow **CS4** + **XGB+TS** · log **`logs/train.log`**.
+**Retrening niedzielny (macOS — launchd, zalecane):** `pl.smart-energy-model.train` → **`mlops/train_dual_weekly.sh`** (~**04:30**): RF **16** (produkcja) + shadow **CS4** + **XGB+TS** · **dual report** (shuffle MAE + L30 soft) · log **`logs/train.log`**. Protokół: [`docs/NOTATKA_GATE_DUAL_L30.md`](docs/NOTATKA_GATE_DUAL_L30.md).
 
-Ręcznie (cały weekly, jak w launchd):
+Ręcznie (cały weekly, jak w launchd — dual już w środku):
 
 ```bash
 ./mlops/train_dual_weekly.sh
 ```
 
+Tylko podsumowanie dual (bez treningu):
+
+```bash
+PYTHONPATH=$PWD ./venv/bin/python scripts/train/weekly_dual_gate_report.py
+```
+
 **CRON — retrening (Linux / stary skrót; tylko RF 16, bez shadow):**
 
 ```cron
-0 5 * * 0 cd ~/smart-energy-model && ./venv/bin/python scripts/train/train_hourly_model_tuning.py >> logs/train.log 2>&1
+0 5 * * 0 cd /path/to/smart-energy-model && ./venv/bin/python scripts/train/train_hourly_model_tuning.py >> logs/train.log 2>&1
 ```
 
 Na Macu **nie** używaj tego CRON-a zamiast launchd — pełny weekly = `train_dual_weekly.sh` (patrz §5).
@@ -224,7 +230,9 @@ Szukaj w logu: `daily workflow | … 05:` oraz opcjonalnie `Midday refresh | …
 Panel lokalny: notatki pogodowe, walidacja prognozy vs app, faktury Tauron · [`dashboard/app.py`](dashboard/app.py)
 
 ```bash
-
+cd smart-energy-model
+source venv/bin/activate
+streamlit run dashboard/app.py
 ```
 
 → http://localhost:8501
@@ -268,12 +276,12 @@ open -a Simulator                    # okno Simulatora (czasem schowane za innym
 npx cap run ios
 ```
 #Na co dzień możesz trzymać ten skrót
-cd ~/smart-energy-model/mobile
+cd /path/to/smart-energy-model/mobile
 open -a Simulator
 npx cap run ios --target-name "iPhone 17"
 
 #Pamiętaj też o API, jeśli chcesz live dane w appce:
-cd ~/smart-energy-model
+cd /path/to/smart-energy-model
 docker compose up -d db api
 
 **`npx cap run ios` czeka w terminalu na wybór urządzenia** (`Please choose a target device`). Przejdź do okna terminala → strzałki ↓ do **iPhone 17** (lub inny iPhone) → **Enter**. Dopiero wtedy Xcode buduje apkę i Simulator się uruchamia (domyślnie podświetlony jest iPad — to normalne).
