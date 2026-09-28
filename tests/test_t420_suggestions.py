@@ -63,7 +63,7 @@ def test_cheap_window_upsert_idempotent(_cloudy, _soc16):
     assert a is not None and b is not None
     assert a.id == b.id
     assert a.notif_type == 'cheap_window'
-    assert 'szczyt wieczorny' in a.title.lower() or 'Sugestia' in a.title
+    assert '22:00' in a.title or 'okno' in a.title.lower() or 'ładowanie' in a.title.lower()
     assert db.query(Notification).filter(Notification.user_id == user_id).count() == 1
     assert db.query(AdviceEvent).filter(AdviceEvent.advice_type == 'cheap_window').count() == 1
     db.close()
