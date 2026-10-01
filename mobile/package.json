@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "node scripts/ensure-simulator-api-host.mjs",
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --port 8100 --host 127.0.0.1",
     "build": "ng build",
     "build:sim": "node scripts/sync-simulator-api-host.mjs && ng build --configuration development",
     "deploy:sim": "npm run build:sim && npx cap sync ios && npx cap run ios --target-name \"iPhone 17\"",
