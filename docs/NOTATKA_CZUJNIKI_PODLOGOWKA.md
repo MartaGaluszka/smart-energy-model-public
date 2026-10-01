@@ -45,6 +45,8 @@ Z1 w X–XI 2026 **może spaść** przez baterię nawet przy load/HDD bez zmian.
 
 **Kontekst:** formalny werdykt czujników = **load/HDD** w **X–XI 2026 vs X–XI 2025** (§D). Poniżej — **jakość + wczesny sygnał Fox**, żeby nie mylić „pamięci o grzaniu” z samą pogodą zewnętrzną.
 
+Pełny miesiąc, wykresy dnia i godziny: zestawienie September 2025 vs 2026 (canvas lokalny — tylko repo prywatne).
+
 ### Obserwacja terenowa
 
 | | **IX 2025** | **IX 2026** |
@@ -61,7 +63,8 @@ Wrażenie „już grzaliśmy rok temu we wrześniu” **nie musi** oznaczać ch�
 |-------|------:|----------------:|-------|
 | **2025-09-01 → 17** | **~17,6 °C** | **~9,1 °C** (18.09) | pierwsza połowa IX **cieplejsza** niż 2026 w tym samym kalendarzu |
 | **2026-09-01 → 17** | **~16,7 °C** | **~5,5 °C** (07.09) | chłodniejsze **noce** w wybranych dniach |
-| **2025-09-19 → 30** | **~13,2 °C** | **~3,5 °C** | **koniec IX 2025** — tu ogrzewanie **obiektywnie** uzasadnione |
+| **2025-09-18 → 30** | **~13,1 °C** | **~3,5 °C** (28.09) | HDD **~41**; koniec IX — ogrzewanie **obiektywnie** uzasadnione |
+| **2026-09-18 → 30** | **~12,7 °C** | **~4,9 °C** (28.09) | HDD **~32**; podobnie chłodno, mniej stopniodni niż 2025 |
 
 Pełniejszy kontekst PV / bilans: [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) §Dashboard Fox + Accu kalendarz ~09:13.
 
@@ -73,11 +76,31 @@ Pełniejszy kontekst PV / bilans: [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.m
 |---------|---------------------:|---------------------:|
 | **Load Σ (loads)** | **~221 kWh** | **~196 kWh** |
 | **Load / dzień** | **~13,0 kWh** | **~11,5 kWh** |
-| **Śr. load 00–05** | **~0,35 kW** | **~0,17 kW** |
-| **Śr. load 22–06** | **~0,32 kW** | **~0,20 kW** |
-| **Śr. load 18–23** | **~0,30 kW** | **~0,36 kW** |
+| **Śr. load 00–05** | **~0,30 kW** | **~0,17 kW** |
+| **Śr. load 22–06** | **~0,30 kW** | **~0,20 kW** |
+| **Śr. load 18–23** | **~0,36 kW** | **~0,36 kW** |
 
-**Wniosek:** rok temu **wyższy nocny load** mimo **cieplejszej** średniej T w **1–17.09** — spójne z **dłuższym / mniej regulowanym** ogrzewaniem (podłoga), nie z „zimniejszym wrześniem” w pierwszej połowie miesiąca. W **2026** wieczór nieco wyższy (AGD, bojler — [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md)), **noc spokojniejsza**.
+Godziny: `load_power_kw` w **czasie lokalnym**. W 2025 znacznik ma `+02:00`, w 2026 jest bez offsetu; oba okna czytane tak samo (cywilnie). Noc **12.09.2025** (~1,8 kW) podnosi średnią 00–05; bez niej zostaje **~0,20 kW**, nadal powyżej 2026.
+
+**Wniosek (1–17.09):** rok temu **wyższy nocny load** mimo **cieplejszej** średniej T — spójne z **dłuższym / mniej regulowanym** ogrzewaniem (podłoga), nie z „zimniejszym wrześniem” w pierwszej połowie miesiąca. Wieczór **18–23** w tym oknie jest zbliżony.
+
+### 18–30.09
+
+Wrzesień kończy się **30**. Okno **18–30** to **13 dni**. To tu pojawia się prawie całe HDD miesiąca.
+
+| Metryka | **2025-09-18 → 30** | **2026-09-18 → 30** |
+|---------|---------------------:|---------------------:|
+| **Load Σ (loads)** | **~158 kWh** | **~173 kWh** |
+| **Load / dzień** | **~12,1 kWh** | **~13,3 kWh** |
+| **HDD (baza 15 °C)** | **~41** | **~32** |
+| **Load / HDD** | **~3,8** | **~5,4** |
+| **Śr. load 00–05** | **~0,22 kW** | **~0,19 kW** |
+| **Śr. load 22–06** | **~0,24 kW** | **~0,20 kW** |
+| **Śr. load 18–23** | **~0,33 kW** | **~0,48 kW** |
+| **Import (gridConsumption)** | **~41 kWh** | **~16 kWh** |
+| **PV (PVEnergyTotal)** | **~236 kWh** | **~298 kWh** |
+
+**Wniosek (18–30.09):** noce są już zbliżone. Load domu jest **wyższy w 2026** przy **niższym HDD**. Różnica siedzi w wieczorze **18–23** (AGD, bojler — [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md)), nie w dłuższej pracy podłogi po północy. Spadek importu to bateria od **7.01.2026**, nie czujniki. **Load/HDD** tej połówki **nie** jest werdyktem: HDD września jest małe wobec X–XI, a wieczór miesza się z ogrzewaniem. Werdykt zostaje w §D.
 
 **HDD września** na potrzeby load/HDD liczyć dopiero w **X–XI** (próg 15 °C); sam IX często **poniżej progu grzania sezonowego** w danych — obserwacja jakościowa **uzupełnia**, nie zastępuje §D.
 
@@ -167,5 +190,6 @@ Zł w dół przy load/HDD ≈ 0 i Z1 w dół → **nie przypisywać czujnikom**.
 - Start grzania (pierwszy tydzień z load/HDD ~2,2)  
 - Czy grzałka bufora dostała blokadę 15–22 pn–pt (osobny efekt)  
 - [x] **18.09.2026** — obserwacja podłogi IX 2025 vs czujniki IX 2026 + Fox/pogoda (§ Obserwacja 18.09.2026)
+- [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD)
 
 Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md)
