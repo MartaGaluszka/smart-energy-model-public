@@ -1,0 +1,70 @@
+# Produkcja OCI: Postgres + API + Caddy (HTTPS / nip.io).
+# Uruchamiaj z tego katalogu albo: docker compose -f deploy/oci/docker-compose.yml ...
+# Build context = root repozytorium.
+
+services:
+  db:
+    image: postgres:16
+    container_name: smart_energy_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smart_energy}
+      POSTGRES_USER: ${POSTGRES_USER:-smart_energy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Ustaw POSTGRES_PASSWORD w .env}
+    volumes:
+      - smart_energy_pg_data:/var/lib/postgresql/data
+      - ../../db/init:/docker-entrypoint-initdb.d:ro
+    # Brak publish na host — tylko sieć compose (API łączy się po nazwie `db`).
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: smart-energy-model-api:oci
+    container_name: smart_energy_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-smart_energy}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-smart_energy}
+      DATABASE_PATH: /app/data/energy_model.db
+      JWT_SECRET: ${JWT_SECRET:?Ustaw JWT_SECRET w .env}
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-}
+      TZ: Europe/Warsaw
+      PV_HOURLY_MODEL_PATH: ${PV_HOURLY_MODEL_PATH:-models/pv_hourly_model.joblib}
+      CORS_ORIGINS: ${CORS_ORIGINS:-capacitor://localhost,ionic://localhost,http://localhost,http://127.0.0.1}
+    volumes:
+      - ../../data:/app/data:rw
+      - ../../models:/app/models:ro
+    # Port 8000 tylko wewnątrz sieci Docker — na świat idzie Caddy :443.
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: smart_energy_caddy
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?Ustaw PUBLIC_HOST np. 130-61-12-34.nip.io}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  smart_energy_pg_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,4 @@
+# Lokalne / na VM — nie commitować
+.env
+.env.bak
+*.env.local
