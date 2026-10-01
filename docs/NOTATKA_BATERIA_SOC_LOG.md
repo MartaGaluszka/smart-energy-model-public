@@ -128,8 +128,8 @@ Accu+MB **CS4** · okno białe 80–90% + breaks · app daily **17,68**.
 | **~11:58** (DB) | **90%** | clearing: PV ~2–3 kW; SoC 74%→90% |
 | **12:38→** (app) | **~pełna** | **eksport do Tauron** — nadwyżka PV; bateria nie ładuje dalej |
 | **~13:55–14:00** (app) | — | PV dnia **12,4 kWh**; chwilowo **1,99 kW**; eksport **4,1 kWh** (od 12:38 → 14:00) |
-| **~18:25** (app) | — | PV dnia **21,1 kWh** (vs daily RF **12,5**); nadal **~30 W** na dachu → EOD może +odrobinę |
-| ~22:00 przed ewentualnym FC | — | decyzja: 27 jasny → **nie** pełnić |
+| **~18:25** (app) | — | PV dnia **21,1 kWh** (vs daily RF **12,5**); nadal **~30 W** na instalacji → do końca dnia możliwy niewielki przyrost |
+| ~22:00 przed ewentualnym doładowaniem | — | decyzja: 27 jasny → **nie** doładowywać |
 | closeout 26 | — | PV **21,1** · zużycie / sieć / SoC EOD *(uzupełnij)* |
 
 **Werdykt dzień (~18:25):**

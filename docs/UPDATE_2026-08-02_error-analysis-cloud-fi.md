@@ -15,13 +15,13 @@ Dostawcy API czasem podają zachmurzenie jako:
 
 | Skala | Zakres | Ryzyko |
 |-------|--------|--------|
-| ułamek | 0.0–1.0 | jeśli model oczekuje 0–100 → drzewa uczą się „śmieci” |
+| ułamek | 0.0–1.0 | jeśli model oczekuje 0–100 → drzewa dopasowują się do błędnej skali |
 | procent | 0–100 | jeśli ktoś ×100 drugi raz → saturation / złe progi |
 
 **Hipoteza robocza u nas:** Open-Meteo ICON → kolumny `cloud_cover_percent` / `*_low/mid/high_percent` w `weather_data` (nazwy sugerują **0–100**), mapowanie w `src/data/weather_api.py` bez jawnego `×100`.  
 **TODO:** twardy audyt min/max/kwantyle + porównanie z dokumentacją OM i z Accu/MB na tych samych godzinach (nie zakładać, że nazwa kolumny = prawda w każdym wierszu historycznym).
 
-Jeśli skala kiedykolwiek była mieszana (stare `best_match` vs ICON, refetch) — RF/XGB mogą „wierzyć” w chmury za słabo albo w złym kierunku na dniach przejściowych.
+Jeśli skala kiedykolwiek była mieszana (stare `best_match` vs ICON, refetch) — RF/XGB mogą niedoszacować wpływ zachmurzenia albo odwrócić jego znak na dniach przejściowych.
 
 ### H2 — feature importance: chmury vs czas (godzina / day-of-year)
 

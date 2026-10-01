@@ -83,7 +83,7 @@ CS4 daily **niżej** niż oneshot hybrid OFF na 18 (19,3 vs 20,8) — typowe: la
 | **MB** | deszcz rano, gęste chmury, UKMO trochę jaśniejszy w ikonach | ICON |
 | **UKMO oneshot PV** | +3…+6 kWh vs ICON | **zbyt optymistyczny** dziś (jak case 11.08) |
 
-**Werdykt UKMO:** na **szarym** 18.08 UKMO **nie** do podmiany — rozjazd większy niż wczoraj (+1…+2,5). MB „UKMO jaśniejszy” potwierdzony liczbowo, ale Accu/MB konsensus = dzień słaby → zostajemy przy ICON.
+**Werdykt UKMO:** na **pochmurnym** 18.08 UKMO **nie** zastępuje primary — rozbieżność większa niż wczoraj (+1…+2,5). Ocena MB „UKMO jaśniejszy” potwierdzona liczbowo, ale konsensus Accu/MB = dzień słaby → zostaje ICON.
 
 ---
 
@@ -96,7 +96,7 @@ CS4 daily **niżej** niż oneshot hybrid OFF na 18 (19,3 vs 20,8) — typowe: la
 | UKMO oneshot | 26,1 | 24,5 | 24,4 |
 
 - Modele na ICON **zgadzają się** (~19–21) — dzień pochmurny, mały spread.
-- Po **17.08** (CS4 wygrał) warto na closeout **18.08** znów pilnować CS4 vs RF (szary dzień = teren CS4).
+- Po **17.08** (CS4 miał niższy błąd) warto na closeout **18.08** ponownie porównać CS4 vs RF (pochmurny dzień, warunki lokalne: CS4).
 - XGB+TS najniżej na ICON i na 20.08 (17 kWh) — obserwacja, nie gate.
 
 ---

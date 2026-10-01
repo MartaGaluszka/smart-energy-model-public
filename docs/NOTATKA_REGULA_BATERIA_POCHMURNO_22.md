@@ -24,9 +24,9 @@ TO  cel SoC z tabeli Tśr jutro × PV jutro (PLAN_BATERIA §C)
 |-----------|----------|--------:|
 | < 0°C | dowolne | 95% |
 | 0–5°C | < 12 kWh | 95% |
-| 0–5°C | ≥ 12 kWh | nie pełnić (rezerwa) |
+| 0–5°C | ≥ 12 kWh | nie doładowywać (zostawić rezerwę) |
 | ≥ 5°C | < 8 kWh | 80% |
-| ≥ 5°C | ≥ 12 kWh | nie pełnić / jak lato |
+| ≥ 5°C | ≥ 12 kWh | nie doładowywać / jak w lecie |
 
 Bez T: PV < 12 kWh → 90%, inaczej pomiń.
 
