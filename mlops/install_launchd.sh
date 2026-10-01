@@ -27,6 +27,7 @@ LABELS=(
   "pl.smart-energy-model.weekly-review"
   "pl.smart-energy-model.train"
   "pl.smart-energy-model.ensure-api"
+  "pl.smart-energy-model.rcem"
 )
 
 usage() {
@@ -61,7 +62,8 @@ install_launchd() {
     "${PROJECT_ROOT}/mlops/morning_hold.sh" \
     "${PROJECT_ROOT}/mlops/forecast_cs4_shadow.sh" \
     "${PROJECT_ROOT}/mlops/forecast_xgb_ts_shadow.sh" \
-    "${PROJECT_ROOT}/mlops/train_dual_weekly.sh"
+    "${PROJECT_ROOT}/mlops/train_dual_weekly.sh" \
+    "${PROJECT_ROOT}/mlops/fetch_rcem.sh"
 
   for label in "${LABELS[@]}"; do
     unload_label "${label}"
@@ -85,6 +87,7 @@ install_launchd() {
   echo "   16:00 codziennie  → peak_arrival.sh (16 + CS4 + XGB+TS)"
   echo "   co 10 min         → evening_closeout_dynamic.sh (closeout + catch-up daily/train po śnie/DNS)"
   echo "   22:42 codziennie  → evening_closeout.sh (siatka bezpieczeństwa, gdyby dynamiczny nie zadziałał)"
+  echo "   22:42 dnia 11.    → fetch_rcem.sh (RCEm PSE za poprzedni miesiąc + korekty z 12 miesięcy; także weekend i święto)"
   echo "   co 5 min + login → ensure_api.sh (Colima + docker compose db/api po blackoucie)"
   echo "   04:15 codziennie  → morning_hold.sh (nie usypiaj + sam train 04:30 nd + daily 05:00)"
   echo "   10:00 sobota      → weekly_model_review.sh (MAPE × pogoda × model; przed retreningiem)"
