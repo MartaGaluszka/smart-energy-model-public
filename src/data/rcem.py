@@ -2,21 +2,42 @@
 RCEm — rynkowa miesięczna cena energii (PSE).
 
 Źródło oficjalne: https://www.pse.pl/oire/rcem-rynkowa-miesieczna-cena-energii-elektrycznej
-Brak publicznego API — wartości z publikacji PSE (seed) lub średnia z rce_prices w bazie.
+Tabela HTML (brak API) albo średnia z rce_prices. Cena za miesiąc M jest publikowana
+11. dnia miesiąca M+1, także w weekend i święto. Korekta wygasa z końcem 12. miesiąca
+po zakończeniu miesiąca, którego cena dotyczy.
 """
 
 from __future__ import annotations
 
 import json
-import os
+import re
 import sqlite3
+from datetime import date, datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Optional, Union
+from urllib.request import Request, urlopen
 
 import pandas as pd
 
 DEFAULT_DB = 'data/energy_model.db'
 SEED_PATH = Path(__file__).resolve().parents[2] / 'data' / 'rcem_pse_seed.json'
+PSE_RCEM_URL = 'https://www.pse.pl/oire/rcem-rynkowa-miesieczna-cena-energii-elektrycznej'
+
+_MONTHS_PL = {
+    'styczeń': 1,
+    'luty': 2,
+    'marzec': 3,
+    'kwiecień': 4,
+    'maj': 5,
+    'czerwiec': 6,
+    'lipiec': 7,
+    'sierpień': 8,
+    'wrzesień': 9,
+    'październik': 10,
+    'listopad': 11,
+    'grudzień': 12,
+}
 
 RCEM_TABLE_SQL = '''
 CREATE TABLE IF NOT EXISTS rcem_prices (
@@ -100,6 +121,201 @@ def import_seed_to_db(db_path: str = DEFAULT_DB) -> int:
             notes='PSE RCEm — publikacja pse.pl/oire/rcem',
         )
     return len(seed)
+
+
+class RcEmNotPublished(RuntimeError):
+    """11. dnia miesiąca tabela PSE nie zawiera jeszcze ceny za poprzedni miesiąc."""
+
+
+class _RcemHtmlParser(HTMLParser):
+    """Zbiera wiersze tabel z pse.pl (komórki mogą mieć zagnieżdżone span)."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.tables: list[list[list[str]]] = []
+        self._depth = 0
+        self._rows: list[list[str]] = []
+        self._row: list[str] = []
+        self._cell: list[str] = []
+        self._in_cell = False
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag == 'table':
+            self._depth += 1
+            if self._depth == 1:
+                self._rows = []
+        elif self._depth and tag == 'tr':
+            self._row = []
+        elif self._depth and tag in ('td', 'th'):
+            self._in_cell = True
+            self._cell = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ('td', 'th') and self._in_cell:
+            text = re.sub(r'\s+', ' ', ''.join(self._cell)).strip()
+            self._row.append(text)
+            self._in_cell = False
+        elif tag == 'tr' and self._depth and self._row:
+            self._rows.append(self._row)
+            self._row = []
+        elif tag == 'table' and self._depth:
+            self._depth -= 1
+            if self._depth == 0:
+                self.tables.append(self._rows)
+
+    def handle_data(self, data: str) -> None:
+        if self._in_cell:
+            self._cell.append(data)
+
+
+def _parse_price(text: str) -> Optional[float]:
+    cleaned = text.replace('\xa0', '').replace(' ', '').strip()
+    if cleaned in {'', '-', '–', '—'}:
+        return None
+    return float(cleaned.replace(',', '.'))
+
+
+def _parse_pl_date(text: str) -> Optional[str]:
+    cleaned = text.strip()
+    if cleaned in {'', '-', '–', '—'}:
+        return None
+    return datetime.strptime(cleaned, '%d.%m.%Y').date().isoformat()
+
+
+def _month_number(label: str) -> Optional[int]:
+    name = label.lower().split('*')[0].strip()
+    return _MONTHS_PL.get(name)
+
+
+def parse_rcem_html(html: str) -> dict[str, dict]:
+    """Tabela PSE → {YYYY-MM: cena, data publikacji, ostatnia korekta}.
+
+    Gdy miesiąc ma kilka wierszy „skorygowana RCEm”, zostaje publikacja z najpóźniejszą datą.
+    """
+    parser = _RcemHtmlParser()
+    parser.feed(html)
+    parsed: dict[str, dict] = {}
+    for table in parser.tables:
+        year: Optional[int] = None
+        month: Optional[int] = None
+        for row in table:
+            head = row[0] if row else ''
+            if re.fullmatch(r'20\d\d', head):
+                year = int(head)
+                month = None
+                continue
+            month_no = _month_number(head)
+            if month_no is not None and year is not None and len(row) == 1:
+                month = month_no
+                continue
+            if year is None or month is None or len(row) < 3:
+                continue
+            key = f'{year:04d}-{month:02d}'
+            label = head.lower()
+            price = _parse_price(row[1])
+            published = _parse_pl_date(row[2])
+            if label.startswith('rcem') and 'skorygowana' not in label:
+                if price is None:
+                    continue
+                slot = parsed.setdefault(key, {})
+                slot['rce_pln_mwh'] = price
+                slot['publication_date'] = published
+                continue
+            if 'skorygowana' not in label or price is None or published is None:
+                continue
+            slot = parsed.setdefault(key, {})
+            previous = slot.get('corrected_publication_date')
+            if previous is None or published >= previous:
+                slot['corrected_rce_pln_mwh'] = price
+                slot['corrected_publication_date'] = published
+    return {k: v for k, v in parsed.items() if 'rce_pln_mwh' in v}
+
+
+def fetch_rcem_html(url: str = PSE_RCEM_URL, timeout: int = 30) -> str:
+    request = Request(url, headers={'User-Agent': 'smart-energy-model/rcem'})
+    with urlopen(request, timeout=timeout) as response:
+        charset = response.headers.get_content_charset() or 'utf-8'
+        return response.read().decode(charset, errors='replace')
+
+
+def correction_window_open(period_month: str, as_of: date) -> bool:
+    """Korekta RCEm jest dopuszczalna do końca 12. miesiąca po zakończeniu okresu."""
+    period_end = pd.Timestamp(f'{period_month}-01') + pd.offsets.MonthEnd(0)
+    expiry = period_end + pd.DateOffset(months=12) + pd.offsets.MonthEnd(0)
+    return pd.Timestamp(as_of) <= expiry
+
+
+def previous_calendar_month(as_of: date) -> str:
+    previous = pd.Timestamp(as_of).replace(day=1) - pd.Timedelta(days=1)
+    return previous.strftime('%Y-%m')
+
+
+def sync_official_rcem(
+    db_path: str = DEFAULT_DB,
+    as_of: Optional[date] = None,
+    html: Optional[str] = None,
+) -> list[dict]:
+    """Zapisuje do rcem_prices miesiące, dla których okno korekty jest jeszcze otwarte.
+
+    11. dnia miesiąca wymaga ceny za poprzedni miesiąc — tego dnia PSE podaje ją oficjalnie.
+    """
+    today = as_of or date.today()
+    page = html if html is not None else fetch_rcem_html()
+    parsed = parse_rcem_html(page)
+    if today.day == 11:
+        expected = previous_calendar_month(today)
+        if expected not in parsed:
+            raise RcEmNotPublished(
+                f'Brak RCEm za {expected} na stronie PSE ({PSE_RCEM_URL}). '
+                'Publikacja przypada na 11. dzień miesiąca, także w weekend i święto.'
+            )
+
+    conn = sqlite3.connect(db_path)
+    ensure_rcem_table(conn)
+    changes: list[dict] = []
+    for period_month in sorted(parsed):
+        if not correction_window_open(period_month, today):
+            continue
+        row = parsed[period_month]
+        corrected = row.get('corrected_rce_pln_mwh')
+        existing = conn.execute(
+            '''
+            SELECT rce_pln_mwh, corrected_rce_pln_mwh
+            FROM rcem_prices
+            WHERE period_month = ? AND source = 'pse_official'
+            ''',
+            (period_month,),
+        ).fetchone()
+        same_base = existing is not None and abs(float(existing[0]) - row['rce_pln_mwh']) < 0.001
+        old_corr = None if existing is None or existing[1] is None else float(existing[1])
+        same_corr = (old_corr is None and corrected is None) or (
+            old_corr is not None and corrected is not None and abs(old_corr - corrected) < 0.001
+        )
+        action = 'unchanged' if same_base and same_corr else ('updated' if existing else 'inserted')
+        if action != 'unchanged':
+            notes = f"PSE RCEm, publikacja {row.get('publication_date') or '—'}"
+            corr_date = row.get('corrected_publication_date')
+            if corr_date:
+                notes += f'; korekta {corr_date}'
+            save_rcem_to_db(
+                period_month,
+                row['rce_pln_mwh'],
+                db_path=db_path,
+                corrected_rce_pln_mwh=corrected,
+                publication_date=row.get('publication_date'),
+                source='pse_official',
+                notes=notes,
+            )
+        changes.append({
+            'period_month': period_month,
+            'rce_pln_mwh': row['rce_pln_mwh'],
+            'corrected_rce_pln_mwh': corrected,
+            'publication_date': row.get('publication_date'),
+            'corrected_publication_date': row.get('corrected_publication_date'),
+            'action': action,
+        })
+    conn.close()
+    return changes
 
 
 def compute_rcem_from_hourly(
