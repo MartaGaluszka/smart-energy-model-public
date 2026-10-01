@@ -134,12 +134,18 @@ def load_hourly_pv_from_pve(
     """Godzinowa produkcja z licznika ``PVEnergyTotal`` (dodatnie delty próbek).
 
     To ta sama zmienna co w aplikacji FoxESS / closeout — bez skalowania pvPower.
+
+    Wartość 0 jest pomijana: licznik skumulowany nie resetuje się w ciągu doby,
+    więc taki odczyt nie reprezentuje stanu licznika. Gdyby wszedł do różnicy,
+    skok z 0 do bieżącej wartości przekroczyłby próg odrzucenia i zaniżył sumę
+    (30.09.2026: 31,6 kWh na liczniku, suma delt bez tego filtra: 16,5 kWh).
     """
     conn = sqlite3.connect(db_path)
     try:
         # Delty tylko w obrębie dnia (PARTITION BY day) — nie przypisuj
         # skoku przez lukę sync z poprzedniego dnia do godziny 0 (25.07:
         # prev 24.07 16:00 → +3 kWh sztucznie w 00:00; max−min dnia = app).
+        # value > 0: odczyt zerowy nie wchodzi do różnicy z kolejną próbką.
         q = """
         WITH ordered AS (
             SELECT
@@ -154,6 +160,7 @@ def load_hourly_pv_from_pve(
             WHERE variable = ?
               AND DATE(timestamp) >= ?
               AND DATE(timestamp) <= ?
+              AND value > 0
         )
         SELECT
             day,
