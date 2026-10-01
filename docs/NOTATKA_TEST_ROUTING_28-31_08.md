@@ -116,7 +116,7 @@ cat data/processed/routing_pick.csv | grep 2026-08-28
 3) NIE wdrażać progu ICON cloud ≥30% (ani 40%).
    Jeśli kiedyś wrócimy do progu ICON-only: start od ≥55–70% + Accu mokry (nie sam cloud).
 
-4) UKMO oneshot: pilnować broken radiation na forecast D+2 (3.09) — nie ufać ślepo.
+4) UKMO oneshot: kontrolować niepoprawną radiację na prognozie D+2 (3.09) — nie przyjmować jej bez weryfikacji.
 ```
 
 ### Decyzja formalna (potwierdzona 01.09)
@@ -126,7 +126,7 @@ cat data/processed/routing_pick.csv | grep 2026-08-28
 - [x] CS4 + RF/ICON zostają w shadow / porównaniu closeout  
 - [x] Paper Accu RF↔CS4 kontynuować (osobna ścieżka UI), bez zmiany że ensemble wygrywa kWh na jasnych
 
-**Backup planu (plan E1):** próg 40–50% był lepszy niż 30%, ale **always ENS** bije oba na tej próbce.
+**Wariant zapasowy (plan E1):** próg 40–50% był lepszy niż 30%, ale **always ENS** przewyższa oba progi na tej próbce.
 
 ---
 

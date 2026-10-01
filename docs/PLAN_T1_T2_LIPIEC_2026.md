@@ -15,9 +15,9 @@ Powiązane: [NOTATKA_RETRENINGI_I_WDROZENIA.md](NOTATKA_RETRENINGI_I_WDROZENIA.m
 | **CS4** gate ACCEPT + **dual launchd** (16 primary + CS4) | ✅ 26.07 |
 | `train_dual_weekly.sh` niedziela | ✅ (przeładuj: `./mlops/install_launchd.sh`) |
 | UKMO oneshot (opad + RF) | ✅ — **nie** do prod; obserwacja ręczna |
-| Geometria dachu | ❌ park (CS4+Geom nie bije CS4) |
+| Geometria dachu | ❌ wstrzymane (CS4+Geom nie poprawia wyniku względem CS4) |
 | Adjust / cloudy tuning | OFF do decyzji D8 |
-| `pvlib` / clearness | ✅ w CS4 (Haurwitz+astral; Ineichen padł) — bez dalszego eksperymentu |
+| `pvlib` / clearness | ✅ w CS4 (Haurwitz+astral; obliczenie Ineichena zakończyło się błędem) — bez dalszego eksperymentu |
 
 ---
 
@@ -41,7 +41,7 @@ W notatkach / SCIĄG: **`pvlib`** = clear-sky / clearness (nie osobne API pogody
 
 | | |
 |--|--|
-| **Czy brać na testy teraz?** | **Nie trzeba** — clearness jest już w **CS4** (Haurwitz + `astral`; Ineichen z `pvlib` padł na pandas). |
+| **Czy brać na testy teraz?** | **Nie trzeba** — clearness jest już w **CS4** (Haurwitz + `astral`; Ineichen z `pvlib` zakończył się błędem zależności pandas). |
 | **Kiedy wrócić?** | Tylko jeśli chcecie porównać Haurwitz vs Ineichen oneshot — **nie** blokuje 2 tygodni. |
 | **Nie mylić z:** UKMO / ICON (to modele NWP w Open-Meteo), Accu/MB (UI / `weather_notes`). |
 
@@ -98,8 +98,8 @@ Cel: ≥7 dni z wieczornym closeoutem 22:42 na modelu PVE+ICON (od **18.07** / p
 | Data | Closeout | Raw 5:00 vs app | Notatki |
 |------|----------|-----------------|---------|
 | 18.07 | ✅ | raw 5:00 ~29,1 vs app 26,6 | burza / krótkie przerwy |
-| 19.07 | ✅ (dogoniony 21.07; evening padł na run_at) | raw 5:00 26,89 vs 27,3 (APE 1,5%); MAPE dziś ~1,3%; D+1 18.07 12:00 APE 1,6% | burza; raw trafiony |
-| 20.07 | ✅ (re-run 21.07 rano; evening 20.07 padł na run_at) | raw 5:00 33,76 vs 37,4 (APE 9,7%); MAPE dziś 8,8%; D+2 18.07 5:00 APE 1,7%; szczyt 13:00 vs prog 12:00 | słonecznie, model niedoszacował |
+| 19.07 | ✅ (uzupełniony 21.07; wieczorny run przerwany — błąd `run_at`) | raw 5:00 26,89 vs 27,3 (APE 1,5%); MAPE dziś ~1,3%; D+1 18.07 12:00 APE 1,6% | burza; raw trafiony |
+| 20.07 | ✅ (ponowienie 21.07 rano; wieczorny run 20.07 przerwany — błąd `run_at`) | raw 5:00 33,76 vs 37,4 (APE 9,7%); MAPE dziś 8,8%; D+2 18.07 5:00 APE 1,7%; szczyt 13:00 vs prog 12:00 | słonecznie, model niedoszacował |
 | 21.07 | ⏳ closeout 22:42 / dogoń | raw 5:00 **27,55** vs app **18,8** (APE ~−32%); raw model wieczór ~25,1 | **pochmurny**; **AccuWeather dziś-na-dziś:** RealFeel 20° / shade 18°, krótkotrwały przelotny opad, UV 6, Brightness **5**, wiatr W 20 / porywy 46, opady **70%** (burza 14%), deszcz **2,8 mm** (~1,5 h), cloud **71%**; ICON śr. cloud ~85% (best_match ~48%); próby → „Jednorazowe próby 21.07” |
 | 22.07 | | (oczekiwane) | **AccuWeather dziś-na-dziś (22.07 wieczór):** Max 22° / RF 24° / shade 21°, częściowo słonecznie, UV **8**, Brightness **9**, wiatr W 13 / 30, opady **0 mm** (P=25%), cloud **27%**, ostrzeżenie susza — **jasny dzień**; ICON forecast cloud ~79% / precip 0 (AW mniej chmur). Wcześniejsza AW z 21.07 na 22.07: cloud 46%, Brightness 7 |
 | 23.07 | ⏳ closeout 22:42 | raw 5:00 **25,8** → 16:51 **25,2**; hybryda 16:00 **21,0** (FoxESS do 16:00 = **18,8**); app ~17:37 **19,8** (+ deszcz, PV~245 W) | **pochmurny/deszcz**; AW dziś-na-dziś: cloud **65%**, deszcz **7 mm** P=100%; AW na 24.07: cloud 72%, 2,6 mm; oneshot chmur → sekcja **Notatki wdrożeniowe — 23.07** |
@@ -149,7 +149,7 @@ Punkt startu: `tests/test_pv_pipeline_smoke.py` (już jest smoke).
 
 **Pomysły ML (park):**
 - Retrain **UKMO** (osobny eksperyment) — na razie tylko **obserwacja ręczna** na złe dni (PLAN § 2 tygodnie).
-- Geometria paneli — park (CS4+Geom nie bije CS4).
+- Geometria paneli — wstrzymane (CS4+Geom nie poprawia wyniku względem CS4).
 - `pvlib` Ineichen vs Haurwitz — opcjonalny oneshot, nie priorytet.
 - IMGW `2026_07_s.zip` + audyt Balice.
 - Conditional adjust po D8.
@@ -233,7 +233,7 @@ Actual app **18,8**. MAE = Test 80/20 na roku treningowym.
 
 1. Najlepsze **cechy ML** na dziś: **I** (low+mid + rad_eff) i **H** (cloud_heavy) — ~24 kWh, ~72% dokładności; wciąż ~5 kWh za wysoko.
 2. **Precip / visibility / sama geometria** — słabe lub gorsze na 21.07.
-3. **K full** ma najlepszy Test MAE (0.610), ale na dziś nie bije prostego I — ryzyko przeuczenia / zbędnych cech.
+3. **K full** ma najlepszy Test MAE (0.610), ale na dziś nie przewyższa prostego wariantu I — ryzyko przeuczenia / zbędnych cech.
 4. **Adjust** nadal jedyny wariant blisko 18,8 — decyzja na stałe dopiero D8.
 5. Kandydat T2 do `compare_model_change`: najpierw **B/H/I** (warstwy chmur ± rad_effective), nie full dump.
 
@@ -252,7 +252,7 @@ CSV: `data/processed/oneshot_feature_trials_20260721_runda2.csv`
 | M | + clearness | 0.640 | 25.47 | 64.5% |
 | S/T/U/V/Y/Z/AA | hour/doy/wind/humid×cloud/flags/high/snow | ≥0.635 | często gorsze | ≤64% |
 
-**Werdykt rundy 2:** nowe „wygrywające” to znowu **rodzina chmur** (`cloud_frac_low`, delty cloud/rad + low/mid) — ~23.8 kWh / ~73%, nadal ~5 kWh za wysoko. Kalendarz (doy), wiatr kierunek, humid×cloud, cloud_high, śnieg — **nie pomagają** na dziś. Nadal żaden wariant ML nie bije **adjust ~18.7**.
+**Werdykt rundy 2:** najlepszy wynik ponownie daje **rodzina chmur** (`cloud_frac_low`, delty cloud/rad + low/mid) — ~23.8 kWh / ~73%, nadal ~5 kWh powyżej obserwacji. Kalendarz (doy), wiatr kierunek, humid×cloud, cloud_high, śnieg — **nie poprawiają** trafności na dziś. Nadal żaden wariant ML nie osiąga lepszej trafności niż **adjust ~18.7**.
 
 ### Runda deszcz (21.07)
 
@@ -330,7 +330,7 @@ Szczegóły 20.07: ICON cloud ~38%, wet_score ~0.31, 0 h overcast; MIX2 **33,64*
 | Raw RF 5:00 → 16:00/16:51 | dziś **25,8 → 25,2**; jutro **15,2 → 18,5**; pojutrze **~34,2** | `pv_forecast_*` / `forecast_history` |
 | Hybryda 16:00 / 16:51 | dziś **21,0** (FoxESS do 16:00 = **18,8** + RF reszta) | peak / daily |
 | App ~17:37 | **19,8 kWh**; chwilowe PV ~**245 W**, zaczął padać deszcz | obserwacja użytkownika |
-| Ostatni sensowny PVE w bazie | ~16:48 → **~19,3 kWh** dnia; potem śmieciowy odczyt `PVEnergyTotal=0` | `foxess_timeseries` |
+| Ostatni poprawny PVE w bazie | ~16:48 → **~19,3 kWh** dnia; potem nieprawidłowy odczyt `PVEnergyTotal=0` (nie reprezentuje stanu licznika) | `foxess_timeseries` |
 | Szacunek EOD | **~20–20,5 kWh** (słaby ogon jak 21.07: 17:34→koniec było +0,9) | RF ≥17 ~0,6 + deszcz |
 
 **Oneshot cech chmur (jednorazowo, bez zmiany `.joblib`):**  
@@ -380,7 +380,7 @@ CSV: `data/processed/oneshot_feature_trials_20260723_clearness.csv` (+ `_cases.c
 
 \* \(100\times(1-|err|/20{,}6)\). Dziś clearness śr. ~**0,50** (słaby dzień).
 
-**Werdykt:** clearness **lekko pomaga na 23.07** (jak low+mid), Test MAE ≈ remis z baseline (**nie** regresja duża). Najlepszy oneshot dnia: **CS4**. Na 21.07 sam clearness ≈ baseline; low+mid+clearness trochę lepiej. **Nie wdrażać** — kandydat T2 obok B, gate `compare_model_change`. (`pvlib` Ineichen padł na konflikcie pandas; Haurwitz wystarcza do oneshotu.)
+**Werdykt:** clearness **nieznacznie poprawia 23.07** (jak low+mid), Test MAE ≈ remis z baseline (bez dużej regresji). Najlepszy oneshot dnia: **CS4**. Na 21.07 sam clearness ≈ baseline; low+mid+clearness nieco lepiej. **Nie wdrażać** — kandydat T2 obok B, gate `compare_model_change`. (Obliczenie Ineichena w `pvlib` przerwane przez konflikt pandas; Haurwitz wystarcza do oneshotu.)
 
 **CS4 vs reszta (ten sam trening → 22.07):**
 
@@ -416,7 +416,7 @@ CSV: `data/processed/oneshot_icon_vs_ukmo_precip.csv` (+ hourly 24.07).
 | 21.07 | 0,0 | 0,2 | 0/0 | 0,1/0,1 | oba „suche” vs Accu deszcz |
 | 22.07 | 0,0 | 0,0 | — | — | jasny — OK |
 | 23.07 | **10,3** | **11,9** | 1,3 / 2,8 | 3,4 / 3,3 | oba mokre (Accu ~7) |
-| **24.07** | **0,0** | **3,8** | 0 / 0 | **0,4 / 2,7** | UKMO bliżej obserwacji (~deszcz od południa); ICON **ślepy na mm** |
+| **24.07** | **0,0** | **3,8** | 0 / 0 | **0,4 / 2,7** | UKMO bliżej obserwacji (~deszcz od południa); ICON **nie rejestruje opadu** |
 
 **Werdykt:** oneshot pogodowy **TAK, zrobiony** — UKMO lepiej na **24.07**. **Nie** przełączać `OPENMETEO_MODEL` na stałe. Ewentualny test RF na pogodzie UKMO = osobny T2 (jak CS4), nie dziś do launchd.
 

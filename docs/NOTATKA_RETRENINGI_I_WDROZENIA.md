@@ -50,7 +50,7 @@ Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 |--|--|
 | **Wdrożone (bez zmiany cech)** | launchd: midday ~14.07, daily 5:00 ~15.07, peak 16:00 ~16.07; evening closeout |
 | **2026-07-16** | Expanding window **ACCEPT**; rolling 12m **REJECT**; warstwa **korekty operacyjnej** (intraday / cloudy / ranking) — [UPDATE_2026-07-16_korekta-operacyjna.md](UPDATE_2026-07-16_korekta-operacyjna.md) |
-| **Target ML** | nadal ∫`pvPower`; closeout vs app = `PVEnergyTotal` (rozjazd skali) |
+| **Target ML** | nadal ∫`pvPower`; closeout vs app = `PVEnergyTotal` (rozbieżność skali) |
 
 ### 2026-07-17 ~16:00 — GPS dach
 
@@ -173,7 +173,7 @@ Closeout **17.08** (deszcz Accu/MB) = pierwszy dzień porównania nowych wag RF 
 
 | | |
 |--|--|
-| **Problem** | Dni przejściowe / po froncie: duże APE (np. 24.07 ~100%); live dual 26.07–01.08 — CS4 nie bije 16 |
+| **Problem** | Dni przejściowe / po froncie: duże APE (np. 24.07 ~100%); live dual 26.07–01.08 — CS4 nie przewyższa modelu 16 cech |
 | **Hipotezy** | (1) mieszana skala zachmurzenia 0–1 vs 0–100 w pipeline; (2) model „wierzy” w godzinę/DOY mocniej niż w chmury |
 | **Docs** | **[UPDATE_2026-08-02_error-analysis-cloud-fi.md](UPDATE_2026-08-02_error-analysis-cloud-fi.md)** — checklista **EA.1–EA.7** też w PLAN (backlog) |
 | **Prod** | bez zmian do audytu; primary 16 zostaje |
