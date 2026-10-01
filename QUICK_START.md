@@ -318,6 +318,14 @@ Potem ponownie `npx cap run ios` albo Run w Xcode.
 
 **Gdy brak danych w Simulatorze:** sprawdź `docker compose ps` i `GET /ready`; w buildzie dev iOS używa `http://127.0.0.1:8000` (`mobile/src/environments/environment.ts`). Więcej: [README.md](README.md) § aplikacja mobilna.
 
+### Publiczne API (Oracle Cloud + nip.io)
+
+Produkcyjny backend (Postgres + FastAPI + Caddy / HTTPS):
+
+- procedura: [deploy/oci/README.md](deploy/oci/README.md)
+- z Maca: `OCI_SSH=ubuntu@IP OCI_PUBLIC_IP=IP ./deploy/oci/push-from-mac.sh`
+- mobile prod: `mobile/src/environments/environment.prod.ts` → `https://<IP-z-myślnikami>.nip.io`
+
 ---
 
 ## Dokumentacja szczegółowa
