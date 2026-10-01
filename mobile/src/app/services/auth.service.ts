@@ -20,6 +20,20 @@ const REFRESH_TOKEN_KEY = 'se_refresh_token';
 const DEMO_EMAIL = 'mobile.demo@example.com';
 const DEMO_PASSWORD = 'demo12345678';
 
+/** True gdy JWT access wygasł (lub nie da się odczytać exp) — bez weryfikacji podpisu. */
+function isJwtExpired(token: string, skewSeconds = 30): boolean {
+  try {
+    const payloadPart = token.split('.')[1];
+    if (!payloadPart) return true;
+    const json = atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/'));
+    const payload = JSON.parse(json) as { exp?: number };
+    if (typeof payload.exp !== 'number') return true;
+    return payload.exp * 1000 <= Date.now() + skewSeconds * 1000;
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Zarządza sesją JWT klienta wobec `api/` (FastAPI, Faza 0). Patrz
  * docs/PROJEKT_APLIKACJA_MOBILNA.md §12.3 (Auth) i §5 (decyzja: własny IdP + vault Fox).
@@ -39,8 +53,14 @@ export class AuthService {
   /** Zwraca aktywny access token, logując/rejestrując demo sesję przy pierwszym użyciu. */
   ensureSession(): Observable<string | null> {
     const existing = this.getAccessToken();
-    if (existing) {
+    // Wygasły access w localStorage (JWT ~30 min) wcześniej wracał „jak żywy” —
+    // pierwsze GET/POST dostawały 401, a przy padniętym refresh (restart Dockera /
+    // zmiana JWT_SECRET) kalkulatory Symulator/ROI zostawały na stale offline.
+    if (existing && !isJwtExpired(existing)) {
       return of(existing);
+    }
+    if (existing && isJwtExpired(existing)) {
+      return this.renewSession();
     }
     if (!this.sessionInFlight$) {
       this.sessionInFlight$ = this.login(DEMO_EMAIL, DEMO_PASSWORD).pipe(
