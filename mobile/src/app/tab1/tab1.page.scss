@@ -156,11 +156,21 @@
   flex-shrink: 0;
 }
 
+.se-charge-alert__kicker {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted, var(--text));
+  opacity: 0.75;
+}
+
 .se-charge-alert__title {
   display: block;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 20px;
   color: var(--text);
+  margin-top: 2px;
 }
 
 .se-charge-alert__body {
@@ -168,6 +178,14 @@
   font-size: 13px;
   color: var(--text);
   line-height: 1.4;
+}
+
+.se-charge-alert__hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.75;
+  line-height: 1.35;
 }
 
 .se-battery {

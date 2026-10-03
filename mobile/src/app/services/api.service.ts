@@ -56,6 +56,10 @@ export interface BatterySuggestionResponse {
   force_charge_night_start?: string | null;
   force_charge_night_end?: string | null;
   force_charge_night_minutes?: number | null;
+  tomorrow_pv_kwh?: number | null;
+  charge_target_soc_percent?: number | null;
+  charge_delta_soc_percent?: number | null;
+  charge_kwh?: number | null;
   force_charge_afternoon_window?: string | null;
   charge_when_summary?: string;
   fc_max_minutes?: number;

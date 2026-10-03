@@ -269,6 +269,7 @@ def _charge_window_bits(
     night_rule,
     aft_rec: bool,
     start_hour: int,
+    charge_kwh: float | None = None,
 ) -> dict:
     """Strukturalne pola planu SE (G12w + sezon) na Home / ekran Bateria."""
     night_start = night_end = None
@@ -281,8 +282,9 @@ def _charge_window_bits(
         end = datetime.combine(date.today(), time(start_hour, 0)) + timedelta(minutes=round(minutes))
         night_end = end.strftime('%H:%M')
         delta = round(minutes * 50.0 / 30.0)
+        kwh_bit = f'jeszcze ~{charge_kwh:.1f} kWh, ' if charge_kwh else ''
         summary = (
-            f'Sugestia SE: doładuj {night_start}–{night_end} '
+            f'Sugestia SE: doładuj {kwh_bit}{night_start}–{night_end} '
             f'(~{minutes:.0f} min ≈ +{delta:.0f}% SoC; 30 min ≈ +50%)'
         )
         if aft_rec:
@@ -839,6 +841,10 @@ def fallback_home_suggestion(settings_row=None, as_of: datetime | None = None) -
         'soc_min_evening_percent': seasonal_min_evening_percent(d, season=season),
         'force_charge_night_recommended': False,
         'force_charge_night_label': night,
+        'tomorrow_pv_kwh': None,
+        'charge_target_soc_percent': None,
+        'charge_delta_soc_percent': None,
+        'charge_kwh': None,
         'force_charge_afternoon_recommended': aft_rec,
         'force_charge_afternoon_label': aft,
         **bits,
@@ -987,6 +993,12 @@ def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
         night_rec, night_label = False, 'pomiń — wystarczy PV'
         aft_rec, aft_label = False, 'rzadko potrzebne'
 
+    charge_kwh = night_rule.charge_kwh if night_rec else None
+    charge_target = night_rule.target_soc_percent if night_rec else None
+    charge_delta = None
+    if night_rec and charge_target is not None and soc_now is not None:
+        charge_delta = round(max(0.0, charge_target - soc_now), 1)
+
     if wait_cheap.triggered:
         rec, action = wait_cheap.recommendation, wait_cheap.body
     elif alert.triggered:
@@ -1047,7 +1059,12 @@ def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
             night_rule=night_rule if night_rec else None,
             aft_rec=aft_rec,
             start_hour=start_h,
+            charge_kwh=charge_kwh,
         ),
+        'tomorrow_pv_kwh': night_rule.tomorrow_pv_kwh if night_rec else None,
+        'charge_target_soc_percent': charge_target,
+        'charge_delta_soc_percent': charge_delta,
+        'charge_kwh': charge_kwh,
         'fc_max_minutes': fc_max,
         'fc_night_start_hour': start_h,
         'soc16_alert': alert.triggered,

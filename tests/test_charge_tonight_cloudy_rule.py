@@ -101,8 +101,23 @@ def test_october_pv_under_8_charges():
     assert rule.triggered is True
     assert rule.target_soc_percent == 85.0
     assert rule.fc_minutes == fc_minutes_for_delta_soc(85.0 - 40.0)
+    assert rule.charge_kwh == round((85.0 - 40.0) / 100.0 * 10.36, 1)
     assert 'JESIEŃ' in rule.recommendation
     assert '22:00' in rule.body
+
+
+def test_october_floor_soc_needs_about_8_kwh():
+    """X.2025: SoC ~10% i PV jutro 4 kWh → brak ~7,8 kWh do celu 85% (45 min)."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=10.0,
+        tomorrow_pv_kwh=4.1,
+        tomorrow_temp_c=10.0,
+        as_of=datetime(2026, 10, 8, 17, 0),
+    )
+    assert rule.triggered is True
+    assert rule.target_soc_percent == 85.0
+    assert rule.charge_kwh == round(75.0 / 100.0 * 10.36, 1)
+    assert rule.fc_minutes == 45.0
 
 
 def test_october_pv_10_skips_when_above_reserve():

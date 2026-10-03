@@ -116,6 +116,10 @@ class BatterySuggestionResponse(BaseModel):
     force_charge_night_start: str | None = None
     force_charge_night_end: str | None = None
     force_charge_night_minutes: float | None = None
+    tomorrow_pv_kwh: float | None = None
+    charge_target_soc_percent: float | None = None
+    charge_delta_soc_percent: float | None = None
+    charge_kwh: float | None = None
     force_charge_afternoon_window: str | None = None
     charge_when_summary: str = 'Dziś bez doładowania z sieci — wystarczy PV / rezerwa SE'
     fc_max_minutes: float = 15.0

@@ -75,6 +75,7 @@ class ChargeTonightCloudyRule:
     body: str
     target_soc_percent: float | None = None
     fc_minutes: float | None = None
+    charge_kwh: float | None = None
     tomorrow_temp_c: float | None = None
     estimated_gap_kwh: float | None = None
     skip_reason: str = ''
@@ -558,6 +559,7 @@ def evaluate_charge_tonight_cloudy(
             delta = _summer_fc_delta_soc()
         end_h, end_m = _fc_end_clock(start_h, minutes)
         label = 'WIOSNA' if spring else 'LATO'
+        cap = _b2_capacity_kwh(capacity_kwh)
         return ChargeTonightCloudyRule(
             triggered=True,
             soc_percent=soc_percent,
@@ -574,6 +576,7 @@ def evaluate_charge_tonight_cloudy(
             ),
             target_soc_percent=min(100.0, soc_percent + delta),
             fc_minutes=minutes,
+            charge_kwh=round(delta / 100.0 * cap, 1),
             tomorrow_temp_c=tomorrow_temp_c,
         )
 
@@ -632,6 +635,7 @@ def evaluate_charge_tonight_cloudy(
             ),
             target_soc_percent=target,
             fc_minutes=minutes,
+            charge_kwh=round(energy_kwh, 1),
             tomorrow_temp_c=tomorrow_temp_c,
             estimated_gap_kwh=round(gap, 1),
         )
@@ -706,6 +710,7 @@ def evaluate_charge_tonight_cloudy(
         ),
         target_soc_percent=target,
         fc_minutes=minutes,
+        charge_kwh=round(energy_kwh, 1),
         tomorrow_temp_c=tomorrow_temp_c,
         estimated_gap_kwh=None if gap is None else round(gap, 1),
     )

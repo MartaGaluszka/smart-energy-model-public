@@ -152,15 +152,30 @@
       >
         <ion-card-content>
           <div class="se-charge-alert__row">
-            <ion-icon name="warning-outline" class="se-charge-alert__icon"></ion-icon>
+            <ion-icon name="battery-charging-outline" class="se-charge-alert__icon"></ion-icon>
             <div>
-              <span class="se-charge-alert__title">Załaduj baterię wieczorem</span>
+              <span class="se-charge-alert__kicker">Słabe PV jutro · mało w baterii</span>
+              <span class="se-charge-alert__title" *ngIf="bat.charge_kwh != null">
+                Doładuj jeszcze {{ bat.charge_kwh | number:'1.1-1' }} kWh
+              </span>
+              <span class="se-charge-alert__title" *ngIf="bat.charge_kwh == null">Załaduj baterię wieczorem</span>
               <p class="se-charge-alert__body">
-                Słabe PV jutro
-                <ng-container *ngIf="bat.soc_now_percent !== null">
-                  · teraz {{ bat.soc_now_percent | number:'1.0-0' }}%
-                </ng-container>.
-                Krótkie doładowanie w taniej G12w.
+                <ng-container *ngIf="bat.soc_now_percent !== null && bat.charge_target_soc_percent != null">
+                  Teraz {{ bat.soc_now_percent | number:'1.0-0' }}% → cel
+                  {{ bat.charge_target_soc_percent | number:'1.0-0' }}%
+                  <ng-container *ngIf="bat.charge_delta_soc_percent != null">
+                    (+{{ bat.charge_delta_soc_percent | number:'1.0-0' }} pp)
+                  </ng-container>.
+                </ng-container>
+                <ng-container *ngIf="bat.tomorrow_pv_kwh != null">
+                  Jutro PV ~{{ bat.tomorrow_pv_kwh | number:'1.0-0' }} kWh.
+                </ng-container>
+                <ng-container *ngIf="bat.force_charge_night_start">
+                  Włącz {{ bat.force_charge_night_start }}<ng-container *ngIf="bat.force_charge_night_end">, wyłącz {{ bat.force_charge_night_end }}</ng-container><ng-container *ngIf="bat.force_charge_night_minutes != null"> (~{{ bat.force_charge_night_minutes | number:'1.0-0' }} min)</ng-container>.
+                </ng-container>
+              </p>
+              <p class="se-charge-alert__hint">
+                X.2025: przy SoC około 10% i PV jutro poniżej 8 kWh poranek brał 6–10 kWh z drogiej strefy.
               </p>
             </div>
           </div>
