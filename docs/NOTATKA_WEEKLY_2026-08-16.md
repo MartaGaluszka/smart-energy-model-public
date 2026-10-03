@@ -63,7 +63,7 @@ CS4: MAPE daily ~**10,0%** (n=24). Pochmurne: **16–17.08** best `daily_cs4`. J
 | **18.08** | 20°C, cloud 78%, jasność 4, **2,1 mm**, porywy 44 | słaba PV; Accu łagodniejszy niż MB „ciągły deszcz” |
 | **19.08** | 24°C, cloud 68%, jasność 6, **1,4 mm** wcześnie | umiarkowana / powrót |
 
-Szerszy opis 15–17.08: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md).
+Szerszy opis 15–17.08: [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md).
 
 ---
 

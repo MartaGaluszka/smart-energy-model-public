@@ -1,4 +1,6 @@
-# Notatka pogoda — 16.08–18.09.2026
+# Notatki pogodowe
+
+Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego dnia jest w `NOTATKA_YYYY-MM-DD.md`.
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
 **Produkcja ML:** Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, od **02.09**) · RF16  
@@ -7,6 +9,10 @@
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-10-03 ~17:40** | **MB** meteogram+MM+ens **03–07** · **03** słońce **24°** · **04** słońce **22–23°**, wysoka chmura PM · **05** **20–21°**, chmura średnia, ens ~100% w południe, **0 mm** (deszcz z 01.10 zszedł do mniejszości zespołu) · **06–07** słońce **23/24°** · Accu **05** jaśniej niż MB — [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md) |
+| **2026-10-03 ~17:38** | **Accu** **03** **9/5%/0** → **jasny→RF** (zamglenia) · **04** **9/19%/0** → **RF** · **05** **9/11%/0** P9% → **RF** · peak ENS **28,0 / 26,7 / 16,4** · **05.10** model chmurniej (**~60%**) niż Accu · closeout **01** Fox **19,1 (−25%)** · **02** Fox **31,3 (−14%)** · **03** Fox **30,2** w toku — [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md) |
+| **2026-10-01 ~11:46** | **MB** meteogram+MM+ens **01–05** · **01–04** słońce w dzień **0 mm** T **21/21/22/23°** · dziś clearing po poł. · deszcz zszedł z **04** na **05** · Accu **01** **64%** ciemniej niż MB — [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md) |
+| **2026-10-01 ~11:43** | **Accu** **01** **5/64%/0** → **mix→RF** (było **1/98%→CS4**) · **02** **10/0%/0** → **jasny→RF** · **03** **10/1%/0** zamglenia → **RF** · @05 ENS **14,4 / 26,8 / 26,5** · chmura modelu dziś **~100%** · closeout **29** Fox **32,7 (−17%)** · **30** Fox **31,6 (−14%)** — [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md) |
 | **2026-09-29 ~18:23** | **MB** meteogram+MM+ens **29–01.10** · **29–30** słońce **0 mm** T **~22°** · **01.10** słońce+chmura, ens **~30–40%** (nie 98%) · MM: rozbieżność · deszcz **04.10** · Accu **01.10 watch mix** — [`NOTATKA_2026-09-29.md`](NOTATKA_2026-09-29.md) |
 | **2026-09-29 ~18:21** | **Accu** **29** **10/0%/0** → **RF** · **30** **10/4%/0** → **RF** (jaśniej niż **9/25%**) · **01.10** **1/98%/0** → **CS4** · Fox **28,7** · closeout **28** Fox **31,8** vs ENS **27,6 (−13%)** — [`NOTATKA_2026-09-29.md`](NOTATKA_2026-09-29.md) |
 | **2026-09-28 ~15:31** | **MB** meteogram+MM+ens **28–30** · **słońce / 0 mm** · T **~22/21/22°** · RH po poł. **~40%** · wiatr **E** · spike chmur tylko **~06 wt.** · deszcz zespołu **04.10** (nie 02–03.10) · Accu **zgodny**, **30** Accu **25%**, nieco większe zachmurzenie — [`NOTATKA_2026-09-28.md`](NOTATKA_2026-09-28.md) |
@@ -125,7 +131,62 @@
 
 ---
 
-## Meteoblue — 29.09 ~18:23 (obecny run)
+## Meteoblue — 03.10 ~17:40 (obecny run)
+
+Update **2026-10-03 ~17:40** · okolice Krakowa (GPS w `.env`).
+
+| | **03.10** | **04.10** | **05.10** | **06–07.10** |
+|--|-----------|-----------|-----------|--------------|
+| **Meteogram** | **6–24°** · słońce · **0 mm** | **8–22°** · słońce, wysoka chmura PM · **0 mm** | **9–21°** · chmura średnia · **0 mm** | **06** słońce **23°** · **07** **24°** |
+| **MM** | słońce, zgodne | słońce **06–18**, bardzo zgodne | słońce, mniejsza zgoda; ICON-12/7, NEMS-12, NMM-12 chmurzej rano | — |
+| **Ensemble** | cloud poniżej **~10–15%** | południe **~35–40%**, wieczorem czysto | średnia **~100%** w południe, wieczorem **~20%**; kilku członków deszcz do **~8 mm** | — |
+| **Wiatr/RH** | **~3–5**, RH min **~40%** | **~5–10**, porywy **~20**, RH min **~30%** | **~5–8**, porywy **~14**, RH min **~45%** | — |
+| **vs Accu** | **9 / 5%** zgoda | **9 / 19%** zgoda | Accu **9 / 11%** jaśniej niż MB | — |
+
+Dzień: [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md).
+
+---
+
+## AccuWeather — 03.10 ~17:38 (obecny run)
+
+| Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
+|-------|------:|------:|------:|------:|--------------|
+| **03.10** sob. | **23°C** | **9** b. jasne | **5%** | **0,0 mm** | **jasny→RF** — zamglenia · susza |
+| **04.10** nd. | **22°C** | **9** | **19%** | **0,0 mm** | **jasny→RF** — przeważnie słonecznie |
+| **05.10** pn. | **20°C** | **9** | **11%** | **0,0 mm** | **jasny→RF** — przeważnie słonecznie · P opadu **9%** (MB z 01.10 dawał deszcz) |
+
+Dzień: [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md).
+
+---
+
+## Meteoblue — 01.10 ~11:46 (obecny run)
+
+Update **2026-10-01 ~11:46** · okolice Krakowa (GPS w `.env`).
+
+| | **01.10** | **02.10** | **03.10** | **04–05.10** |
+|--|-----------|-----------|-----------|--------------|
+| **Meteogram** | **6–21°** · clearing · **0 mm** | **7–21°** słońce **0 mm** | **7–22°** słońce **0 mm** | **04** słońce **23°** **0 mm** · **05** deszcz, porywy **~30** |
+| **MM** | po poł. słońce; ICON-12 / NEMS-4 / NEMS-30 chmurzej | słońce, zgodne | słońce, zgodne | — |
+| **Ensemble** | cloud dnia spada ku **~0–20%** | **~0** | **~0–20%** | opad **0** do końca **04**; od **05** suma rośnie |
+| **vs Accu** | **5 / 64%** ciemniej niż MB | **10 / 0%** zgoda | **10 / 1%** zgoda | — |
+
+Dzień: [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md).
+
+---
+
+## AccuWeather — 01.10 ~11:43
+
+| Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
+|-------|------:|------:|------:|------:|--------------|
+| **01.10** czw. | **20°C** | **5** średnie | **64%** | **0,0 mm** | **mix→RF** — rosnące zachmurzenie · susza (było **1 / 98% → CS4**) |
+| **02.10** pt. | **22°C** | **10** b. jasne | **0%** | **0,0 mm** | **jasny→RF** — dużo słońca |
+| **03.10** sob. | **23°C** | **10** | **1%** | **0,0 mm** | **jasny→RF** — zamglenia |
+
+Dzień: [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md).
+
+---
+
+## Meteoblue — 29.09 ~18:23 (archiwum)
 
 Update **2026-09-29 ~18:23** · okolice Krakowa (GPS w `.env`).
 
@@ -141,7 +202,7 @@ Dzień: [`NOTATKA_2026-09-29.md`](NOTATKA_2026-09-29.md).
 
 ---
 
-## AccuWeather — 29.09 ~18:21 (obecny run)
+## AccuWeather — 29.09 ~18:21 (archiwum)
 
 | Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
 |-------|------:|------:|------:|------:|--------------|

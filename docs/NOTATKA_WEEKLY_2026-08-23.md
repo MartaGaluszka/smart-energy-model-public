@@ -70,7 +70,7 @@ CS4 daily ~**10,5%** (n=27), lepszy **9/27**.
 | **22.08** | Accu jasność **6** / wiatr (nie 9) | actual **25,1** · oneshot ~24 |
 | **23.08** | Accu outlook jasność **9** | daily ~28–29 — ryzyko zaniżenia przy bardzo jasnym dniu |
 
-Szerszy opis: [`NOTATKA_POGODA_2026-08-15.md`](NOTATKA_POGODA_2026-08-15.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md).
+Szerszy opis: [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · [`NOTATKA_2026-08-22.md`](NOTATKA_2026-08-22.md).
 
 ---
 
