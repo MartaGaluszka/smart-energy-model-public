@@ -144,6 +144,26 @@ PV doby p25/p50/p75: **6 / 10 / 20 kWh**. Aż **63%** dni ma PV &lt; 12, ale prz
 
 Stary próg „jesień: PV &lt; 12” był **za agresywny** (ładowałby też dni z luką ~2 kWh). Docelowo B2 jesień: **PV &lt; ~8 kWh** (ew. 8–12 tylko przy SoC &lt; rezerwy). T nie jest pierwszym filtrem jesienią.
 
+### D2. Październik 2026 — ile doładować (fakt X.2025)
+
+Pojemność **10,36 kWh**. Jesienią cel nocny **85%**, gdy prognoza PV jutro **&lt; 8 kWh**. Brak:
+
+`kWh = (85 − SoC) / 100 × 10,36` · czas: **30 min ≈ +50 pp** (SoC 10% → 85% = **+75 pp ≈ 7,8 kWh ≈ 45 min**, od **22:00**).
+
+Karta Home (`GET /battery/suggestion`) pokazuje ten brak, gdy reguła włącza nocne FC: **„Doładuj jeszcze X kWh”**, teraz → cel, jutro PV, okno 22:00.
+
+| Okno X.2025 | SoC | PV doby | Z sieci w oknie | X.2026 |
+|-------------|----:|--------:|----------------:|--------|
+| **10.10** 6:00–12:43 (pt, po ciemnym 9.10, PV 3,0) | 10% | 4,1 | **9,8 kWh** | **ładuj** nocą 9.10: 10% → 85%, **~7,8 kWh** |
+| **15.10** 6:00–10:22 | 8% | 9,3 | **6,2 kWh** | PV 8–12 i SoC &lt; rezerwy: tylko do **22%**, nie do 85% |
+| **1.10** cały dzień (po 30.09, PV 4,0) | 7–13% | 4,3 | **16 kWh** (~14 w drogiej) | jak 10.10: noc wcześniej do 85% |
+| **20.10** 6:00–9:31 (pn; nd 18:00 było 77%) | 10% | **26** | **7,2 kWh** | **nie kupuj** nocy; **zostaw** niedzielny SoC do 6:00 |
+| **30.10** 6:00–7:40 | **48%** | 10,7 | **0,1 kWh** | wzorzec: rano wciąż jest zapas, droga strefa nie wchodzi |
+| **22 / 25 / 28 / 29.10** poranek | ~8–10% | różne | **0,2–1,6 kWh** | poniżej **2 kWh** — pomiń cykl |
+| **11–12, 19, 25.10** weekend | ~10% | ciemno | sieć | cała doba **tanio** — nie ładuj „bo pusto” |
+
+Wieczór, który jest już na **10%** przed 22:00 (9.10 od 14:00, 27.10 od 21:22), nie naprawi ładowanie o 22:00. Ten wieczór wygrywa **poprzednia** noc, żeby o 15:00 SoC było jeszcze powyżej podłogi.
+
 ### E. Wiosna — wstępne założenia (fakt: III.2026 n=20 roboczych; V.2025 n=10 — dane niepełne / nietypowe PV)
 
 | Miesiąc | n | Tśr | Load droga | PV doby | Luka | Uwaga |
@@ -209,7 +229,8 @@ Luki: brak twardej blokady „nie zjeżdżaj poniżej X% przed 22:00”. UI suwa
 | BAT.4 | `[x]` | Backtest kosztów IX–II (polityka vs fakt) — `scripts/analysis/backtest_battery_policy_ix_ii.py` + [`NOTATKA_BAT4_BACKTEST_IX_II_2026-08-27.md`](NOTATKA_BAT4_BACKTEST_IX_II_2026-08-27.md) |
 | BAT.5 | `[x]` | UI `soc_min` = rezerwa sezonowa — auto: lato **20%** / zima 40%; KPI SoC na Home |
 | BAT.6 | `[ ]` | Po BAT.4: decyzja o auto-apply (park do świadomej zgody) |
+| BAT.7 | `[x]` | Home: „doładuj jeszcze X kWh” przy PV jutro &lt; 8 i niskim SoC — §D2, X.2025 |
 
 ---
 
-*Plan z analizy IX.2025–II.2026 — 2026-08-02; T×droga taryfa×PV zima — 2026-08-27; jesień/wiosna §D–E — 2026-08-27.*
+*Plan z analizy IX.2025–II.2026 — 2026-08-02; T×droga taryfa×PV zima — 2026-08-27; jesień/wiosna §D–E — 2026-08-27; ile doładować w X.2026 (§D2) — 2026-10-01.*
