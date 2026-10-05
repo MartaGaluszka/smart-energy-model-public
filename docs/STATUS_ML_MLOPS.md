@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-09-27 (offline weekly) · live closeouty w tabeli poniżej do **12.09** (do odświeżenia po closeoutach 13–26.09)  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 27.09**) · `forecast_validation.csv` (closeouty do **12.09**) · [`NOTATKA_WEEKLY_2026-09-27.md`](NOTATKA_WEEKLY_2026-09-27.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
+**Stan na:** 2026-10-04 (offline weekly) · live closeouty w tabeli poniżej do **12.09** (do odświeżenia po closeoutach 13–26.09)  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 04.10**) · `forecast_validation.csv` (closeouty do **12.09**) · [`NOTATKA_WEEKLY_2026-10-04.md`](NOTATKA_WEEKLY_2026-10-04.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -21,14 +21,14 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 
 | Metryka | Wartość |
 |---------|---------|
-| Okno | 2025-06-01 → **2026-09-26** |
-| Test MAE | **0.677** kWh/h |
-| Gap train–test | **0.079** |
-| Daily MAE | **3.44** kWh/d |
-| Daily R² | **0.856** |
+| Okno | 2025-06-01 → **2026-10-03** |
+| Test MAE | **0.671** kWh/h |
+| Gap train–test | **0.074** |
+| Daily MAE | **3.54** kWh/d |
+| Daily R² | **0.842** |
 | Werdykt | nie przeuczony |
 
-Gate vs weekly **20.09** (0.652): Δ **+0.025** → **REVIEW** (próg remisu ≤ +0.02). Primary bez zmian (RF16 + ENS). Od **04.10** dual report: shuffle + **L30 soft** ([`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md)). Szczegóły: [`NOTATKA_WEEKLY_2026-09-27.md`](NOTATKA_WEEKLY_2026-09-27.md).
+Gate vs weekly **27.09** (0.677): Δ **−0.006** → **ACCEPT** (REVIEW z 27.09 zamknięty: Δ vs 20.09 = +0.019). L30 chrono **0.808** (INFO). Primary bez zmian (RF16 + ENS). Dual report: shuffle + **L30 soft** ([`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md)); kryteria testu live i przejścia L30: [`NOTATKA_GATE_L30_CLOSEOUT.md`](NOTATKA_GATE_L30_CLOSEOUT.md). Szczegóły: [`NOTATKA_WEEKLY_2026-10-04.md`](NOTATKA_WEEKLY_2026-10-04.md).
 
 ### Live (closeout vs app)
 
@@ -80,8 +80,10 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Notatki pogodowe od 16.08 | [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · dzień [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md) (Accu **03–05** jasny→RF; closeout **01** Fox **19,1** · **02** Fox **31,3**) · poprzednio [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md) |
 | Oś retreningów / wdrożeń | [`NOTATKA_RETRENINGI_I_WDROZENIA.md`](NOTATKA_RETRENINGI_I_WDROZENIA.md) |
 | Weekly **20.09** | [`NOTATKA_WEEKLY_2026-09-20.md`](NOTATKA_WEEKLY_2026-09-20.md) |
+| Weekly **04.10** | [`NOTATKA_WEEKLY_2026-10-04.md`](NOTATKA_WEEKLY_2026-10-04.md) |
 | Weekly **27.09** | [`NOTATKA_WEEKLY_2026-09-27.md`](NOTATKA_WEEKLY_2026-09-27.md) |
 | Gate dual L30 (soft X 2026) | [`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md) |
+| Kryteria closeout tygodniowego + przejście L30 | [`NOTATKA_GATE_L30_CLOSEOUT.md`](NOTATKA_GATE_L30_CLOSEOUT.md) |
 | Weekly **13.09** | [`NOTATKA_WEEKLY_2026-09-13.md`](NOTATKA_WEEKLY_2026-09-13.md) |
 | Weekly **06.09** | [`NOTATKA_WEEKLY_2026-09-06.md`](NOTATKA_WEEKLY_2026-09-06.md) |
 | Weekly **30.08** | [`NOTATKA_WEEKLY_2026-08-30.md`](NOTATKA_WEEKLY_2026-08-30.md) |

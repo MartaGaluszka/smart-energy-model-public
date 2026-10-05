@@ -70,7 +70,7 @@ Przykład (oczekiwany rząd jesień): shuffle **~0,65–0,70** · L30 **~0,75–
 
 ## Co dalej (po X 2026)
 
-- Po **2–4** weekly z dual: rozważyć L30 jako główny wiersz gate (nadal bez ucinania prod).
+- Po **2–4** weekly z dual: rozważyć L30 jako główny wiersz gate (nadal bez ucinania prod). **Kryteria przejścia (≥6 punktów, P90, korelacja z closeoutem, reguła wielosygnałowa) i kryteria testu live:** [`NOTATKA_GATE_L30_CLOSEOUT.md`](NOTATKA_GATE_L30_CLOSEOUT.md) (05.10).
 - Sezonowy baseline (Δ vs med4 / vs rok) — osobno.
 
 Powiązane: [`NOTATKA_WEEKLY_2026-09-27.md`](NOTATKA_WEEKLY_2026-09-27.md) · [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md) · [`QUICK_START.md`](../QUICK_START.md) § retrening
