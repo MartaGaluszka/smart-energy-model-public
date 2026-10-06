@@ -136,6 +136,7 @@ def load_july_validation(path: Path) -> pd.DataFrame:
         'predicted_midday',
         'predicted_daily_raw',
         'predicted_midday_raw',
+        'predicted_daily_icon',
     )
     for col in pred_cols:
         if col in df.columns:
@@ -209,6 +210,106 @@ def _weather_bucket(cloud: float | None) -> str:
     if cloud >= CLOUD_POOR_MIN:
         return 'pochmurny / deszczowy'
     return 'mieszany'
+
+
+# Progi closeoutu tygodniowego — docs/NOTATKA_GATE_L30_CLOSEOUT.md (05.10.2026)
+WEEK_MIN_DAYS = 5
+WEEK_SUNNY_KWH = 20.0
+WAPE_WATCH, WAPE_ALARM = 15.0, 22.0
+BIAS_WATCH, BIAS_ALARM = 8.0, 12.0
+WORST_WATCH, WORST_ALARM = 25.0, 40.0
+
+
+def _grade(value: float, watch: float, alarm: float) -> str:
+    if value > alarm:
+        return 'ALARM'
+    if value > watch:
+        return 'WATCH'
+    return 'OK'
+
+
+def _weekly_closeout_lines(m: pd.DataFrame, *, since: str = '2026-08-03') -> list[str]:
+    """Tabela WAPE / bias raw 5:00 vs Fox per tydzień pn–nd (kryteria NOTATKA_GATE_L30_CLOSEOUT)."""
+    d = m.dropna(subset=['actual_pv_total', 'predicted_daily_raw']).copy()
+    if 'predicted_daily_icon' in d.columns:
+        d['predicted_daily_icon'] = pd.to_numeric(d['predicted_daily_icon'], errors='coerce')
+    d = d[(d['actual_pv_total'] >= 1.0) & (d['target_day'] >= pd.Timestamp(since))]
+    if d.empty:
+        return []
+    d['err'] = d['predicted_daily_raw'] - d['actual_pv_total']
+    d['pct'] = d['err'] / d['actual_pv_total'] * 100.0
+    d['week'] = pd.to_datetime(d['target_day']).dt.to_period('W-SUN')
+
+    has_icon = 'predicted_daily_icon' in d.columns and d['predicted_daily_icon'].notna().any()
+    head = '| Tydzień | n | Fox śr. [kWh] | WAPE | Bias | Bias dni jasnych | Najgorszy dzień |'
+    sep = '|---|---:|---:|---:|---:|---:|---:|'
+    if has_icon:
+        head += ' ICON solo WAPE | ICON bias |'
+        sep += '---:|---:|'
+    lines = [head + ' Ocena |', sep + '---|']
+    for wk, g in d.groupby('week'):
+        fox_sum = g['actual_pv_total'].sum()
+        wape = g['err'].abs().sum() / fox_sum * 100.0
+        bias = g['err'].sum() / fox_sum * 100.0
+        worst = g['pct'].abs().max()
+        sun = g[g['actual_pv_total'] >= WEEK_SUNNY_KWH]
+        bias_sun = (
+            f"{sun['err'].sum() / sun['actual_pv_total'].sum() * 100.0:+.1f}% (n={len(sun)})"
+            if len(sun) else '—'
+        )
+        grades = (
+            _grade(wape, WAPE_WATCH, WAPE_ALARM),
+            _grade(abs(bias), BIAS_WATCH, BIAS_ALARM),
+            _grade(worst, WORST_WATCH, WORST_ALARM),
+        )
+        overall = 'ALARM' if 'ALARM' in grades else ('WATCH' if 'WATCH' in grades else 'OK')
+        flags = f"WAPE {grades[0]} · bias {grades[1]} · dzień {grades[2]}"
+        if len(g) < WEEK_MIN_DAYS:
+            overall = f'info (n<{WEEK_MIN_DAYS})'
+            flags = ''
+        label = f"{wk.start_time:%d.%m}–{wk.end_time:%d.%m}"
+        icon_cells = ''
+        if has_icon:
+            gi = g.dropna(subset=['predicted_daily_icon'])
+            if len(gi) >= 3:
+                ei = gi['predicted_daily_icon'] - gi['actual_pv_total']
+                icon_cells = (
+                    f" {ei.abs().sum() / gi['actual_pv_total'].sum() * 100:.1f}% (n={len(gi)}) |"
+                    f" {ei.sum() / gi['actual_pv_total'].sum() * 100:+.1f}% |"
+                )
+            else:
+                icon_cells = ' — | — |'
+        lines.append(
+            f"| {label} | {len(g)} | {g['actual_pv_total'].mean():.1f} | {wape:.1f}% | "
+            f"{bias:+.1f}% | {bias_sun} | {worst:.0f}% |{icon_cells} "
+            f"**{overall}**{(' · ' + flags) if flags else ''} |"
+        )
+    return lines
+
+
+def _era_weather_lines(m: pd.DataFrame) -> list[str]:
+    """MAPE raw 5:00 wg typu dnia osobno dla ery dual ICON i ery ENS (korekta o miks pogody)."""
+    day = pd.to_datetime(m['target_day'])
+    eras = (
+        ('dual ICON 27.07–01.09', (day >= '2026-07-27') & (day <= '2026-09-01')),
+        ('ENS od 02.09', day >= ENS_PRIMARY_START),
+    )
+    types = ('słoneczny / mało chmur', 'mieszany', 'pochmurny / deszczowy')
+    lines = [
+        '| Era | ' + ' | '.join(f'{t} (n · MAPE 5:00)' for t in types) + ' | udział dni pochmurnych |',
+        '|---|' + '---:|' * (len(types) + 1),
+    ]
+    for name, mask in eras:
+        g = m[mask]
+        if g.empty:
+            continue
+        cells = []
+        for t in types:
+            gt = g[g['weather_type'] == t]
+            cells.append(f"{len(gt)} · {gt['ape_raw_morning'].mean():.1f}%" if len(gt) else '—')
+        share = (g['weather_type'] == 'pochmurny / deszczowy').mean() * 100.0
+        lines.append(f"| {name} | " + ' | '.join(cells) + f' | {share:.0f}% |')
+    return lines
 
 
 def build_july_error_summary(
@@ -316,6 +417,50 @@ def build_july_error_summary(
         'Od **02.09** primary to **ENS (ICON+UKMO)** — ten sam RF16, inna pogoda.'
     )
     lines.append('')
+
+    # --- tydzień po tygodniu ---
+    weekly = _weekly_closeout_lines(m)
+    if weekly:
+        lines.append('#### Tydzień po tygodniu — WAPE i bias (test live)')
+        lines.append('')
+        lines.append(
+            'Raw 5:00 vs Fox, tygodnie pn–nd (od 03.08, min. '
+            f'{WEEK_MIN_DAYS} dni). **WAPE** = Σ|pred−Fox| / ΣFox (odporne na słabe dni, w przeciwieństwie do MAPE). '
+            '**Bias** = Σ(pred−Fox) / ΣFox (minus = niedoszacowanie). Dni jasne = Fox ≥ '
+            f'{WEEK_SUNNY_KWH:.0f} kWh. Progi OK / WATCH / ALARM: WAPE ≤{WAPE_WATCH:.0f}% / ≤{WAPE_ALARM:.0f}%, '
+            f'|bias| ≤{BIAS_WATCH:.0f}% / ≤{BIAS_ALARM:.0f}%, najgorszy dzień ≤{WORST_WATCH:.0f}% / ≤{WORST_ALARM:.0f}% '
+            '— szczegóły i reguła „dwa tygodnie z rzędu”: `docs/NOTATKA_GATE_L30_CLOSEOUT.md`. '
+            '**ICON solo** = shadow (ten sam RF16, pogoda tylko z ICON) liczony od 02.09 — porównuj z ENS tylko w tygodniach z pełnym n.'
+        )
+        lines.append('')
+        lines.extend(weekly)
+        lines.append('')
+
+    if 'weather_type' in m.columns:
+        era_lines = _era_weather_lines(m)
+        if len(era_lines) > 2:
+            lines.append('#### ENS vs dual ICON — korekta o miks pogody')
+            lines.append('')
+            day_m = pd.to_datetime(m['target_day'])
+            dual_m = m[(day_m >= '2026-07-27') & (day_m <= '2026-09-01')]
+            ens_m = m[day_m >= ENS_PRIMARY_START]
+            diffs = []
+            for t in ('słoneczny / mało chmur', 'mieszany', 'pochmurny / deszczowy'):
+                a = dual_m.loc[dual_m['weather_type'] == t, 'ape_raw_morning'].mean()
+                b = ens_m.loc[ens_m['weather_type'] == t, 'ape_raw_morning'].mean()
+                if pd.notna(a) and pd.notna(b):
+                    diffs.append(f"{t}: {'wyższy' if b > a else 'niższy'} o {abs(b - a):.1f} pp w erze ENS")
+            share_d = (dual_m['weather_type'] == 'pochmurny / deszczowy').mean() * 100.0
+            share_e = (ens_m['weather_type'] == 'pochmurny / deszczowy').mean() * 100.0
+            lines.append(
+                f'Era ENS ma więcej dni pochmurnych (**{share_e:.0f}%** vs **{share_d:.0f}%** w erze dual), '
+                'a na pochmurnych |APE| % jest zawyżone przez niski Fox — dlatego porównuj **te same typy dni** '
+                '(różnica MAPE raw 5:00, ENS − dual): ' + '; '.join(diffs) + '. '
+                'Mała próba (n w komórkach) — to obserwacja, nie wniosek.'
+            )
+            lines.append('')
+            lines.extend(era_lines)
+            lines.append('')
 
     # --- hybryda ---
     lines.append('#### Kiedy hybryda dnia pomaga, a kiedy szkodzi')
@@ -486,7 +631,10 @@ def build_july_error_summary(
     )
     lines.append(
         '- **`production_validation_plot.png`:** góra = tylko **5:00** (raw ≈ hybryda, mało FoxESS). '
-        'Dół = 5:00 i 12:00 razem. Tło od **02.09** = **ENS (ICON+UKMO)**.'
+        'Dół = 5:00 i 12:00 razem. Tło od **02.09** = **ENS (ICON+UKMO)**. '
+        'Pomarańczowe linie pionowe = niedzielny weekly retrening (04:30); od **27.09** opis „REVIEW” '
+        '(gate Δ MAE > +0,02), od **04.10** „+ L30” (dual report: shuffle + chronologiczny holdout 30 dni) — '
+        '`docs/NOTATKA_RETRENINGI_I_WDROZENIA.md`, `docs/NOTATKA_GATE_DUAL_L30.md`.'
     )
     lines.append(
         '- Dni **bez Porannej @05** (launchd / Mac spał) nie mają niebieskiej kropki 5:00 — '
@@ -613,7 +761,10 @@ def build_july_plot(df: pd.DataFrame, output: Path) -> None:
                 ax2.bar(xpos[mask], vals[mask], width, label=label, color=color, alpha=0.85)
 
         ax2.set_xticks(idx)
-        ax2.set_xticklabels([d.strftime('%d.%m') for d in df['target_day']], rotation=30)
+        ax2.set_xticklabels(
+            [d.strftime('%d.%m') if d.weekday() == 0 else '' for d in df['target_day']],
+            rotation=30,
+        )
         ax2.set_ylabel('|Błąd| [%]')
         ax2.set_xlabel('Dzień')
         ax2.set_title(

@@ -43,6 +43,7 @@ COLORS = {
     'hyb_midday': '#C0392B',
     'main_raw': '#27AE60',
     'main_hyb': '#8E44AD',
+    'icon': '#E91E63',
 }
 
 # Retreningi i zmiany produkcji (annotacje na wykresie)
@@ -55,6 +56,11 @@ MILESTONES = [
     {'date': '2026-08-23', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-08-30', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-09-02', 'label': 'ENS primary', 'color': '#16A085', 'type': 'deploy'},
+    {'date': '2026-09-06', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-09-13', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-09-20', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-09-27', 'label': 'Retrain (REVIEW)', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-10-04', 'label': 'Retrain + L30', 'color': '#F39C12', 'type': 'retrain'},
 ]
 
 ENS_PRIMARY_START = '2026-09-02'
@@ -92,6 +98,7 @@ def load_validation_table(path: Path) -> pd.DataFrame:
         'predicted_manual',
         'predicted_daily_raw',
         'predicted_midday_raw',
+        'predicted_daily_icon',
         'actual_pv_total',
     ):
         if col in df.columns:
@@ -128,6 +135,20 @@ def _plot_series(ax, dates, values, *, label, color, marker='o', linestyle='-', 
     )
 
 
+def _plot_icon_shadow(ax, dates, values) -> None:
+    """Cienka linia: ICON solo (shadow, ten sam RF16, od 02.09) — porównanie z ENS primary."""
+    s = pd.to_numeric(values, errors='coerce')
+    mask = s.notna()
+    if not mask.any():
+        return
+    ax.plot(
+        dates[mask], s[mask],
+        label='ICON solo 5:00 (shadow, od 02.09)',
+        color=COLORS['icon'], marker='x', markersize=5, linestyle=':',
+        linewidth=1.2, alpha=0.9, zorder=3,
+    )
+
+
 def _add_milestones(ax, zoom_start: pd.Timestamp) -> None:
     """Dodaj vertical lines z annotacjami o retreningach i deploymentach."""
     for milestone in MILESTONES:
@@ -153,21 +174,22 @@ def _add_milestones(ax, zoom_start: pd.Timestamp) -> None:
 def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10.4), sharex=False)
+    last_day = df['target_day'].max() if not df.empty else pd.Timestamp.now()
     fig.suptitle(
-        'Walidacja PV — raw RF vs hybryda dnia (od 14.07)',
+        f'Walidacja PV — raw RF vs hybryda dnia (14.07–{last_day:%d.%m})',
         fontsize=16,
         fontweight='bold',
         y=0.995,
     )
     fig.text(
         0.5, 0.955,
-        'Raw = sam RF na cały dzień  ·  Hybryda dnia = FoxESS (minione godz.) + RF (przyszłe)'
-        '  ·  to nie jest korekta ADJUST',
+        'Raw = sam RF na cały dzień (ENS primary)  ·  Hybryda dnia = FoxESS (minione godz.) + RF (przyszłe)'
+        '  ·  ICON solo = shadow (ten sam RF16, tylko ICON)  ·  to nie jest korekta ADJUST',
         ha='center', va='top', fontsize=9.5, color='#34495E',
     )
     fig.text(
         0.5, 0.935,
-        'Linie pionowe: retreningi weekly (pomarańczowe) + zmiany produkcji  ·  '
+        'Linie pionowe: niedzielne retreningi weekly (pomarańczowe; REVIEW 27.09, L30 od 04.10) + zmiany produkcji  ·  '
         'tła: ICON od 18.07  ·  kalibracja dual od 26.07  ·  ENS primary od 02.09',
         ha='center', va='top', fontsize=8.5, color='#7F8C8D', style='italic',
     )
@@ -196,14 +218,16 @@ def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
             ax1, long_df['target_day'], long_df.get('predicted_daily'),
             label='Hybryda dnia 5:00 (FoxESS+RF)', color=COLORS['main_hyb'], linestyle='--',
         )
+        _plot_icon_shadow(ax1, long_df['target_day'], long_df.get('predicted_daily_icon'))
     else:
         ax1.text(0.5, 0.5, 'Brak danych walidacji od 14.07', ha='center', va='center',
                  transform=ax1.transAxes, fontsize=11)
 
     ax1.set_ylabel('Energia [kWh]')
-    ax1.legend(loc='upper left', framealpha=0.95, fontsize=9)
+    ax1.legend(loc='lower left', framealpha=0.95, fontsize=9)
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%d.%m'))
-    ax1.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+    ax1.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO))
+    ax1.xaxis.set_minor_locator(mdates.DayLocator())
     ax1.tick_params(axis='x', rotation=35)
     # Oś X od startu MLOps (bez pustego czerwca)
     x_end = max(today, long_df['target_day'].max() if not long_df.empty else today)
@@ -250,15 +274,17 @@ def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
             label='Hybryda dnia 12:00 (FoxESS+RF)', color=COLORS['hyb_midday'], marker='D',
             linestyle='--',
         )
+        _plot_icon_shadow(ax2, zoom_df['target_day'], zoom_df.get('predicted_daily_icon'))
     else:
         ax2.text(0.5, 0.5, 'Brak danych w oknie od 14.07', ha='center',
                  va='center', transform=ax2.transAxes, fontsize=11)
 
     ax2.set_xlabel('Data')
     ax2.set_ylabel('Energia [kWh]')
-    ax2.legend(loc='upper left', framealpha=0.95, fontsize=9)
+    ax2.legend(loc='lower left', framealpha=0.95, fontsize=9)
     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%d.%m'))
-    ax2.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+    ax2.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=mdates.MO))
+    ax2.xaxis.set_minor_locator(mdates.DayLocator())
     ax2.tick_params(axis='x', rotation=35)
     x_end = max(today, zoom_df['target_day'].max() if not zoom_df.empty else today)
     ax2.set_xlim(zoom_start - pd.Timedelta(hours=12), x_end + pd.Timedelta(days=1))

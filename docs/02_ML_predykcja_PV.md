@@ -427,8 +427,8 @@ Skrypt: [`scripts/plots/plot_production_accuracy.py`](../scripts/plots/plot_prod
 
 ![Weryfikacja produkcyjna](images/ml/production_validation.png)
 
-**Raw vs hybryda dnia** — closeouty launchd **14.07–12.09** (n=**61**); od **02.09** tło **ENS primary**.  
-**Odświeżenie wykresów:** **13.09.2026** (po closeoucie **12.09**).
+**Raw vs hybryda dnia** — closeouty launchd **14.07–04.10** (n=**83**); od **02.09** tło **ENS primary**.  
+**Odświeżenie wykresów:** **05.10.2026** (po closeoucie **04.10**).
 
 ![Walidacja closeoutów: kWh + |APE| %](images/ml/july_validation_plot.png)
 
@@ -437,17 +437,20 @@ Skrypt: [`scripts/plots/plot_production_accuracy.py`](../scripts/plots/plot_prod
 | [`july_validation_plot.png`](images/ml/july_validation_plot.png) | **Czarne** = FoxESS (actual) · **niebieski** = raw RF **5:00** · **pomarańczowy** = raw **12:00** · fiolet/czerwień = hybryda dnia | **|APE| %** = \|actual − prognoza\| / actual — wysoki słupek = dzień słaby/deszczowy lub outlier (np. **11.09**) | `plot_july_validation.py` |
 | [`production_validation_plot.png`](images/ml/production_validation_plot.png) | Tylko prognoza **5:00** (raw ≈ hybryda — przed wschodem mało FoxESS) | **5:00 + 12:00** razem; tło zielone od **02.09** = era **ENS (ICON+UKMO)** | `plot_production_validation.py` |
 
-**Legenda er na osi X:** pionowe linie = **ICON** od 18.07 · **kalibracja dual** od 26.07 · **ENS primary** od 02.09.
+**Legenda er na osi X:** pionowe linie = **ICON** od 18.07 · **kalibracja dual** od 26.07 · **ENS primary** od 02.09. Na `production_validation_plot.png` dodatkowo pomarańczowe linie = niedzielne retreningi weekly (od 09.08; **27.09** = gate REVIEW, **04.10** = pierwszy weekly z dual report shuffle + L30).
 
 **Ostatnie closeouty (operacyjnie):**
 
 | Dzień | Fox actual | Prognoza (raw) | \|APE\| | Uwaga |
 |-------|----------:|---------------:|--------:|-------|
-| **10.09** | **18,8** | peak **18,31** | **−2,6%** | brak Porannej @05 |
-| **11.09** | **3,1** | midday **8,52** | **+174,8%** | **rekord |APE|** w całej serii (14.07–12.09); Accu **CS4** reżim OK, miss = kWh |
-| **12.09** | **13,1** | midday **13,47** · peak **11,94** | **−2,8%** / **+0,7%** | brak Porannej @05; Accu **CS4** ✓ · PM słońce |
+| **11.09** | **3,1** | midday **8,52** | **+174,8%** | **rekord \|APE\|** w całej serii (14.07–04.10); Accu **CS4** reżim OK, miss = kWh |
+| **29.09** | **32,7** | daily @05 **27,1** | **−17%** | słonecznie; niedoszacowanie (bias tygodnia −14%) |
+| **01.10** | **19,1** | daily @05 **14,4** | **−25%** | najgorszy dzień tygodnia 28.09–04.10 |
+| **03.10** | **30,3** | daily @05 **26,6** · peak **27,99** | **−12%** / **−8%** | ostatni dzień na starych wagach |
+| **04.10** | **29,6** | daily @05 **27,99** · peak **28,04** | **−5%** / **−5%** | pierwszy dzień na wagach z weekly 04.10 |
 
-**MAPE er (raw):** dual ICON **27.07–01.09** n=37 → **15,6% / 15,8%** · ENS **02.09–12.09** n=11 → **9,2% / 24,3%** (12:00 podbija **11.09**) · całość **14.07–12.09** → **16,9% / 18,5%**.
+**MAPE er (raw):** dual ICON **27.07–01.09** n=37 → **15,6% / 15,8%** · ENS **02.09–04.10** n=33 → **17,4% / 22,4%** (12:00 podbija **11.09**) · całość **14.07–04.10** n=83 → **17,8% / 19,3%**.  
+**Test live tydzień po tygodniu:** WAPE / bias raw 5:00 vs Fox z progami OK/WATCH/ALARM — tabela w [`july_validation_summary.md`](images/ml/july_validation_summary.md), kryteria w [`NOTATKA_GATE_L30_CLOSEOUT.md`](NOTATKA_GATE_L30_CLOSEOUT.md). Ostatni tydzień (28.09–04.10): WAPE **13,9%**, bias **−13,9%** (ALARM w bias — systematyczne niedoszacowanie jasnych dni).
 
 - **Raw** = sam RF na cały dzień · **Hybryda** = FoxESS (minione) + RF (przyszłe) — **nie** `FORECAST_OPERATIONAL_ADJUST`
 - Regeneracja: `MPLBACKEND=Agg PYTHONPATH=$PWD python scripts/analysis/refresh_notebook05_report.py`
@@ -566,9 +569,9 @@ python mlops/forecast_pv.py --days 3 --sync --top 5
 | `data/processed/academic_evaluation_metrics.csv` | Metryki wykresów akademickich (4 fazy) |
 | `images/ml/calendar_ablation_comparison.png` | Kalendarz vs Pogoda+Słońce vs Produkcja |
 | `images/ml/production_validation.png` | Predykcja vs FoxESS (operacyjnie, VI → **23.07**) |
-| `images/ml/july_validation_plot.png` | Closeouty **14.07–12.09** (n=61): góra kWh, dół \|APE\| % · odświeżone **13.09** |
-| `images/ml/production_validation_plot.png` | Góra **5:00**, dół 5:00+12:00 · tło ENS od **02.09** · do **12.09** |
-| `images/ml/july_validation_summary.md` | Opis błędów: pogoda, hybryda, MAPE er, ostatnie dni (**12.09** −2,8%) |
+| `images/ml/july_validation_plot.png` | Closeouty **14.07–04.10** (n=83): góra kWh, dół \|APE\| % · odświeżone **05.10** |
+| `images/ml/production_validation_plot.png` | Góra **5:00**, dół 5:00+12:00 · tło ENS od **02.09** · retreningi weekly (pomarańczowe) · do **04.10** |
+| `images/ml/july_validation_summary.md` | Opis błędów: pogoda, hybryda, MAPE er, WAPE/bias tydzień po tygodniu, ENS vs dual wg typu dnia, ostatnie dni (**04.10** −5%) |
 | `images/ml/monthly_model_comparison.png` | Porównanie modeli — MAE miesięczne *(archiwum)* |
 | `prediction_vs_actual_train_vs_holdout.png` | Porównanie modeli (TRAIN \| HOLDOUT; ★ RF na holdoucie) |
 | `prediction_vs_actual_deployed_train_vs_holdout.png` | (artefakt opcjonalny — nie w narracji prezentacji; ★ RF już na wykresie porównania) |

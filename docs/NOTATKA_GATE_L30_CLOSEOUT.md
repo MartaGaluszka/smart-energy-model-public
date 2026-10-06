@@ -67,6 +67,18 @@ Wszystkie cztery warunki naraz:
 
 ---
 
+## Źródło pogody: kiedy wracać z ENS do ICON solo
+
+ICON solo liczy się jako shadow (ten sam RF16, pogoda tylko z ICON) od 02.09 i jest widoczny na `production_validation_plot.png` (cienka linia) oraz w tabeli tygodniowej.
+
+**Stan na 05.10 (30 par dni 02.09–04.10):** ENS MAE 3,64 kWh · WAPE 15,1% · bias −7,7%; ICON solo 3,89 · 16,1% · −12,2%. ENS bliżej Fox w 12 dniach, ICON w 6, remis w 12; różnica nieistotna statystycznie (95% CI −0,46…+0,94 kWh). ICON ma lepszy MAPE tylko dzięki słabym dniom (Fox < 15 kWh: bias ENS +31%, ICON +12%).
+
+**Wracamy do ICON solo, gdy:** ICON ma niższy WAPE niż ENS w **4 kolejnych tygodniach** (każdy ≥ 5 dni z pełną parą) **albo** przedział ufności średniej różnicy błędu bezwzględnego leży w całości po stronie ICON. Do tego czasu ENS = primary.
+
+Niedoszacowanie dni jasnych jest wspólne dla obu źródeł → przyczyna w modelu, nie w API ([`NOTATKA_BIAS_JASNE_DNI_2026-10-05.md`](NOTATKA_BIAS_JASNE_DNI_2026-10-05.md)).
+
+---
+
 ## Harmonogram
 
 | Kiedy | Co |
