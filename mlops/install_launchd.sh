@@ -85,7 +85,7 @@ install_launchd() {
   echo "   05:00 codziennie  → daily_workflow.sh (16 + CS4 + XGB+TS)"
   echo "   12:00 codziennie  → midday_forecast.sh (16 + CS4 + XGB+TS)"
   echo "   16:00 codziennie  → peak_arrival.sh (16 + CS4 + XGB+TS)"
-  echo "   co 10 min         → evening_closeout_dynamic.sh (closeout + catch-up daily/train po śnie/DNS)"
+  echo "   co 10 min         → evening_closeout_dynamic.sh (closeout + catch-up daily/midday/train po śnie/restarcie/DNS; midday w oknie 12:20–15:45)"
   echo "   22:42 codziennie  → evening_closeout.sh (siatka bezpieczeństwa, gdyby dynamiczny nie zadziałał)"
   echo "   22:42 dnia 11.    → fetch_rcem.sh (RCEm PSE za poprzedni miesiąc + korekty z 12 miesięcy; także weekend i święto)"
   echo "   co 5 min + login → ensure_api.sh (Colima + docker compose db/api po blackoucie)"

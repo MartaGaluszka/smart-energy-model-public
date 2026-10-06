@@ -1,4 +1,4 @@
-"""Kiedy nadrabiać daily 05:00 / weekly train po śnie albo padzie DNS."""
+"""Kiedy nadrabiać daily 05:00 / midday 12:00 / weekly train po śnie, restarcie albo padzie DNS."""
 
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ from pathlib import Path
 
 DAILY_CATCHUP_AFTER = (5, 20)
 DAILY_CATCHUP_UNTIL = (12, 0)  # potem jest midday — nie udawaj Porannej wieczorem
+MIDDAY_CATCHUP_AFTER = (12, 20)  # po 12:00 + zapas, żeby nie dublować normalnego runu launchd
+MIDDAY_CATCHUP_UNTIL = (15, 45)  # o 16:00 jest peak — późniejszy midday zafałszowałby archiwum
 TRAIN_CATCHUP_AFTER = (4, 35)
 MAX_DAILY_ATTEMPTS = 4
 MIN_RETRY_MINUTES = 20
@@ -22,6 +24,15 @@ def last_sunday(day: date) -> date:
 
 def has_primary_daily(history_csv: Path, day: date) -> bool:
     """Czy forecast_history ma primary `daily` z run_at i target_day = ten dzień."""
+    return _has_primary_run(history_csv, day, 'daily')
+
+
+def has_primary_midday(history_csv: Path, day: date) -> bool:
+    """Czy forecast_history ma primary `midday` z run_at i target_day = ten dzień."""
+    return _has_primary_run(history_csv, day, 'midday')
+
+
+def _has_primary_run(history_csv: Path, day: date, run_label: str) -> bool:
     if not history_csv.is_file():
         return False
     day_s = day.isoformat()
@@ -29,7 +40,7 @@ def has_primary_daily(history_csv: Path, day: date) -> bool:
         with history_csv.open(newline='', encoding='utf-8') as fh:
             reader = csv.DictReader(fh)
             for row in reader:
-                if (row.get('run_label') or '').strip() != 'daily':
+                if (row.get('run_label') or '').strip() != run_label:
                     continue
                 run_at = (row.get('run_at') or '')[:10]
                 target = (row.get('target_day') or '')[:10]
@@ -83,6 +94,39 @@ def needs_daily_catchup(
     return True
 
 
+def needs_midday_catchup(
+    *,
+    has_midday: bool,
+    now: datetime,
+    attempts: int,
+    last_attempt: datetime | None,
+) -> bool:
+    """Midday 12:00 pominięty (Mac wyłączony / restart) → nadrób w oknie 12:20–15:45."""
+    if has_midday:
+        return False
+    gate = now.replace(
+        hour=MIDDAY_CATCHUP_AFTER[0],
+        minute=MIDDAY_CATCHUP_AFTER[1],
+        second=0,
+        microsecond=0,
+    )
+    if now < gate:
+        return False
+    until = now.replace(
+        hour=MIDDAY_CATCHUP_UNTIL[0],
+        minute=MIDDAY_CATCHUP_UNTIL[1],
+        second=0,
+        microsecond=0,
+    )
+    if now >= until:
+        return False
+    if attempts >= MAX_DAILY_ATTEMPTS:
+        return False
+    if last_attempt is not None and (now - last_attempt) < timedelta(minutes=MIN_RETRY_MINUTES):
+        return False
+    return True
+
+
 def jobs_to_run(
     *,
     now: datetime,
@@ -90,8 +134,11 @@ def jobs_to_run(
     train_ok_day: date | None,
     daily_attempts: int = 0,
     last_daily_attempt: datetime | None = None,
+    has_midday: bool = True,
+    midday_attempts: int = 0,
+    last_midday_attempt: datetime | None = None,
 ) -> list[str]:
-    """Kolejność: train (nowe wagi) przed daily."""
+    """Kolejność: train (nowe wagi) → daily → midday."""
     jobs: list[str] = []
     if needs_weekly_train(train_ok_day, now):
         jobs.append('train')
@@ -102,6 +149,13 @@ def jobs_to_run(
         last_attempt=last_daily_attempt,
     ):
         jobs.append('daily')
+    if needs_midday_catchup(
+        has_midday=has_midday,
+        now=now,
+        attempts=midday_attempts,
+        last_attempt=last_midday_attempt,
+    ):
+        jobs.append('midday')
     return jobs
 
 
@@ -125,11 +179,28 @@ def _parse_dt(raw: str | None) -> datetime | None:
     return datetime.fromisoformat(raw)
 
 
+def _read_attempt_state(path: Path | None) -> tuple[int, datetime | None]:
+    """Plik stanu: '<liczba prób> <ISO czas ostatniej próby>'."""
+    attempts = 0
+    last_attempt = None
+    if path and path.is_file():
+        parts = path.read_text(encoding='utf-8').strip().split()
+        if parts:
+            try:
+                attempts = int(parts[0])
+            except ValueError:
+                attempts = 0
+        if len(parts) >= 2:
+            last_attempt = _parse_dt(parts[1])
+    return attempts, last_attempt
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description='Wypisz joby catch-up (train / daily).')
     parser.add_argument('--history', type=Path, required=True)
     parser.add_argument('--train-marker', type=Path, required=True)
     parser.add_argument('--daily-state', type=Path, default=None)
+    parser.add_argument('--midday-state', type=Path, default=None)
     parser.add_argument('--now', default=None, help='ISO datetime (testy); domyślnie teraz')
     args = parser.parse_args(argv)
 
@@ -138,17 +209,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.train_marker.is_file():
         train_ok = _parse_day(args.train_marker.read_text(encoding='utf-8'))
 
-    attempts = 0
-    last_attempt = None
-    if args.daily_state and args.daily_state.is_file():
-        parts = args.daily_state.read_text(encoding='utf-8').strip().split()
-        if parts:
-            try:
-                attempts = int(parts[0])
-            except ValueError:
-                attempts = 0
-        if len(parts) >= 2:
-            last_attempt = _parse_dt(parts[1])
+    attempts, last_attempt = _read_attempt_state(args.daily_state)
+    midday_attempts, last_midday_attempt = _read_attempt_state(args.midday_state)
 
     jobs = jobs_to_run(
         now=now,
@@ -156,6 +218,9 @@ def main(argv: list[str] | None = None) -> int:
         train_ok_day=train_ok,
         daily_attempts=attempts,
         last_daily_attempt=last_attempt,
+        has_midday=has_primary_midday(args.history, now.date()),
+        midday_attempts=midday_attempts,
+        last_midday_attempt=last_midday_attempt,
     )
     for job in jobs:
         print(job)
