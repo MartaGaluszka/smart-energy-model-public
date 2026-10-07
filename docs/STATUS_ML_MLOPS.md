@@ -77,7 +77,7 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Decyzje (PVE, ICON, 16 cech) | [`03_ZALOZENIA_I_DECYZJE.md`](03_ZALOZENIA_I_DECYZJE.md) |
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
-| Notatki pogodowe od 16.08 | [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · dzień [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md) (Accu **03–05** jasny→RF; closeout **01** Fox **19,1** · **02** Fox **31,3**) · poprzednio [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md) |
+| Notatki pogodowe od 16.08 | [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · dzień [`NOTATKA_2026-10-07.md`](NOTATKA_2026-10-07.md) (Accu **07** jasny→RF · **08–09** pochmurny→CS4; closeout **04** Fox **29,6** · **05** **28,1** · **06** **27,2**) · poprzednio [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md) · [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md) |
 | Oś retreningów / wdrożeń | [`NOTATKA_RETRENINGI_I_WDROZENIA.md`](NOTATKA_RETRENINGI_I_WDROZENIA.md) |
 | Weekly **20.09** | [`NOTATKA_WEEKLY_2026-09-20.md`](NOTATKA_WEEKLY_2026-09-20.md) |
 | Weekly **04.10** | [`NOTATKA_WEEKLY_2026-10-04.md`](NOTATKA_WEEKLY_2026-10-04.md) |

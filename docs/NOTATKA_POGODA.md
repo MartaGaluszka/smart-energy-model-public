@@ -9,6 +9,8 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-10-07 ~14:25** | **MB** meteogram+MM+ens **07–09** · **07** słońce **23°**, chmura chwilowa w południe, **0 mm** · **08** **24°**, rano słońce, chmura od ~12, **opad od ~19–20** · **09** **11–14°**, deszcz w nocy i rano, po południu przejaśnienia · oneshot ~14:30: RF×I/×U **07** **20,7/20,0** · **08** **20,0/23,1** · **09** **20,3/n/d** (UKMO rad skip) · CS4×I/×U **20,4/21,2 · 20,5/23,8 · 22,5/n/d** · **09.10** ICON najjaśniejszy z 3 dni vs Accu/MB — watch — [`NOTATKA_2026-10-07.md`](NOTATKA_2026-10-07.md) |
+| **2026-10-07 ~14:22** | **Accu** **07** **9/9%/0** → **jasny→RF** · **08** **4/80%/0,4 mm** P opadu **55%** → **pochmurny→CS4** · **09** **5/77%/0,7 mm** P **60%**, **15°** → **pochmurny→CS4** · ENS @05 **07** **23,4** · **08** **23,5** · **09** **17,3** (midday **22,2**, watch) · closeout **04** Fox **29,6** · **05** **28,1** · **06** **27,2** (brak midday) — [`NOTATKA_2026-10-07.md`](NOTATKA_2026-10-07.md) |
 | **2026-10-03 ~17:40** | **MB** meteogram+MM+ens **03–07** · **03** słońce **24°** · **04** słońce **22–23°**, wysoka chmura PM · **05** **20–21°**, chmura średnia, ens ~100% w południe, **0 mm** (deszcz z 01.10 zszedł do mniejszości zespołu) · **06–07** słońce **23/24°** · Accu **05** jaśniej niż MB — [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md) |
 | **2026-10-03 ~17:38** | **Accu** **03** **9/5%/0** → **jasny→RF** (zamglenia) · **04** **9/19%/0** → **RF** · **05** **9/11%/0** P9% → **RF** · peak ENS **28,0 / 26,7 / 16,4** · **05.10** model chmurniej (**~60%**) niż Accu · closeout **01** Fox **19,1 (−25%)** · **02** Fox **31,3 (−14%)** · **03** Fox **30,2** w toku — [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md) |
 | **2026-10-01 ~11:46** | **MB** meteogram+MM+ens **01–05** · **01–04** słońce w dzień **0 mm** T **21/21/22/23°** · dziś clearing po poł. · deszcz zszedł z **04** na **05** · Accu **01** **64%** ciemniej niż MB — [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md) |
@@ -131,7 +133,35 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 ---
 
-## Meteoblue — 03.10 ~17:40 (obecny run)
+## AccuWeather — 07.10 ~14:22 (obecny run)
+
+| Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
+|-------|------:|------:|------:|------:|--------------|
+| **07.10** śr. | **23°C** | **9** b. jasne | **9%** | **0,0 mm** | **jasny→RF** — przeważnie słonecznie · susza · UV **3** |
+| **08.10** czw. | **24°C** | **4** przyćm. | **80%** | **0,4 mm** | **pochmurny→CS4** — możliwy przelotny opad · P opadu **55%**, burze **11%**, porywy **41** |
+| **09.10** pt. | **15°C** | **5** średnie | **77%** | **0,7 mm** | **pochmurny→CS4** — deszcz z przerwami i mżawka · P opadu **60%**, porywy **44** |
+
+Model vs Accu: **07** model chmurniej (**~56–65%** vs **9%**) · **08–09** model jaśniej (**~60% / ~43–48%** vs **80% / 77%**), ENS **~21–22 kWh** — watch. Brak MB w tym runie. Dzień: [`NOTATKA_2026-10-07.md`](NOTATKA_2026-10-07.md).
+
+---
+
+## Meteoblue — 07.10 ~14:25 (obecny run)
+
+Update **2026-10-07 ~14:25** · okolice Krakowa (GPS tylko w `.env`). Wartości z wykresów to odczyty z obrazów (**~**).
+
+| | **07.10** | **08.10** | **09.10** |
+|--|-----------|-----------|-----------|
+| **Meteogram** | **7–23°** · słońce, chmura chwilowa ok. **12–15** · **0 mm** | **9–24°** · rano słońce, chmura od ~**12**, opad od ~**19–20**, burza w nocy czw.→pt. · porywy ~**37** | **11–14°** · deszcz w nocy i rano (~**1,3 mm/h**), przejaśnienia PM · porywy ~**38** |
+| **MM** | słońce do południa, PM część modeli chmura | rano słońce, od południa chmura, opad od wieczora | rano chmura i deszcz (prawie wszystkie), PM przejaśnienia u części · MM szczyt opadu ~**2,9 mm/h** |
+| **Ensemble** | cloud średnia ~**40%** o 14–15, czarna ~**90%** w południe | średnia ~**10% → 80%**, czarna ~**100%** od ~16 | średnia ~**90%** rano, czarna ~**100%** do południa · opad średnia ~**5 mm** do końca pt. |
+| **Wiatr/RH** | ~**5–9**, RH min ~**35%** | śr. ~**20**, RH min ~**45%** | śr. ~**20–22** (W/NW), RH min ~**50%** |
+| **vs Accu** | zgoda | MB jaśniej rano, opad wieczorem vs Accu **0,4 mm** w dzień | zgoda, MB przejaśnia PM |
+
+Dzień: [`NOTATKA_2026-10-07.md`](NOTATKA_2026-10-07.md).
+
+---
+
+## Meteoblue — 03.10 ~17:40 (archiwum)
 
 Update **2026-10-03 ~17:40** · okolice Krakowa (GPS w `.env`).
 
@@ -147,7 +177,7 @@ Dzień: [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md).
 
 ---
 
-## AccuWeather — 03.10 ~17:38 (obecny run)
+## AccuWeather — 03.10 ~17:38 (archiwum)
 
 | Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
 |-------|------:|------:|------:|------:|--------------|
