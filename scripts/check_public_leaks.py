@@ -3,7 +3,10 @@
 
 Tryby:
   --staged            skanuje DODANE linie w git index (hook pre-commit)
-  --tracked           skanuje wszystkie śledzone pliki tekstowe (audyt całego repo)
+  --outgoing          skanuje to, co wychodzi na remote (hook pre-push, czyta stdin gita)
+  --history           audyt całej historii wszystkich gałęzi (dodane linie + komunikaty)
+  --tracked           skanuje wszystkie śledzone pliki tekstowe (HEAD)
+  --install-hook      wersjonowane hooki w .githooks/ + core.hooksPath (pre-commit, pre-push)
   --repo PATH         repo do skanowania (domyślnie: bieżący katalog)
 
 Wychodzi kodem 1, gdy coś znajdzie. Nie czyta .env — działa wyłącznie na wzorcach.
@@ -11,7 +14,7 @@ Zakazane w public: ścieżki lokalne, dokładne GPS, IP lokalne, sekrety,
 linki do prywatnych notatek, zakazane pliki. Dozwolone: współrzędne miasta
 (Kraków-Obserwatorium) — lista ALLOWED_COORDS.
 
-Użycie jako hook w repo publicznym:
+Po świeżym klonie repo publicznego:
   python3 scripts/check_public_leaks.py --install-hook
 """
 
@@ -111,24 +114,89 @@ def scan_tracked(repo: Path) -> list[str]:
     return problems
 
 
+ZERO_SHA = '0' * 40
+
+
+def scan_log(repo: Path, rev_args: list[str]) -> list[str]:
+    """Skanuje DODANE linie, zakazane ścieżki i komunikaty commitów w podanych rewizjach."""
+    problems: list[str] = []
+    text = git(
+        repo, 'log', *rev_args, '-p', '-U0', '--no-color', '--text', '--no-renames',
+        '--format=@@COMMIT %h %s',
+    )
+    commit = '?'
+    cur: str | None = None
+    for raw in text.split('\n'):
+        if raw.startswith('@@COMMIT '):
+            commit = raw[9:]
+            cur = None
+            short = commit.split(' ', 1)
+            for what in check_line(commit):
+                problems.append(f'{short[0]} (komunikat): {what}: {commit[:110]}')
+        elif raw.startswith('+++ b/'):
+            cur = raw[6:]
+            if FORBIDDEN_PATH.search(cur) and not ALLOWED_PATH.search(cur):
+                problems.append(f'{commit.split(" ", 1)[0]} {cur}: zakazany plik w public')
+        elif raw.startswith('+') and not raw.startswith('+++') and cur and cur != SELF:
+            for what in check_line(raw[1:]):
+                problems.append(f'{commit.split(" ", 1)[0]} {cur}: {what}: {raw[1:].strip()[:110]}')
+    return problems
+
+
+def scan_outgoing(repo: Path, stdin_lines: list[str]) -> list[str]:
+    """pre-push: stdin = '<local ref> <local sha> <remote ref> <remote sha>' na wiersz."""
+    problems: list[str] = []
+    for line in stdin_lines:
+        parts = line.split()
+        if len(parts) != 4:
+            continue
+        _lref, local, _rref, remote = parts
+        if local == ZERO_SHA:  # usuwanie gałęzi
+            continue
+        have_remote = remote != ZERO_SHA and subprocess.run(
+            ['git', 'cat-file', '-e', f'{remote}^{{commit}}'], cwd=repo, capture_output=True
+        ).returncode == 0
+        if have_remote:
+            revs = [f'{remote}..{local}']
+        else:  # nowa gałąź lub force-push z nieznanym SHA: wszystko, czego nie ma na żadnym remote
+            revs = [local, '--not', '--remotes']
+        problems += scan_log(repo, revs)
+    return problems
+
+
 def install_hook(repo: Path) -> None:
-    hook = repo / '.git' / 'hooks' / 'pre-commit'
-    hook.write_text(
+    """Wersjonowane hooki w .githooks/ + core.hooksPath (działa w każdym klonie po instalacji)."""
+    hooks = repo / '.githooks'
+    hooks.mkdir(exist_ok=True)
+    guard = '"$(git rev-parse --show-toplevel)/scripts/check_public_leaks.py"'
+    (hooks / 'pre-commit').write_text(
         '#!/usr/bin/env bash\n'
         '# Guard: blokuje commit z danymi lokalnymi/prywatnymi (public repo).\n'
-        'exec python3 "$(git rev-parse --show-toplevel)/scripts/check_public_leaks.py" --staged\n'
+        f'exec python3 {guard} --staged\n'
     )
-    hook.chmod(0o755)
-    print(f'Zainstalowano hook: {hook}')
+    (hooks / 'pre-push').write_text(
+        '#!/usr/bin/env bash\n'
+        '# Guard: skanuje wszystko, co wychodzi na remote (dodane linie, pliki, komunikaty).\n'
+        f'exec python3 {guard} --outgoing\n'
+    )
+    for h in ('pre-commit', 'pre-push'):
+        (hooks / h).chmod(0o755)
+    subprocess.run(['git', 'config', 'core.hooksPath', '.githooks'], cwd=repo, check=True)
+    legacy = repo / '.git' / 'hooks' / 'pre-commit'
+    if legacy.exists() and 'check_public_leaks' in legacy.read_text(errors='ignore'):
+        legacy.unlink()
+    print(f'Zainstalowano hooki: {hooks}/pre-commit, pre-push (core.hooksPath=.githooks)')
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument('--repo', type=Path, default=Path('.'))
     mode = ap.add_mutually_exclusive_group(required=True)
-    mode.add_argument('--staged', action='store_true')
-    mode.add_argument('--tracked', action='store_true')
-    mode.add_argument('--install-hook', action='store_true')
+    mode.add_argument('--staged', action='store_true', help='dodane linie w indexie (pre-commit)')
+    mode.add_argument('--outgoing', action='store_true', help='to, co wychodzi (pre-push, czyta stdin)')
+    mode.add_argument('--history', action='store_true', help='cała historia wszystkich gałęzi')
+    mode.add_argument('--tracked', action='store_true', help='wszystkie śledzone pliki (HEAD)')
+    mode.add_argument('--install-hook', action='store_true', help='zainstaluj .githooks + hooksPath')
     args = ap.parse_args()
     repo = args.repo.resolve()
 
@@ -136,7 +204,15 @@ def main() -> int:
         install_hook(repo)
         return 0
 
-    problems = scan_staged(repo) if args.staged else scan_tracked(repo)
+    if args.staged:
+        problems = scan_staged(repo)
+    elif args.outgoing:
+        problems = scan_outgoing(repo, sys.stdin.read().splitlines())
+    elif args.history:
+        problems = scan_log(repo, ['--all'])
+    else:
+        problems = scan_tracked(repo)
+
     if problems:
         print(f'❌ Guard public-leaks: {len(problems)} problem(ów)', file=sys.stderr)
         for p in problems[:60]:
