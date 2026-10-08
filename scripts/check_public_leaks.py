@@ -10,9 +10,10 @@ Tryby:
   --repo PATH         repo do skanowania (domyślnie: bieżący katalog)
 
 Wychodzi kodem 1, gdy coś znajdzie. Nie czyta .env — działa wyłącznie na wzorcach.
-Zakazane w public: ścieżki lokalne, dokładne GPS, IP lokalne, sekrety,
-linki do prywatnych notatek, zakazane pliki. Dozwolone: współrzędne miasta
-(Kraków-Obserwatorium) — lista ALLOWED_COORDS.
+Zakazane w public: ścieżki lokalne, dokładne GPS (≥3 miejsca po przecinku), IP lokalne,
+sekrety, linki do prywatnych notatek, zakazane pliki. Dozwolone: zapis przybliżony
+(2 miejsca, np. lat=50.06, lon=19.94) oraz współrzędne miasta (Kraków-Obserwatorium)
+z listy ALLOWED_COORDS.
 
 Po świeżym klonie repo publicznego:
   python3 scripts/check_public_leaks.py --install-hook
@@ -36,7 +37,9 @@ COORD_CONTEXT = re.compile(
     r'\b(?:lat|lon|lng|latitude|longitude)\b|WEATHER_(?:LAT|LON)|°\s*[NE]\b',
     re.IGNORECASE,
 )
-COORD_VALUE = re.compile(r'(?<![\d.])((?:49|50|19|20)\.\d{2,})(?!\d)')
+# Zapis przybliżony (2 miejsca po przecinku, ~1 km, np. lat=50.06, lon=19.94) jest OK —
+# flagujemy dopiero ≥3 miejsca (dokładne GPS).
+COORD_VALUE = re.compile(r'(?<![\d.])((?:49|50|19|20)\.\d{3,})(?!\d)')
 
 RULES: list[tuple[str, re.Pattern[str]]] = [
     ('ścieżka lokalna /Users/<nazwa>', re.compile(r'/Users/(?!<user>|\.\.\.)[A-Za-z0-9_.-]+')),
