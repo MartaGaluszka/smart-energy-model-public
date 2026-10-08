@@ -112,6 +112,40 @@ Wrzesień kończy się **30**. Okno **18–30** to **13 dni**. To tu pojawia si�
 
 ---
 
+## Obserwacja 08.10.2026 — czy podłogówka już się załącza (1–8.10, 2025 vs 2026)
+
+**Metoda:** `foxess_report_daily` (`loads`, godziny), `foxess_data` (5 min), `weather_data` (HDD baza 15 °C). Fox nie ma licznika CO, więc to **heurystyka** (jak wyżej).  
+**Okno nocne = 00:00–04:59.** Godzina **05–06** zostaje poza oknem: rano bywa **pieczenie chleba** (np. **07.10**: skok od **05:11**, do ~**3,4 kW**, **1,5 kWh** w godzinie 05–06) i fałszowało wcześniejsze „00–05”.
+
+| 1–8.10 | **2025** | **2026** |
+|--------|---------:|---------:|
+| T średnia / T min (średnio) | **7,9 / 4,9 °C** | **12,9 / 6,3 °C** |
+| HDD | **57** | **17** |
+| Load domu | **15,7 kWh/dz.** | **13,0 kWh/dz.** |
+| Noc 00–04, średnia / mediana | **0,28 / 0,25 kW** | **0,21 / 0,20 kW** |
+| Wieczór 18–22 | **2,2 kWh** | **1,8 kWh** |
+| Import (Fox) | **5,3 kWh/dz.** | **1,15 kWh/dz.** |
+| PV | **14,7 kWh/dz.** | **26,1 kWh/dz.** |
+
+| Noc 00–04 (kW) | Średnia | Mediana |
+|----------------|--------:|--------:|
+| lato 2026 (VII–VIII) | 0,211 | 0,200 |
+| IX 2025 | 0,263 | 0,180 |
+| IX 2026 | 0,198 | 0,160 |
+| 1–8.X 2025 | 0,280 | 0,250 |
+| **1–8.X 2026** | **0,212** | **0,200** |
+| 9–31.X 2025 | 0,377 | 0,320 |
+
+**Wniosek:** w 2026 noc jest na poziomie **letnim** (0,21 kW), a load **13,0 ≈ lato 13,4 kWh/dz.** — **brak śladu grzania podłogi**. Rok temu noc rosła z chłodem (do **0,38 kW** w drugiej części X; **03.10.2025** T min −2 °C → **3,4 kWh** w 00–05), więc wtedy grzało. Różnica to w dużej mierze **pogoda** (HDD **17** vs **57**), nie dowód działania czujników; werdykt nadal z §D (load/HDD w X–XI).
+
+**Pojedyncze skoki (nie podłoga):** **07.10** — poranek **05–07**, pieczenie. **30.09** — nieregularnie (00–01, 02–03, 05–06), nie umiem przypisać. **04.10** — jedyna noc z plateau **0,3–0,5 kWh/h** w godz. 00–04 (typowo 0,1–0,2); jedna noc, **do sprawdzenia w logu sterowników**.
+
+**Przy werdykcie X–XI:** liczyć noc **00–04**, a poranek **05–07** z pieczeniem wyłączyć lub oznaczyć w `household_events`. Import, eksport i autokonsumpcja zależą głównie od PV i baterii, więc o grzaniu nie mówią nic.
+
+**Kontekst PV (08.10):** produkcja X 2026 do 8.10 **208,9 kWh** vs cały X 2025 **392,2 kWh**; brakuje **183,3 kWh** (**8,0 kWh/dz.** przez 23 dni). 9–31.10.2025 dało **274,6 kWh** (śr. **11,9**, mediana **9,9**). Import do końca miesiąca zależy od pogody i grzania: **~36 kWh** (jak dotąd) do **~154 kWh** (jak 2025).
+
+---
+
 ## A. Baseline — bez świadomego FC
 
 | Okres | Czujniki | FC | n | T śr. | HDD | Load kWh | Load/d | **Load/HDD** | Import Fox | Peak load kWh | Peak/HDD |
@@ -190,6 +224,9 @@ Zł w dół przy load/HDD ≈ 0 i Z1 w dół → **nie przypisywać czujnikom**.
 - Start grzania (pierwszy tydzień z load/HDD ~2,2)  
 - Czy grzałka bufora dostała blokadę 15–22 pn–pt (osobny efekt)  
 - [x] **18.09.2026** — obserwacja podłogi IX 2025 vs czujniki IX 2026 + Fox/pogoda (§ Obserwacja 18.09.2026)
+- [x] **08.10.2026** — 1–8.10 2025 vs 2026: podłogówka jeszcze **nie** widoczna w nocy 00–04 (§ Obserwacja 08.10.2026); poranek 05–07 = pieczenie, nie wliczać
+- [ ] Sprawdzić **04.10** (plateau nocne) w logu sterowników, jeśli jest
+- [ ] Zapisać w `household_events` pieczenie chleba (np. **07.10 ~05:10–07:00**), żeby odfiltrować poranek przy werdykcie
 - [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD)
 
 Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md)
