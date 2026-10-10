@@ -43,6 +43,27 @@ Nie mylić z płytą (też ~2 kW, ale przy obecności / posiłku) — 5.09 bez g
 
 ## Log
 
+### 2026-10-09 → 10.10 — DZIEŃ (closeout 09.10) + NOC + DZIEŃ 10.10 (w toku @~16:00)
+
+Accu 09.10 **mix→RF** · PV **18,1** (ENS @05 **19,79**, midday **18,10**). 10.10: ENS **15,85**, fakt **~22** (stan 15:57 **21,7**).
+
+| Moment | SoC | PV / uwagi |
+|--------|----:|------------|
+| **pt. 09.10 ~8:00** | **66%** | min przed PV; wcześniej **63%** o 08:22 w app |
+| ~11:00 | **91%** | PV rośnie, ładowanie z dachu |
+| ~12:00–15:00 | **100%** | eksport po pełnej baterii |
+| ~17:00 | **95%** | drogie 15–22 |
+| ~22:00 | **73%** | bez ForceCharge (ENS na sob. **15,9** ≥ 12) |
+| **00:00 / 02:00–05:00** | **60% / 59%** | plateau, **bez importu** |
+| **sob. 10.10 ~8:00** | **42%** | dołek przed PV (weekend, tanio cały dzień) |
+| ~11:00 | **91%** | Fox **5,1 kWh/h** o 11:00 |
+| ~14:00 | **100%** | do 15:57: PV **21,7**, eksport **9,2**, import **1,0**, load **9,4** |
+| closeout | | *(uzupełnij wieczór 10.10)* |
+
+**Werdykt:** piątek: dzień **18,1** i bateria pełna od **12:00**, noc bez zakupu OK (**59%** rano po drogich godzinach 15–22). Sobota: prognoza **15,9** zaniżona o **~28%**, ale decyzja bez zakupu była słuszna i bateria wróciła do **100%** do 14:00. Noc sob.→nd.: ENS **11,9** (strefa 8–12), bez zakupu. Tydzień: lekcja 20.10.2025 (nd. wieczór → pn. do 6:00) dotyczy **11→12.10**.
+
+---
+
 ### 2026-09-05 — DZIEŃ (kajaki / pusty dom)
 
 Wyjazd ~**8:30** · powrót ~**14:30** (bez skoku mocy). Nie gotowali, nie grzali. PC/przedłużki zostawione — load jak pusta noc.
