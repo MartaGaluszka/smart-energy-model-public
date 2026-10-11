@@ -210,7 +210,7 @@ def build_markdown(m: pd.DataFrame, *, generated: date) -> str:
     lines = [
         '# Review modeli × pogoda (closeouty)',
         '',
-        f'**Wygenerowano:** {generated.isoformat()} (sobotni przegląd przed retreningiem niedzielnym)  ',
+        f'**Wygenerowano:** {generated.isoformat()} (przegląd modeli × pogoda)  ',
         f'**Zakres closeoutów:** {m["target_day"].min().date()} → {last_day.date()} (**{n_days}** dni)  ',
         '**Metryka:** |APE| % = |Fox − prognoza| / Fox × 100 · pogoda: średnie cloud **6–20** (ICON w DB)  ',
         '**Nie w tabeli:** UKMO solo / oneshot ½ — tylko w notatkach dnia (`oneshot_rf_icon_vs_ukmo.py`).  ',
@@ -301,10 +301,17 @@ def main() -> None:
 
         df = load_july_validation(Path(args.input))
         fig = ROOT / 'reports/figures/july_validation_plot.png'
-        summary = ROOT / 'docs/images/ml/july_validation_summary.md'
+        md = build_july_error_summary(df, db_path=Path(args.db))
         build_july_plot(df, fig)
-        summary.write_text(build_july_error_summary(df, db_path=Path(args.db)), encoding='utf-8')
-        print(f'✓ odświeżono {fig.name} + {summary.name}')
+        for summary in (
+            ROOT / 'docs/images/ml/july_validation_summary.md',
+            ROOT / 'reports/figures/july_validation_summary.md',
+        ):
+            summary.parent.mkdir(parents=True, exist_ok=True)
+            summary.write_text(md, encoding='utf-8')
+        docs_fig = ROOT / 'docs/images/ml/july_validation_plot.png'
+        docs_fig.write_bytes(fig.read_bytes())
+        print(f'✓ odświeżono {fig.name} + july_validation_summary.md (+ kopia docs/images/ml)')
 
 
 if __name__ == '__main__':

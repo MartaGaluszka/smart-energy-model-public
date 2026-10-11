@@ -633,7 +633,8 @@ def build_july_error_summary(
         '- **`production_validation_plot.png`:** góra = tylko **5:00** (raw ≈ hybryda, mało FoxESS). '
         'Dół = 5:00 i 12:00 razem. Tło od **02.09** = **ENS (ICON+UKMO)**. '
         'Pomarańczowe linie pionowe = niedzielny weekly retrening (04:30); od **27.09** opis „REVIEW” '
-        '(gate Δ MAE > +0,02), od **04.10** „+ L30” (dual report: shuffle + chronologiczny holdout 30 dni) — '
+        '(gate Δ MAE > +0,02), od **04.10** „+ L30” (dual report: shuffle + chronologiczny holdout 30 dni), '
+        '**11.10** „XGB REVIEW” (RF/CS4 ACCEPT) — '
         '`docs/NOTATKA_RETRENINGI_I_WDROZENIA.md`, `docs/NOTATKA_GATE_DUAL_L30.md`.'
     )
     lines.append(

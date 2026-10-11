@@ -61,6 +61,7 @@ MILESTONES = [
     {'date': '2026-09-20', 'label': 'Retrain', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-09-27', 'label': 'Retrain (REVIEW)', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-10-04', 'label': 'Retrain + L30', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-10-11', 'label': 'Retrain (XGB REVIEW)', 'color': '#F39C12', 'type': 'retrain'},
 ]
 
 ENS_PRIMARY_START = '2026-09-02'
@@ -189,7 +190,7 @@ def build_plot(df: pd.DataFrame, output: Path, *, long_start: str) -> None:
     )
     fig.text(
         0.5, 0.935,
-        'Linie pionowe: niedzielne retreningi weekly (pomarańczowe; REVIEW 27.09, L30 od 04.10) + zmiany produkcji  ·  '
+        'Linie pionowe: niedzielne retreningi weekly (pomarańczowe; REVIEW 27.09, L30 od 04.10, XGB REVIEW 11.10) + zmiany produkcji  ·  '
         'tła: ICON od 18.07  ·  kalibracja dual od 26.07  ·  ENS primary od 02.09',
         ha='center', va='top', fontsize=8.5, color='#7F8C8D', style='italic',
     )
