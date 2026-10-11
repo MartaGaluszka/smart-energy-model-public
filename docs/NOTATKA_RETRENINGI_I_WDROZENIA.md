@@ -1,10 +1,10 @@
 # Notatka — retreningi i wdrożenia
 
-Krótka oś czasu (od **2026-07**): **kiedy** był retrening `.joblib`, **co** weszło do produkcji. Cotygodniowe odświeżenia wag → [`NOTATKA_WEEKLY_*.md`](NOTATKA_WEEKLY_2026-10-04.md).  
+Krótka oś czasu (od **2026-07**): **kiedy** był retrening `.joblib`, **co** weszło do produkcji. Cotygodniowe odświeżenia wag → [`NOTATKA_WEEKLY_*.md`](NOTATKA_WEEKLY_2026-10-11.md).  
 Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 
 **Model produkcyjny teraz:** dual — `pv_hourly_model.joblib` (**16**) + `pv_hourly_model_cs4.joblib` (**CS4**)  
-**Stan na 2026-10-11:** GPS dach · **ENS** primary (od 02.09) · target **ΔPVEnergyTotal** · Test MAE **0.674** (16) / **0.673** (CS4) · **nieprzeuczone** · gate weekly RF **ACCEPT** (Δ +0.003 vs 04.10) · XGB **REVIEW** (Δ +0.027) · L30 INFO · skrót: [`NOTATKA_2026-10-11.md`](NOTATKA_2026-10-11.md)
+**Stan na 2026-10-11:** GPS dach · **ENS** primary (od 02.09) · target **ΔPVEnergyTotal** · Test MAE **0.674** (16) / **0.673** (CS4) · **nieprzeuczone** · gate weekly RF **ACCEPT** (Δ +0.003 vs 04.10) · XGB **REVIEW** (Δ +0.027) · L30 INFO · [`NOTATKA_WEEKLY_2026-10-11.md`](NOTATKA_WEEKLY_2026-10-11.md)
 
 ---
 
@@ -186,6 +186,7 @@ Closeout **17.08** (deszcz Accu/MB) = pierwszy dzień porównania nowych wag RF 
 
 | Plik | Treść |
 |------|--------|
+| [NOTATKA_WEEKLY_2026-10-11.md](NOTATKA_WEEKLY_2026-10-11.md) | Weekly 11.10 — RF **ACCEPT** Δ +0.003 · XGB **REVIEW** Δ +0.027 · live WATCH bias |
 | [NOTATKA_WEEKLY_2026-10-04.md](NOTATKA_WEEKLY_2026-10-04.md) | Weekly 04.10 — gate **ACCEPT** Δ −0.006 vs 27.09, dual L30 |
 | [NOTATKA_WEEKLY_2026-09-27.md](NOTATKA_WEEKLY_2026-09-27.md) | Weekly 27.09 — gate **REVIEW** Δ +0.025 vs 20.09 |
 | [NOTATKA_WEEKLY_2026-09-20.md](NOTATKA_WEEKLY_2026-09-20.md) | Weekly 20.09 — gate ACCEPT Δ −0.014 |
