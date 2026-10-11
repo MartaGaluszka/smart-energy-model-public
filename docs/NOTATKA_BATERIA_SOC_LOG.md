@@ -43,6 +43,25 @@ Nie mylić z płytą (też ~2 kW, ale przy obecności / posiłku) — 5.09 bez g
 
 ## Log
 
+### 2026-10-10 → 11.10 — closeout 10.10 + NOC + rano 11.10
+
+Accu 10.10 **mix→RF** (po fakcie) · pick z 08–09 **CS4** · PV **22,0** (ENS @05 **15,85**, **−28%**).
+
+| Moment | SoC | PV / uwagi |
+|--------|----:|------------|
+| **sob. 10.10 ~8:00** | **42%** | dołek przed PV |
+| ~11:00 | **91%** | Fox **5,1 kWh/h** o 11:00 |
+| ~12:00–16:00 | **100%** | eksport po pełnej baterii |
+| ~17:00 | **79%** | weekend, tanio |
+| **~22:00** | **37%** | bez ForceCharge (ENS na nd. **11,9** ≥ 8) |
+| **00:00–05:00** | **36–37%** | plateau, **bez importu** |
+| closeout 10.10 | **37%** EOD | PV **22,0** · load **16,0** · eksport **9,3** · import **1,4** · charge **6,5** / discharge **8,4** |
+| **nd. 11.10 ~05:00** | **36%** | ENS **12,04** · Accu mix→RF |
+
+**Werdykt:** sobota: prognoza **15,9** zaniżona o **28%**, ale decyzja bez zakupu słuszna i bateria wróciła do **100%** do 12:00. Wieczór: zrzut do **37%** (weekend tanio). Noc nd.→pn.: ENS **20,6** ≥ 12, **zostawić naładowaną do 6:00**.
+
+---
+
 ### 2026-10-09 → 10.10 — DZIEŃ (closeout 09.10) + NOC + DZIEŃ 10.10 (w toku @~16:00)
 
 Accu 09.10 **mix→RF** · PV **18,1** (ENS @05 **19,79**, midday **18,10**). 10.10: ENS **15,85**, fakt **~22** (stan 15:57 **21,7**).
