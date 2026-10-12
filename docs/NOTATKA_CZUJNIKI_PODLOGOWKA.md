@@ -144,6 +144,18 @@ Wrzesień kończy się **30**. Okno **18–30** to **13 dni**. To tu pojawia si�
 
 **Kontekst PV (08.10):** produkcja X 2026 do 8.10 **208,9 kWh** vs cały X 2025 **392,2 kWh**; brakuje **183,3 kWh** (**8,0 kWh/dz.** przez 23 dni). 9–31.10.2025 dało **274,6 kWh** (śr. **11,9**, mediana **9,9**). Import do końca miesiąca zależy od pogody i grzania: **~36 kWh** (jak dotąd) do **~154 kWh** (jak 2025).
 
+**Próg alarmowy — import X 2026 vs X 2025** (Fox `gridConsumption`, narastająco; dziś **~9–10 kWh** do 8.10, app **10,2**). Szansa na wyrównanie **187,6 kWh**: oceniam na **~10%** (ocena z scenariuszy, nie z modelu; regresja import~HDD+PV z 2026 odrzucona, bo uczy się zimowego FC).
+
+| Do dnia | X 2025 (narastająco) | **Alarm** (≈75% tempa 2025) |
+|---------|---------------------:|----------------------------:|
+| 12.10 | 82 | **> 60** |
+| 15.10 | 100 | **> 75** |
+| 20.10 | 135 | **> 100** |
+| 25.10 | 153 | **> 115** |
+| 31.10 | **187** | **> 140** (blisko rekordu z 2025) |
+
+Do 20.10 przekroczone **100 kWh** = jesteśmy na torze zeszłorocznego importu (podłogówka + seria dni PV < 8 kWh). Poniżej **~60 kWh** do 15.10 = tor mocno poniżej 2025.
+
 ---
 
 ## A. Baseline — bez świadomego FC
@@ -227,6 +239,6 @@ Zł w dół przy load/HDD ≈ 0 i Z1 w dół → **nie przypisywać czujnikom**.
 - [x] **08.10.2026** — 1–8.10 2025 vs 2026: podłogówka jeszcze **nie** widoczna w nocy 00–04 (§ Obserwacja 08.10.2026); poranek 05–07 = pieczenie, nie wliczać
 - [ ] Sprawdzić **04.10** (plateau nocne) w logu sterowników, jeśli jest
 - [ ] Zapisać w `household_events` pieczenie chleba (np. **07.10 ~05:10–07:00**), żeby odfiltrować poranek przy werdykcie
-- [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD)
+- [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD) + link zestawienie September 2025 vs 2026 (canvas lokalny — tylko repo prywatne)
 
-Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md)
+Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) · zestawienie September 2025 vs 2026 (canvas lokalny — tylko repo prywatne)
