@@ -298,6 +298,13 @@ Suwaki G12w + plan ładowania nocą / rozładowania w szczycie; decyzja „czy �
 - Wakacje, urodziny, „przetwory”, ferie
 - Tabela `household_events` (data, typ, wpływ: ↑zużycie / ↓zużycie / tryb_ferie)
 
+**Kalibracja typów (żywe pomiary Fox → reguły sugestii T4.9):**
+
+| Typ | Case | Okno | Load w oknie | Peak | Reguła (szkic) |
+|-----|------|------|-------------:|-----:|----------------|
+| `przetwory` | **11.10.2026** buraki 1 porcja (3 kg buraków · 1,5 kg cebuli · 1,5 kg papryki) | ~13:00–17:40 (~4,7 h) | **~10,4 kWh** | ~5,6 kW | `impact=up` · planuj ~**10 kWh** / 4–5 h w ciągu dnia (najlepiej gdy PV); SoC −25 pp w case |
+| `przetwory` → **nast. dzień roboczy** | **12.10.2026** po nd. przetwory: SoC **38%** @20:15 → **28%** @22:38; **brak na śniadanie** | noc + **05–08** | bojler **0,42** · bufor **0,58** · śniadanie **1,25** (razem **~2,3 kWh**) | 2,4 / 2,6 / 2,1 | Gate **SoC &lt;30% @~22** gdy jutro robocze → **`BUFOR RANO`** ~15 min; kwoty w env `BATTERY_MORNING_*_KWH` |
+
 ### 10.2 Strategia sezonowa
 
 | Sezon | Cel | Dane |

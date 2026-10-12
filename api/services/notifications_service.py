@@ -264,11 +264,19 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
     tomorrow_s = (as_of.date() + timedelta(days=1)).isoformat()
     tomorrow_pv = get_day_pv_forecast_sum(tomorrow_s, as_of=as_of)
     tomorrow_t = get_day_mean_temp_c(tomorrow_s)
+    after_przetwory = False
+    try:
+        from api.services.battery_planner import yesterday_had_przetwory
+
+        after_przetwory = yesterday_had_przetwory(db, user_id, as_of.date())
+    except Exception:
+        after_przetwory = False
     rule = evaluate_charge_tonight_cloudy(
         soc_percent=snap.soc_percent,
         tomorrow_pv_kwh=tomorrow_pv,
         as_of=as_of,
         tomorrow_temp_c=tomorrow_t,
+        after_przetwory=after_przetwory,
     )
     if not rule.triggered:
         return None

@@ -97,7 +97,9 @@ def suggestion(
     db: Session = Depends(get_db),
 ) -> BatterySuggestionResponse:
     settings_row = _get_or_create_settings(db, current_user.id)
-    payload = battery_planner.get_home_suggestion(settings_row)
+    payload = battery_planner.get_home_suggestion(
+        settings_row, db=db, user_id=current_user.id
+    )
     return BatterySuggestionResponse(**payload)
 
 

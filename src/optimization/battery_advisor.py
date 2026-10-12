@@ -475,6 +475,85 @@ def _fc_end_clock(start_hour: int, minutes: float) -> tuple[int, int]:
     return end_h, end_m
 
 
+def _morning_buffer_soc_floor() -> float:
+    """Gate @~22:00: SoC poniżej → krótki FC mimo „dach pokryje jutro” (case 11→12.10)."""
+    return float(os.getenv('BATTERY_SOC_MORNING_BUFFER_FLOOR', '30'))
+
+
+def _morning_buffer_fc_minutes() -> float:
+    """Krótki FC pod śniadanie / bufor ciepła przed PV (15 min ≈ +25 pp ≈ 2,6 kWh)."""
+    return float(os.getenv('BATTERY_MORNING_BUFFER_FC_MINUTES', '15'))
+
+
+def _morning_buffer_breakfast_kwh() -> float:
+    """Kalibracja 12.10.2026: śniadanie ~06:30–08:00 (load Fox)."""
+    return float(os.getenv('BATTERY_MORNING_BREAKFAST_KWH', '1.25'))
+
+
+def _morning_buffer_boiler_kwh() -> float:
+    """Kalibracja 12.10.2026: bojler CWU ~03:15–03:50."""
+    return float(os.getenv('BATTERY_MORNING_BOILER_KWH', '0.42'))
+
+
+def _morning_buffer_heat_kwh() -> float:
+    """Kalibracja 12.10.2026: 1 pik bufora ciepła po 5:00 (~05:50–06:00)."""
+    return float(os.getenv('BATTERY_MORNING_HEAT_BUFFER_KWH', '0.58'))
+
+
+def _morning_buffer_short_fc(
+    *,
+    soc_percent: float,
+    tomorrow_pv_kwh: float | None,
+    soc_below: float,
+    weak_pv_below: float,
+    tomorrow_temp_c: float | None,
+    capacity_kwh: float | None,
+    fc_max_minutes: float | None,
+    start_h: int,
+    after_przetwory: bool = False,
+) -> ChargeTonightCloudyRule:
+    """Jesień/zima: SoC < 30% przed 22:00 gdy jutro robocze — nie polegaj tylko na minSoc Fox 10%."""
+    minutes = _cap_fc_minutes(_morning_buffer_fc_minutes(), fc_max_minutes)
+    delta = _delta_soc_for_minutes(minutes)
+    target = min(100.0, soc_percent + delta)
+    cap = _b2_capacity_kwh(capacity_kwh)
+    end_h, end_m = _fc_end_clock(start_h, minutes)
+    pv_txt = f'~{tomorrow_pv_kwh:.0f} kWh' if tomorrow_pv_kwh is not None else 'brak prognozy'
+    breakfast = _morning_buffer_breakfast_kwh()
+    boiler = _morning_buffer_boiler_kwh()
+    heat = _morning_buffer_heat_kwh()
+    morning_loads = breakfast + boiler + heat
+    extra = (
+        ' Po dniu z przetworami SoC bywa za niski na bufor ciepła + śniadanie.'
+        if after_przetwory
+        else ''
+    )
+    return ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=soc_percent,
+        tomorrow_pv_kwh=tomorrow_pv_kwh,
+        soc_below=soc_below,
+        weak_pv_below=weak_pv_below,
+        recommendation=f'ŁADUJ OD {start_h:02d}:00 (BUFOR RANO)',
+        title=f'Sugestia: krótki FC od {start_h:02d}:00 (SoC < {_morning_buffer_soc_floor():.0f}%)',
+        body=(
+            f'SoC {soc_percent:.0f}% < {_morning_buffer_soc_floor():.0f}% o ~{start_h:02d}:00 '
+            f'(jutro dzień roboczy — szczyt 6–13). Nawet gdy jutro PV {pv_txt} — dach nie pokryje '
+            f'śniadania przed PV. Kalibracja 12.10: śniadanie ~{breakfast:.1f} kWh · bojler ~{boiler:.1f} kWh · '
+            f'bufor ciepła ~{heat:.1f} kWh (razem ~{morning_loads:.1f} kWh). '
+            f'Włącz ForceCharge {start_h:02d}:00, wyłącz o {end_h:02d}:{end_m:02d} '
+            f'(~{minutes:.0f} min / +{delta:.0f} pp ≈ {delta / 100.0 * cap:.1f} kWh). '
+            f'Cel: ≥25–30% do 6:00, nie tylko rezerwa Fox 10%.{extra} '
+            f'Sugestia doradcza, bez automatyki.'
+        ),
+        target_soc_percent=target,
+        fc_minutes=minutes,
+        charge_kwh=round(delta / 100.0 * cap, 1),
+        tomorrow_temp_c=tomorrow_temp_c,
+        skip_reason='',
+    )
+
+
 def evaluate_charge_tonight_cloudy(
     *,
     soc_percent: float | None,
@@ -486,6 +565,7 @@ def evaluate_charge_tonight_cloudy(
     capacity_kwh: float | None = None,
     fc_max_minutes: float | None = None,
     night_start_hour: int = 22,
+    after_przetwory: bool = False,
 ) -> ChargeTonightCloudyRule:
     """Czysta reguła produktowa (bez I/O) — advise-only.
 
@@ -536,15 +616,27 @@ def evaluate_charge_tonight_cloudy(
             **extra,
         )
 
-    if is_weekend(as_of.date()) or is_public_holiday(as_of.date()):
-        return _empty()
+    today_off = is_weekend(as_of.date()) or is_public_holiday(as_of.date())
+    tomorrow_d = as_of.date() + timedelta(days=1)
+    tomorrow_workday = not (is_weekend(tomorrow_d) or is_public_holiday(tomorrow_d))
+    # Bufor rano (11→12.10): SoC <30% przed 22, gdy *jutro* robocze — także nd.→pn.
+    morning_buffer_candidate = (
+        (autumn or winter_b2)
+        and tomorrow_workday
+        and soc_percent is not None
+        and soc_percent < _morning_buffer_soc_floor()
+    )
     if as_of.hour >= 22:
         return _empty()
     if soc_percent is None:
         return _empty()
+    if today_off and not morning_buffer_candidate:
+        return _empty()
 
     # --- Lato / wiosna: krótki FC (nie pełnić baterii) ---
     if not winter_b2 and not autumn:
+        if today_off:
+            return _empty()
         if soc_percent >= soc_below:
             return _empty()
         if tomorrow_pv_kwh is None:
@@ -588,6 +680,19 @@ def evaluate_charge_tonight_cloudy(
         gap = estimate_autumn_peak_gap_kwh(tomorrow_pv_kwh)
         reserve = soc_below
         if target is None:
+            # Case 11→12.10: PV jutro ≥8, ale SoC <30% @22 → brak na bufor/śniadanie.
+            if morning_buffer_candidate:
+                return _morning_buffer_short_fc(
+                    soc_percent=soc_percent,
+                    tomorrow_pv_kwh=tomorrow_pv_kwh,
+                    soc_below=soc_below,
+                    weak_pv_below=weak_pv_below,
+                    tomorrow_temp_c=tomorrow_temp_c,
+                    capacity_kwh=capacity_kwh,
+                    fc_max_minutes=fc_max_minutes,
+                    start_h=start_h,
+                    after_przetwory=after_przetwory,
+                )
             if soc_percent < reserve:
                 target = reserve
             else:
@@ -653,6 +758,18 @@ def evaluate_charge_tonight_cloudy(
     )
     reserve = soc_below
     if target is None:
+        if morning_buffer_candidate:
+            return _morning_buffer_short_fc(
+                soc_percent=soc_percent,
+                tomorrow_pv_kwh=tomorrow_pv_kwh,
+                soc_below=soc_below,
+                weak_pv_below=weak_pv_below,
+                tomorrow_temp_c=tomorrow_temp_c,
+                capacity_kwh=capacity_kwh,
+                fc_max_minutes=fc_max_minutes,
+                start_h=start_h,
+                after_przetwory=after_przetwory,
+            )
         if soc_percent < reserve:
             target = reserve
         else:

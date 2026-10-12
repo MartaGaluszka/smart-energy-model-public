@@ -668,6 +668,22 @@ def today_is_ac_day(db, user_id: int, day: date | None = None) -> bool:
         return False
 
 
+def yesterday_had_przetwory(db, user_id: int, day: date | None = None) -> bool:
+    """True gdy wczoraj w kalendarzu było `przetwory` — wzmacnia treść bufora rano @22."""
+    from api.models import HouseholdEvent
+
+    try:
+        target = ((day or date.today()) - timedelta(days=1)).isoformat()
+        rows = (
+            db.query(HouseholdEvent.event_type)
+            .filter(HouseholdEvent.user_id == user_id, HouseholdEvent.event_date == target)
+            .all()
+        )
+        return any((r.event_type or '').strip().lower() == 'przetwory' for r in rows)
+    except Exception:
+        return False
+
+
 def _ac_night_window(as_of: datetime) -> tuple[datetime, datetime, float]:
     """Start rozliczania baterii (18:00 lub teraz, jeśli później) → najbliższe 6:00."""
     night_hour = int(os.getenv('BATTERY_AC_NIGHT_START_HOUR', str(AC_BATTERY_NIGHT_START_HOUR)))
@@ -864,15 +880,27 @@ def fallback_home_suggestion(settings_row=None, as_of: datetime | None = None) -
     }
 
 
-def get_home_suggestion(settings_row, as_of: datetime | None = None) -> dict:
+def get_home_suggestion(
+    settings_row,
+    as_of: datetime | None = None,
+    *,
+    db=None,
+    user_id: int | None = None,
+) -> dict:
     as_of = as_of or datetime.now()
     try:
-        return _compose_home_suggestion(settings_row, as_of)
+        return _compose_home_suggestion(settings_row, as_of, db=db, user_id=user_id)
     except Exception:
         return fallback_home_suggestion(settings_row, as_of)
 
 
-def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
+def _compose_home_suggestion(
+    settings_row,
+    as_of: datetime,
+    *,
+    db=None,
+    user_id: int | None = None,
+) -> dict:
     """Karta Home (BAT.3 + BAT.5 + B1 jesień): reżim / ForceCharge / rezerwa — bez ML."""
     from src.optimization.battery_advisor import (
         evaluate_below_reserve_wait_cheap,
@@ -918,6 +946,7 @@ def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
     tomorrow_s = (d + timedelta(days=1)).isoformat()
     start_h = _settings_night_start(settings_row)
     fc_max = effective_fc_max(settings_row, season)
+    after_przetwory = bool(db is not None and user_id is not None and yesterday_had_przetwory(db, user_id, d))
     night_rule = evaluate_charge_tonight_cloudy(
         soc_percent=soc_now,
         tomorrow_pv_kwh=get_archived_day_pv_kwh(tomorrow_s),
@@ -928,6 +957,7 @@ def _compose_home_suggestion(settings_row, as_of: datetime) -> dict:
         ),
         fc_max_minutes=fc_max,
         night_start_hour=start_h,
+        after_przetwory=after_przetwory,
     )
 
     weekend = is_weekend(d) or is_public_holiday(d)

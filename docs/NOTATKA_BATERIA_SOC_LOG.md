@@ -43,6 +43,26 @@ Nie mylić z płytą (też ~2 kW, ale przy obecności / posiłku) — 5.09 bez g
 
 ## Log
 
+### 2026-10-11 — DZIEŃ (w toku) + decyzja nocy → 12.10
+
+Accu 11.10 **mix→RF** · ENS @05 **12,04** · Fox minSoc w app **10%**.
+
+| Moment | SoC | PV / uwagi |
+|--------|----:|------------|
+| **~05:00** | **36%** | start dnia; bez FC nocy |
+| **~13:00–17:40** | **72%→47%** | **Przetwory** · load **~10,4 kWh** · peak **~5,6 kW** · porcja: 3 kg buraków · 1,5 kg cebuli · 1,5 kg papryki · `household_events` type=`przetwory` impact=`up` (kalibracja kalendarza app) |
+| **~20:15** | **~38%** | po przetworach; weekend tanio |
+| **~22:38** | **28%** | dalszy spadek wieczorem (nie zatrzymaliśmy się na 38%) |
+| noc → pn. | plan: do **6:00** bez FC | ENS jutro **20,6** · Tnoc **~5°C** |
+| **pn. 12.10 ~03:15–03:50** | **18%→14%** | **bojler** **0,42 kWh** · peak **2,43 kW** |
+| **pn. ~04:56** | **11%** | blisko podłogi |
+| **pn. ~05:50–06:00** | **10%** | **bufor ciepła** **0,58 kWh** · peak **2,06 kW** (już z sieci) |
+| **pn. 06:30–08:00** | **10%** | **śniadanie** **1,25 kWh** · import **1,37** · peak **2,61 kW** |
+
+**Werdykt ex post:** na **bazę nocną** starczyło; **nie** na **bojler ~03:30 + bufor ciepła po 5:00 + śniadanie pn.** przy minSoc **10%**. Po dniu **`przetwory`**: próg **SoC &lt;30% o ~22:00** (nie @20:00 — tu **38%→28%** między 20:15 a 22:38) → na **pn.** krótki **FC w taniej nocy** albo cel **≥25–30%** do 6:00. Szczegóły: [`NOTATKA_2026-10-12.md`](NOTATKA_2026-10-12.md).
+
+---
+
 ### 2026-10-10 → 11.10 — closeout 10.10 + NOC + rano 11.10
 
 Accu 10.10 **mix→RF** (po fakcie) · pick z 08–09 **CS4** · PV **22,0** (ENS @05 **15,85**, **−28%**).

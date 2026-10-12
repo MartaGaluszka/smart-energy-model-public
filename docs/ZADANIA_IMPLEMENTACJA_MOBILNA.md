@@ -239,9 +239,9 @@ Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 lin
 
 | ID | Pri | Zadanie | DoD |
 |----|-----|---------|-----|
-| T4.7 | P2 | `[~]` Tabela `household_events` + API CRUD | Typy: wakacje, urodziny, przetwory, ferie, **`klimatyzacja` / `upał`** (T4.5). API `[x]`; UI kalendarza = T4.8 |
+| T4.7 | P2 | `[~]` Tabela `household_events` + API CRUD | Typy: wakacje, urodziny, przetwory, ferie, **`klimatyzacja` / `upał`** (T4.5). API `[x]`; UI kalendarza = T4.8. **Kalibracja `przetwory`:** case **11.10.2026** ~10,4 kWh / 13:00–17:40 (buraki 1 porcja) — §10.1 PROJEKT + `household_events` |
 | T4.8 | P2 | UI kalendarz miesięczny + dodawanie wydarzenia | Ikony własne |
-| T4.9 | P2 | `[~]` Wpływ wydarzenia na treść sugestii | `klimatyzacja`/`upał` → karta „wyłącz AC o HH:MM” (T4.5). Reszta ↑/↓ load — później |
+| T4.9 | P2 | `[~]` Wpływ wydarzenia na treść sugestii | `klimatyzacja`/`upał` → karta AC (T4.5). **Bufor rano @22:** SoC &lt;30% gdy jutro robocze → krótki FC (case 11→12.10); dopisek gdy wczoraj `przetwory`. Reszta ↑/↓ load — później |
 | T4.10 | P2 | Tryby sezonowe (lato AC / zima ciepło + Wi‑Fi standby) | Linked z T4.3 |
 
 ---

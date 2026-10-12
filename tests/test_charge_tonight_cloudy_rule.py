@@ -132,6 +132,59 @@ def test_october_pv_10_skips_when_above_reserve():
     assert rule.skip_reason == 'covered'
 
 
+def test_october_morning_buffer_when_soc_below_30_despite_sunny():
+    """Case 11→12.10: SoC <30% @~22 mimo PV jutro ≥8 → krótki FC (bufor rano)."""
+    # nd. 21:00 → pn. roboczy: gate na *jutro*, nie „dziś weekend”
+    rule_nd = evaluate_charge_tonight_cloudy(
+        soc_percent=28.0,
+        tomorrow_pv_kwh=20.6,
+        tomorrow_temp_c=8.0,
+        as_of=datetime(2026, 10, 11, 21, 0),
+        after_przetwory=True,
+    )
+    assert rule_nd.triggered is True
+    assert 'BUFOR RANO' in rule_nd.recommendation
+    assert rule_nd.fc_minutes == 15.0
+    assert '22:00' in rule_nd.body
+    assert 'przetworami' in rule_nd.body
+    assert 'śniadanie ~1.2 kWh' in rule_nd.body or 'śniadanie ~1.3 kWh' in rule_nd.body
+    assert 'bojler ~0.4 kWh' in rule_nd.body
+    assert 'bufor ciepła ~0.6 kWh' in rule_nd.body
+    assert rule_nd.target_soc_percent == 28.0 + 25.0  # 15 min ≈ +25 pp
+
+    rule_pn = evaluate_charge_tonight_cloudy(
+        soc_percent=28.0,
+        tomorrow_pv_kwh=20.6,
+        tomorrow_temp_c=8.0,
+        as_of=datetime(2026, 10, 12, 21, 0),  # pn. → wt.
+    )
+    assert rule_pn.triggered is True
+    assert 'BUFOR RANO' in rule_pn.recommendation
+
+
+def test_saturday_evening_no_morning_buffer_for_sunday():
+    """Sob.→nd.: jutro weekend (tanio całą dobę) — bez bufora rano."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=28.0,
+        tomorrow_pv_kwh=20.0,
+        tomorrow_temp_c=8.0,
+        as_of=datetime(2026, 10, 10, 21, 0),  # sobota
+    )
+    assert rule.triggered is False
+
+
+def test_october_morning_buffer_skips_at_exactly_30():
+    """Gate jest <30%, nie ≤30%."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=30.0,
+        tomorrow_pv_kwh=20.0,
+        tomorrow_temp_c=8.0,
+        as_of=datetime(2026, 10, 13, 21, 0),  # wt.
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'covered'
+
+
 def test_october_pv_11_6_no_longer_winter_fill():
     """Dawniej X = zima (PV 11.6 → ładuj); teraz jesień: PV ≥ 8 → covered."""
     rule = evaluate_charge_tonight_cloudy(
