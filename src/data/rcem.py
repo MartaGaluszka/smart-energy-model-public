@@ -23,6 +23,8 @@ import pandas as pd
 DEFAULT_DB = 'data/energy_model.db'
 SEED_PATH = Path(__file__).resolve().parents[2] / 'data' / 'rcem_pse_seed.json'
 PSE_RCEM_URL = 'https://www.pse.pl/oire/rcem-rynkowa-miesieczna-cena-energii-elektrycznej'
+# evening_closeout / Fox sync potrafią trzymać zapis minutami — czekaj zamiast padać od razu
+SQLITE_TIMEOUT_SEC = 120.0
 
 _MONTHS_PL = {
     'styczeń': 1,
@@ -74,16 +76,19 @@ def load_seed() -> dict:
     return {k: v for k, v in payload.items() if k.startswith('20')}
 
 
-def save_rcem_to_db(
+def _connect(db_path: str) -> sqlite3.Connection:
+    return sqlite3.connect(db_path, timeout=SQLITE_TIMEOUT_SEC)
+
+
+def _upsert_rcem(
+    conn: sqlite3.Connection,
     period_month: str,
     rce_pln_mwh: float,
-    db_path: str = DEFAULT_DB,
     corrected_rce_pln_mwh: Optional[float] = None,
     publication_date: Optional[str] = None,
     source: str = 'pse_seed',
     notes: Optional[str] = None,
 ) -> None:
-    conn = sqlite3.connect(db_path)
     ensure_rcem_table(conn)
     conn.execute(
         '''
@@ -104,8 +109,31 @@ def save_rcem_to_db(
             notes,
         ),
     )
-    conn.commit()
-    conn.close()
+
+
+def save_rcem_to_db(
+    period_month: str,
+    rce_pln_mwh: float,
+    db_path: str = DEFAULT_DB,
+    corrected_rce_pln_mwh: Optional[float] = None,
+    publication_date: Optional[str] = None,
+    source: str = 'pse_seed',
+    notes: Optional[str] = None,
+) -> None:
+    conn = _connect(db_path)
+    try:
+        _upsert_rcem(
+            conn,
+            period_month,
+            rce_pln_mwh,
+            corrected_rce_pln_mwh=corrected_rce_pln_mwh,
+            publication_date=publication_date,
+            source=source,
+            notes=notes,
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def import_seed_to_db(db_path: str = DEFAULT_DB) -> int:
@@ -270,51 +298,54 @@ def sync_official_rcem(
                 'Publikacja przypada na 11. dzień miesiąca, także w weekend i święto.'
             )
 
-    conn = sqlite3.connect(db_path)
-    ensure_rcem_table(conn)
-    changes: list[dict] = []
-    for period_month in sorted(parsed):
-        if not correction_window_open(period_month, today):
-            continue
-        row = parsed[period_month]
-        corrected = row.get('corrected_rce_pln_mwh')
-        existing = conn.execute(
-            '''
-            SELECT rce_pln_mwh, corrected_rce_pln_mwh
-            FROM rcem_prices
-            WHERE period_month = ? AND source = 'pse_official'
-            ''',
-            (period_month,),
-        ).fetchone()
-        same_base = existing is not None and abs(float(existing[0]) - row['rce_pln_mwh']) < 0.001
-        old_corr = None if existing is None or existing[1] is None else float(existing[1])
-        same_corr = (old_corr is None and corrected is None) or (
-            old_corr is not None and corrected is not None and abs(old_corr - corrected) < 0.001
-        )
-        action = 'unchanged' if same_base and same_corr else ('updated' if existing else 'inserted')
-        if action != 'unchanged':
-            notes = f"PSE RCEm, publikacja {row.get('publication_date') or '—'}"
-            corr_date = row.get('corrected_publication_date')
-            if corr_date:
-                notes += f'; korekta {corr_date}'
-            save_rcem_to_db(
-                period_month,
-                row['rce_pln_mwh'],
-                db_path=db_path,
-                corrected_rce_pln_mwh=corrected,
-                publication_date=row.get('publication_date'),
-                source='pse_official',
-                notes=notes,
+    conn = _connect(db_path)
+    try:
+        ensure_rcem_table(conn)
+        changes: list[dict] = []
+        for period_month in sorted(parsed):
+            if not correction_window_open(period_month, today):
+                continue
+            row = parsed[period_month]
+            corrected = row.get('corrected_rce_pln_mwh')
+            existing = conn.execute(
+                '''
+                SELECT rce_pln_mwh, corrected_rce_pln_mwh
+                FROM rcem_prices
+                WHERE period_month = ? AND source = 'pse_official'
+                ''',
+                (period_month,),
+            ).fetchone()
+            same_base = existing is not None and abs(float(existing[0]) - row['rce_pln_mwh']) < 0.001
+            old_corr = None if existing is None or existing[1] is None else float(existing[1])
+            same_corr = (old_corr is None and corrected is None) or (
+                old_corr is not None and corrected is not None and abs(old_corr - corrected) < 0.001
             )
-        changes.append({
-            'period_month': period_month,
-            'rce_pln_mwh': row['rce_pln_mwh'],
-            'corrected_rce_pln_mwh': corrected,
-            'publication_date': row.get('publication_date'),
-            'corrected_publication_date': row.get('corrected_publication_date'),
-            'action': action,
-        })
-    conn.close()
+            action = 'unchanged' if same_base and same_corr else ('updated' if existing else 'inserted')
+            if action != 'unchanged':
+                notes = f"PSE RCEm, publikacja {row.get('publication_date') or '—'}"
+                corr_date = row.get('corrected_publication_date')
+                if corr_date:
+                    notes += f'; korekta {corr_date}'
+                _upsert_rcem(
+                    conn,
+                    period_month,
+                    row['rce_pln_mwh'],
+                    corrected_rce_pln_mwh=corrected,
+                    publication_date=row.get('publication_date'),
+                    source='pse_official',
+                    notes=notes,
+                )
+            changes.append({
+                'period_month': period_month,
+                'rce_pln_mwh': row['rce_pln_mwh'],
+                'corrected_rce_pln_mwh': corrected,
+                'publication_date': row.get('publication_date'),
+                'corrected_publication_date': row.get('corrected_publication_date'),
+                'action': action,
+            })
+        conn.commit()
+    finally:
+        conn.close()
     return changes
 
 

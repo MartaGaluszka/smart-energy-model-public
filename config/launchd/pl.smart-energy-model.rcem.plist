@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<!-- 11. dzień każdego miesiąca o 22:42. Bez klucza Weekday — sobota, niedziela
-     i święto też. Cena za poprzedni miesiąc; skrypt odświeża też korekty z 12 miesięcy. -->
+<!-- 11. dzień każdego miesiąca o 23:05 (po evening 22:42 — unikamy SQLite lock).
+     Bez klucza Weekday — sobota, niedziela i święto też. Cena za poprzedni miesiąc;
+     skrypt odświeża też korekty z 12 miesięcy. -->
 <dict>
   <key>Label</key>
   <string>pl.smart-energy-model.rcem</string>
@@ -17,9 +18,9 @@
     <key>Day</key>
     <integer>11</integer>
     <key>Hour</key>
-    <integer>22</integer>
+    <integer>23</integer>
     <key>Minute</key>
-    <integer>42</integer>
+    <integer>5</integer>
   </dict>
   <key>StandardOutPath</key>
   <string>__PROJECT_ROOT__/logs/launchd-rcem.out.log</string>
