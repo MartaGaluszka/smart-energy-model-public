@@ -12,6 +12,7 @@ Aktualne metryki modelu / live: [`docs/STATUS_ML_MLOPS.md`](../docs/STATUS_ML_ML
 | Kiedy | Skrypt | Co |
 |-------|--------|-----|
 | **05:00** | `./mlops/daily_workflow.sh` | sync + prognoza **16** (+ shadow CS4 / XGB gdy włączone) + advisor |
+| **10:00** | `./mlops/weather_morning_run.sh` | Po wpisie Accu: MB Free API + porównanie Accu × MB × ENS/ICON/CS4 → `data/processed/weather_runs/morning_latest.md` |
 | **12:00** | `./mlops/midday_forecast.sh` | sync + midday (16 + shadow) |
 | **16:00** | `./mlops/peak_arrival.sh` | sync + peak (16 + shadow) |
 | **wieczór** | `./mlops/evening_closeout.sh` | walidacja vs app → `forecast_validation.csv` (stała 22:42 i/lub dynamicznie po zachodzie) |
