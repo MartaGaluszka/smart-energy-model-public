@@ -43,6 +43,84 @@ Nie mylić z płytą (też ~2 kW, ale przy obecności / posiłku) — 5.09 bez g
 
 ## Log
 
+### 2026-10-14 → 15.10 — NOC + rano (FC 100% · śniadanie na styk · zmywarka ~9:00)
+
+Accu **15** Lumen **7 / 52%** → paper **RF** · ENS @05 **~15,5** · Tnoc (Accu/MB) **~3°C**.  
+Fox sync do logu: do **~05:00** (SoC **55%**); śniadanie / zmywarka — raport użytkownika **~09:45**.
+
+| Moment | SoC | Uwaga |
+|--------|----:|-------|
+| śr. **~22:00** | **21%** | przed FC (drogi szczyt zjadł zapas po ciemnym **14.10**) |
+| śr. **~22:05–~22:50** | **21%→~100%** | **ForceCharge** · moc **~9–11 kW** / grid **~9–12 kW** · ostatni sample Fox **88%@22:41** (luka do **00:02**); cel użytkownika **100%@22** |
+| czw. **~00:02** | **95%** | już rozładowanie · krótki impuls load **~1,7 kW** |
+| czw. **~01:45–02:00** | **88%→83%** | cykl ciepła ~**2,3–2,5 kW** |
+| czw. **~02:08–02:35** | **82%→66%** | dłuższy cykl / podłoga · peak **~3,5 kW** · **−16 pp** |
+| czw. **~04:36–04:45** | **60%→55%** | kolejny impuls ~**2,7 kW** |
+| czw. **~05:00** | **55%** | ostatni sync Fox przed śniadaniem |
+| czw. **śniadanie** | **na styk** | raport: **100%@22 starczyło prawie na styk** na poranne śniadanie (bez luki sieci jak 13→14) |
+| czw. **~kilka min przed 9:00** | — | **zmywarka załączona** (trwa @~09:45) |
+
+**Werdykt:** lekcja z **13→14** (cel **~90–100%** przy zimnie) **potwierdzona** — **100%@22** domknęło śniadanie **na styk**, bez wcześniejszego minSoc + godziny z sieci. Noc zjadła dużo ciepłem (**~02** i **~04**), nie samym posiłkiem. Zmywarka **~9:00** — przy Accu **mix/RF** i Lumen **7** warto sprawdzić, czy już idzie z PV, czy jeszcze z baterii/sieci (sync Fox po **05:00** do dogrania). Szczegóły: [`NOTATKA_2026-10-15.md`](NOTATKA_2026-10-15.md).
+
+### 2026-10-12 → 13.10 — NOC + rano (grzejnik łazienka + śniadanie)
+
+Accu **13** Lumen **4 / 73%** → paper **CS4** · ENS @05 **20,75** (zawyżone vs oczekiwanie Accu) · Tnoc **~5°C**.
+
+| Moment | SoC | Uwaga |
+|--------|----:|-------|
+| pn. **~18:00** | **86%** | po PV **12.10** Fox **13,6** |
+| pn. **~20:00** | **73%** | spadek wieczorem |
+| pn. **~22:00** | **50%** | **≥30%** → bez BUFOR RANO / bez FC (myśl: starczy) |
+| wt. **~02:52** | **31%→28%** | **bojler** ~**0,4 kWh** · peak **2,64 kW** (bateria) |
+| wt. **~05:00** | **24%** | baza + **grzejnik łazienkowy** (suszenie ręczników, cała noc) |
+| wt. **~06:10–06:25** | **22%→14%** | **bufor ciepła / podłoga** ~**0,6 kWh** · peak **2,62 kW** |
+| wt. **~07:00** | **10%** | minSoc · bateria nie oddaje |
+| wt. **~07:08–08:20** | **10%** | **śniadanie** z sieci: jajecznica + kawiarka indukcja + czajnik · piki **2,2 / 1,5 / 3,8 kW** · ~**1,3–1,5 kWh** / import ~**1,5** |
+| wt. **~09:19** | **14%** | PV ~**3,2 kW** · ładuje |
+
+**Werdykt:** **50%@22 nie starczyło na śniadanie**, choć reguła 30% milczała. Pogoda: chłodno (**~5°C**) → bufor rano jak 12.10. Extra: **`grzejnik_lazienka`**. Kalendarz: eventy `grzejnik_lazienka` (12.10) + `sniadanie` (13.10). Budżet FC: §10.1 PROJEKT.
+
+### 2026-10-13 — DZIEŃ + decyzja nocy → 14.10
+
+Fox PV **~10,2** · Accu **CS4** · ENS peak **~14** (ostrożnie). Tnoc →14 **~2°C**.
+
+| Moment | SoC | Uwaga |
+|--------|----:|-------|
+| **~09:19** | **14%** | start ładowania z PV |
+| **~11:00** | **56%** | |
+| **~14:00** | **72%** | |
+| **~15:10–15:46** | **72%→54%** | **podłogówka / bufor ciepła (dzień)** · load **~1,7 kWh** · peak **~2,3–3,0 kW** · z baterii (PV ~0,3 kW) · **−18 pp** |
+| **~17:00** | **54%** | |
+| **~20:00** | **38%** | |
+| **~22:04** | **31%** | |
+| dzień / rano | — | **grzejnik łazienkowy wyłączony** (po nocy 12→13) |
+| **od 22:07** | — | **grzejnik łazienkowy załączony** na noc 13→14 (suszenie ręczników) |
+| **FC od ~22:15** | plan **65% / do 22:35** | ustawione ręcznie |
+| **po FC** | **80%** | **nie wyłączyło się samo** o 22:35 · poszło **31→80%** (**+49 pp** ≈ kalibracja „30 min ≈ +50 pp”) · wyłączenie ręczne / po fakcie |
+
+**Sygnatura podłogówki (dzień):** plateau **~2,5–3,0 kW** przez **~30–35 min**, SoC spada równo, sieć ~0, PV niski — odróżnić od bojlera (krótszy, ~2,4–2,6 kW) i kuchni (szpice nierówne). Szczegóły: [`NOTATKA_CZUJNIKI_PODLOGOWKA.md`](NOTATKA_CZUJNIKI_PODLOGOWKA.md) · [`NOTATKA_2026-10-13.md`](NOTATKA_2026-10-13.md).
+
+**Werdykt plan / FC:** cel **65% @22:35** nieskuteczny bez ręcznego stopu — Fox **ForceCharge nie uciął** o zaplanowanej godzinie; doszło do **80%**. Lekcja UI: **timer końca FC pilnować ręcznie**.
+
+### 2026-10-13 → 14.10 — NOC closeout + rano (późne śniadanie ~09:00)
+
+FC **80%@22:35** · grzejnik łazienkowy od **22:07** · Tnoc **~2°C**.
+
+| Moment | SoC | Uwaga |
+|--------|----:|-------|
+| wt. **22:35** | **80%** | po FC (plan był 65%) |
+| śr. **~01:18–01:32** | **69%→~56%** | cykl ciepła ~**3,1–3,4 kW** (bateria) |
+| śr. **~03:28–03:38** | **~54%→44%** | kolejny cykl ~**3,2–3,4 kW** |
+| śr. **~05:25–05:35** | **~40%→29%** | bufor/podłoga ~**0,9 kWh** · peak **3,3 kW** |
+| śr. **~06:46–06:56** | **~28%→18%** | kolejny ~**0,9 kWh** · peak **3,6 kW** |
+| śr. **~07:54** | **10%** | minSoc — **zanim** śniadanie |
+| śr. **~07:54–08:44** | **10%** | **~1 h z sieci** · load ~**1,9 kWh** / import ~**1,4 kWh** · peak ~**2,7 kW** (dom bez baterii) |
+| śr. **~09:24–10:05** | **16%→11%→13%** | **śniadanie późniejsze** (wszyscy wstali później) · load ~**1,6 kWh** · **prawie bez sieci** (PV już **0,5–4,4 kW**) |
+
+**Werdykt ex post:** nawet **80%@22** **nie starczyło** do PV przy **Tnoc ~2°C** + grzejnik + **4 cykle ciepła** w nocy/rano. Lukę **~1 h** zrobiło **ciepło 05–08**, nie samo śniadanie — posiłek ~**09:00** już złapał dach. Lekcja kalendarza: późne `sniadanie` ≠ mniejszy budżet nocy; przy zimnie liczy się **bufor do pierwszej sensownej PV (~8–9)**. Na taką noc cel raczej **~90–100%** albo mniej grzania z baterii. Szczegóły: [`NOTATKA_2026-10-14.md`](NOTATKA_2026-10-14.md).
+
+---
+
 ### 2026-10-11 — DZIEŃ (w toku) + decyzja nocy → 12.10
 
 Accu 11.10 **mix→RF** · ENS @05 **12,04** · Fox minSoc w app **10%**.

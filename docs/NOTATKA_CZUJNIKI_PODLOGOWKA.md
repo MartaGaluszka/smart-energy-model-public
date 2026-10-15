@@ -45,7 +45,7 @@ Z1 w X–XI 2026 **może spaść** przez baterię nawet przy load/HDD bez zmian.
 
 **Kontekst:** formalny werdykt czujników = **load/HDD** w **X–XI 2026 vs X–XI 2025** (§D). Poniżej — **jakość + wczesny sygnał Fox**, żeby nie mylić „pamięci o grzaniu” z samą pogodą zewnętrzną.
 
-Pełny miesiąc, wykresy dnia i godziny: zestawienie September 2025 vs 2026 (canvas lokalny — tylko repo prywatne).
+Pełny miesiąc, wykresy dnia i godziny: September 2025 vs 2026 (canvas lokalny — tylko prywatne).
 
 ### Obserwacja terenowa
 
@@ -142,6 +142,22 @@ Wrzesień kończy się **30**. Okno **18–30** to **13 dni**. To tu pojawia si�
 
 **Przy werdykcie X–XI:** liczyć noc **00–04**, a poranek **05–07** z pieczeniem wyłączyć lub oznaczyć w `household_events`. Import, eksport i autokonsumpcja zależą głównie od PV i baterii, więc o grzaniu nie mówią nic.
 
+---
+
+## Obserwacja 13.10.2026 — dzień: cykl podłogówki / bufora widoczny w Fox
+
+Pierwszy **wyraźny dzienny** cykl ciepła w X 2026 (poza krótkimi pikami rano ~06):
+
+| | |
+|--|--|
+| **Okno** | **15:10–15:46** (~35 min) |
+| **Load** | **~1,7 kWh** · peak **~2,3 → 3,0 kW** |
+| **SoC** | **72% → 54%** (−18 pp) · z baterii |
+| **PV / sieć** | PV ~**0,3 kW** · import ~0 |
+| **Kontekst** | dzień pochmurny (Fox PV **~10,2**); T spada wieczorem do **~2°C** nocy →14 |
+
+**Sygnatura vs inne loady:** plateau **2,5–3 kW** przez **~30+ min** = podłoga/bufor; bojler zwykle **krótszy** (~2,4–2,6 kW); kuchnia = **nierówne szpice**. Rano **13.10 ~06:10–06:25** też bufor (~0,6 kWh) — podłoga przyjemna @09. Log: [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-10-13.md`](NOTATKA_2026-10-13.md).
+
 **Kontekst PV (08.10):** produkcja X 2026 do 8.10 **208,9 kWh** vs cały X 2025 **392,2 kWh**; brakuje **183,3 kWh** (**8,0 kWh/dz.** przez 23 dni). 9–31.10.2025 dało **274,6 kWh** (śr. **11,9**, mediana **9,9**). Import do końca miesiąca zależy od pogody i grzania: **~36 kWh** (jak dotąd) do **~154 kWh** (jak 2025).
 
 **Próg alarmowy — import X 2026 vs X 2025** (Fox `gridConsumption`, narastająco; dziś **~9–10 kWh** do 8.10, app **10,2**). Szansa na wyrównanie **187,6 kWh**: oceniam na **~10%** (ocena z scenariuszy, nie z modelu; regresja import~HDD+PV z 2026 odrzucona, bo uczy się zimowego FC).
@@ -237,8 +253,9 @@ Zł w dół przy load/HDD ≈ 0 i Z1 w dół → **nie przypisywać czujnikom**.
 - Czy grzałka bufora dostała blokadę 15–22 pn–pt (osobny efekt)  
 - [x] **18.09.2026** — obserwacja podłogi IX 2025 vs czujniki IX 2026 + Fox/pogoda (§ Obserwacja 18.09.2026)
 - [x] **08.10.2026** — 1–8.10 2025 vs 2026: podłogówka jeszcze **nie** widoczna w nocy 00–04 (§ Obserwacja 08.10.2026); poranek 05–07 = pieczenie, nie wliczać
+- [x] **13.10.2026** — dzienny cykl **15:10–15:46** ~1,7 kWh / SoC −18 pp (§ Obserwacja 13.10.2026); rano bufor ~06:10
 - [ ] Sprawdzić **04.10** (plateau nocne) w logu sterowników, jeśli jest
 - [ ] Zapisać w `household_events` pieczenie chleba (np. **07.10 ~05:10–07:00**), żeby odfiltrować poranek przy werdykcie
-- [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD) + link zestawienie September 2025 vs 2026 (canvas lokalny — tylko repo prywatne)
+- [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD) + link September 2025 vs 2026 (canvas lokalny — tylko prywatne)
 
-Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) · zestawienie September 2025 vs 2026 (canvas lokalny — tylko repo prywatne)
+Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) · September 2025 vs 2026 (canvas lokalny — tylko prywatne)

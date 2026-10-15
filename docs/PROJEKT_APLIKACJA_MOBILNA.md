@@ -304,6 +304,20 @@ Suwaki G12w + plan ładowania nocą / rozładowania w szczycie; decyzja „czy �
 |-----|------|------|-------------:|-----:|----------------|
 | `przetwory` | **11.10.2026** buraki 1 porcja (3 kg buraków · 1,5 kg cebuli · 1,5 kg papryki) | ~13:00–17:40 (~4,7 h) | **~10,4 kWh** | ~5,6 kW | `impact=up` · planuj ~**10 kWh** / 4–5 h w ciągu dnia (najlepiej gdy PV); SoC −25 pp w case |
 | `przetwory` → **nast. dzień roboczy** | **12.10.2026** po nd. przetwory: SoC **38%** @20:15 → **28%** @22:38; **brak na śniadanie** | noc + **05–08** | bojler **0,42** · bufor **0,58** · śniadanie **1,25** (razem **~2,3 kWh**) | 2,4 / 2,6 / 2,1 | Gate **SoC &lt;30% @~22** gdy jutro robocze → **`BUFOR RANO`** ~15 min; kwoty w env `BATTERY_MORNING_*_KWH` |
+| `grzejnik_lazienka` | **noc 12→13.10.2026** suszenie ręczników całą noc | **22:00–07:00** (ciągły) | **+0,5–1,0 kWh** (szacunek 40–100 W; baseline Fox ~0,17 kW — trudny do wyodrębnienia) | niski, stały | `impact=up` · przy evencie w kalendarzu **dodaj** do budżetu nocy przed tanim FC; **nie** polegać tylko na SoC ≥30% |
+| `sniadanie` | **13.10.2026** jajecznica + kawiarka na indukcji + czajnik (herbata) | ~07:08–08:20 | **~1,3–1,5 kWh** (12.10: **1,25**) | **2,2 / 1,5 / 3,8** kW | `impact=up` · planuj **~1,3 kWh** przed PV; pik **~3,8 kW** = czajnik+indukcja równolegle (nie bojler) |
+| `zmywarka` | **14.10.2026** start ~10:00 przy SoC **~12%**, słabe PV | cykl ~1–2 h | typowo **~1–1,5 kWh**/cykl (doprecyzować po closeoucie) | **~1,5–3 kW** | `impact=up` · **nie** w drogim **6–13** przy pustej baterii / ciemnym dniu · lepiej szczyt PV albo tania **13–15** / po **22** |
+
+**Budżet taniej taryfy → rano (nauka, G12w 22–6):**
+
+```text
+E_noc ≈ baza(~1,6–1,8 kWh) + grzejnik_lazienka(0,5–1,0 jeśli event)
+       + bojler(~0,4) + bufor_ciepła(~0,6 przy Tnoc≲5–6°C) + sniadanie(~1,3)
+ΔSoC_pp ≈ E_noc / 0,104          # BATTERY_CAPACITY ≈ 10,36 kWh
+cel_SoC@22 ≥ minSoc(10%) + ΔSoC + margines(5–10 pp)
+```
+
+Case **12→13.10:** SoC **50% @22** (powyżej progu BUFOR RANO **30%**) → sugestia „starczy”; ex post **10% @07**, śniadanie z sieci. Powód: wieczór już **86→50%**, Tnoc **~5°C** → bufor, bojler **~02:52**, **grzejnik łazienkowy**, potem śniadanie indukcja+czajnik. **50% @22 ≈ budżet nocy bez śniadania.**
 
 ### 10.2 Strategia sezonowa
 

@@ -486,18 +486,23 @@ def _morning_buffer_fc_minutes() -> float:
 
 
 def _morning_buffer_breakfast_kwh() -> float:
-    """Kalibracja 12.10.2026: śniadanie ~06:30–08:00 (load Fox)."""
+    """Kalibracja 12.10 ~1,25 kWh; 13.10 ~1,3–1,5 (jajecznica+indukcja+czajnik, peak ~3,8)."""
     return float(os.getenv('BATTERY_MORNING_BREAKFAST_KWH', '1.25'))
 
 
 def _morning_buffer_boiler_kwh() -> float:
-    """Kalibracja 12.10.2026: bojler CWU ~03:15–03:50."""
+    """Kalibracja 12.10 ~03:15 / 13.10 ~02:52 (~0,4 kWh / peak ~2,6 kW)."""
     return float(os.getenv('BATTERY_MORNING_BOILER_KWH', '0.42'))
 
 
 def _morning_buffer_heat_kwh() -> float:
-    """Kalibracja 12.10.2026: 1 pik bufora ciepła po 5:00 (~05:50–06:00)."""
+    """Kalibracja 12.10 (~05:50) / 13.10 (~06:10–06:25) — 1 pik bufora ciepła."""
     return float(os.getenv('BATTERY_MORNING_HEAT_BUFFER_KWH', '0.58'))
+
+
+def _morning_buffer_towel_heater_kwh() -> float:
+    """Szacunek grzejnik łazienka całą noc (case 12→13.10); kalendarz `grzejnik_lazienka`."""
+    return float(os.getenv('BATTERY_MORNING_TOWEL_HEATER_KWH', '0.75'))
 
 
 def _morning_buffer_short_fc(

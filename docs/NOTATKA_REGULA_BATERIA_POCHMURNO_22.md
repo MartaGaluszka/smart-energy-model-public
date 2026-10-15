@@ -63,9 +63,22 @@ TO
 | `BATTERY_SOC_RESERVE_SUMMER` | **20** | nocna podłoga lata |
 | `BATTERY_SOC_MORNING_BUFFER_FLOOR` | **30** | jesień/zima: SoC &lt; tego @~22 → krótki FC mimo „covered” |
 | `BATTERY_MORNING_BUFFER_FC_MINUTES` | **15** | czas krótkiego FC bufora rano (~+25 pp ≈ 2,6 kWh) |
-| `BATTERY_MORNING_BREAKFAST_KWH` | **1,25** | kalibracja **12.10** śniadanie ~06:30–08:00 |
-| `BATTERY_MORNING_BOILER_KWH` | **0,42** | kalibracja **12.10** bojler ~03:15–03:50 |
-| `BATTERY_MORNING_HEAT_BUFFER_KWH` | **0,58** | kalibracja **12.10** bufor ciepła po 5:00 |
+| `BATTERY_MORNING_BREAKFAST_KWH` | **1,25** | kalibracja **12.10** ~1,25 · **13.10** ~1,3–1,5 (jajecznica+indukcja+czajnik, peak **3,8**) |
+| `BATTERY_MORNING_BOILER_KWH` | **0,42** | kalibracja **12.10** ~03:15 · **13.10** ~02:52 (**~0,4**, peak **2,6**) |
+| `BATTERY_MORNING_HEAT_BUFFER_KWH` | **0,58** | kalibracja **12.10** ~05:50 · **13.10** ~06:10–06:25 (**~0,6**, peak **2,6**) |
+| `BATTERY_MORNING_TOWEL_HEATER_KWH` | **0,75** | szacunek **grzejnik łazienka** całą noc (**12→13.10**); kalendarz `grzejnik_lazienka` |
+
+### Lekcja 12→13.10 — „miało starczyć” przy 50%@22
+
+| | |
+|--|--|
+| **Decyzja @22** | SoC **50%** ≥ floor **30%** → **bez** krótkiego FC (ENS jutro **~20,8**, ścieżka „covered”) |
+| **Pogoda nocy** | T **~5°C** (min **~4,5**), bez opadu · chmura rośnie po północy — typowy trigger **bufora ciepła** rano |
+| **Fakt** | SoC **50%→10%@07** · discharge **~3,5 kWh** · śniadanie z **sieci** |
+| **Skład load** | baza + **grzejnik łazienkowy (całą noc)** + bojler **~02:52** + bufor **~06:10** + śniadanie indukcja/czajnik **~07–08:20** |
+| **Wniosek** | próg **30%** chroni tylko *krótki* bufor po przetworach; przy **grzejnik_lazienka** + zimnym poranku cel @22 raczej **~60–70%** (albo FC w taniej), jeśli śniadanie ma iść z baterii |
+
+Kalendarz / pomiary: [`PROJEKT_APLIKACJA_MOBILNA.md`](PROJEKT_APLIKACJA_MOBILNA.md) §10.1 · log [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md).
 | `BATTERY_SUMMER_FC_MAX_MINUTES` | **15** | cap czasu FC |
 | `BATTERY_SUMMER_FC_DELTA_SOC` | **25** | cap przyrostu SoC (~15 min) |
 | `BATTERY_SUMMER_TOMORROW_MAX_KWH` | **10** | jutro do 10 kWh = nadal lato |
@@ -96,3 +109,18 @@ Push FCM (T4.22) — później; na razie feed in-app.
 - Nie spina w weekend / święto (cała doba i tak tania G12w).
 - Po 22:00 nie powtarza „ładuj od 22” (okno już trwa).
 - Nie pełnią baterii, gdy brakuje < ~2 kWh / < 15 pp SoC (żywotność > spread).
+
+### Lekcja FC 13.10 — koniec okna + closeout 14.10 rano
+
+Plan **22:35 / ~65%** (start **31%**): Fox **nie wyłączył ForceCharge sam** → SoC **80%** (**+49 pp** ≈ kalibracja **30 min ≈ +50 pp**). Do automacji apki: sugestia musi mieć **alarm „wyłącz FC”** albo użytkownik stoper.
+
+**Ex post 14.10:** przy **Tnoc ~2°C** + `grzejnik_lazienka` + wielokrotne cykle ciepła **80%@22 i tak za mało** → **10%@07:54**, **~1 h importu** (~07:54–08:44). Późne śniadanie **~09:00** poszło już z PV — luka to **ogrzewanie przed dachem**, nie sam posiłek. Budżet nocy zimnej: cel raczej **~90–100%** albo mniej CO z baterii; nie obniżać FC bo „śniadanie później”.
+
+### Lekcja FC 14→15.10 — 100%@22 ≈ styk na śniadanie
+
+| | |
+|--|--|
+| **Decyzja @22** | SoC **21%** → FC do **~100%** (po ciemnym **14.10** / lekcja „80% za mało”) |
+| **Noc (Fox do 05)** | ciepło **~01:45** + dłuższy cykl **~02:08–02:35** (−16 pp) + impuls **~04:36** → **55%@05** |
+| **Fakt rano** | śniadanie **na styk** z baterii (bez luki sieci jak wczoraj) · **zmywarka ~kilka min przed 9:00** |
+| **Wniosek** | przy Tnoc **~3°C** i cyklach ciepła **100%** to realistyczny **dolny** cel, jeśli śniadanie ma iść z baterii — nie ma dużego luzu; AGD po 9:00 już osobna decyzja vs PV |
