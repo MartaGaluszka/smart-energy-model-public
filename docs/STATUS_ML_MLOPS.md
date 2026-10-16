@@ -1,7 +1,8 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-10-14 (Accu+MB+oneshot 14–16) · Fox **14** rano **~2,8** · weekly **11.10**  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 11.10**) · `forecast_validation.csv` (closeouty do **11.10**) · [`NOTATKA_WEEKLY_2026-10-11.md`](NOTATKA_WEEKLY_2026-10-11.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
+**Stan na:** 2026-10-16 (Accu+MB+oneshot 16–18) · Fox **15** **12,0** · **16** wst. **25,7** · weekly **11.10**  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 11.10**) · `forecast_validation.csv` (closeouty do **11.10**) · [`NOTATKA_2026-10-16.md`](NOTATKA_2026-10-16.md) · [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · weekly [`NOTATKA_WEEKLY_2026-10-11.md`](NOTATKA_WEEKLY_2026-10-11.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)  
+**Paper-trade Accu:** tylko repo prywatne (nie linkować w public)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
 
@@ -77,7 +78,7 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Decyzje (PVE, ICON, 16 cech) | [`03_ZALOZENIA_I_DECYZJE.md`](03_ZALOZENIA_I_DECYZJE.md) |
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
-| Notatki pogodowe od 16.08 | [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · dzień [`NOTATKA_2026-10-14.md`](NOTATKA_2026-10-14.md) (Accu **14** CS4 · **15–16** RF; MB deszcz AM → słońce **16**; oneshot RF×I **10,3 / 15,8 / 20,7**; Fox **~2,8**; ENS **14** overshoot vs ICON) · [`NOTATKA_2026-10-13.md`](NOTATKA_2026-10-13.md) · [`NOTATKA_2026-10-12.md`](NOTATKA_2026-10-12.md) · [`NOTATKA_2026-10-11.md`](NOTATKA_2026-10-11.md) · poprzednio [`NOTATKA_2026-10-10.md`](NOTATKA_2026-10-10.md) |
+| Notatki pogodowe od 16.08 | [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · dzień [`NOTATKA_2026-10-16.md`](NOTATKA_2026-10-16.md) (Accu **16–18** RF; MB **19/41/71%**; Fox **15** **12,0** / **16** wst. **25,7**; ENS **−14%** jasny undershoot) · [`NOTATKA_2026-10-15.md`](NOTATKA_2026-10-15.md) · [`NOTATKA_2026-10-14.md`](NOTATKA_2026-10-14.md) · poprzednio [`NOTATKA_2026-10-12.md`](NOTATKA_2026-10-12.md) |
 | Oś retreningów / wdrożeń | [`NOTATKA_RETRENINGI_I_WDROZENIA.md`](NOTATKA_RETRENINGI_I_WDROZENIA.md) |
 | Weekly **20.09** | [`NOTATKA_WEEKLY_2026-09-20.md`](NOTATKA_WEEKLY_2026-09-20.md) |
 | Weekly **11.10** | [`NOTATKA_WEEKLY_2026-10-11.md`](NOTATKA_WEEKLY_2026-10-11.md) (RF **ACCEPT** Δ +0,003 · XGB **REVIEW** Δ +0,027 · L30 INFO · live WATCH bias) |

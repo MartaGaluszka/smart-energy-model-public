@@ -124,3 +124,12 @@ Plan **22:35 / ~65%** (start **31%**): Fox **nie wyłączył ForceCharge sam** �
 | **Noc (Fox do 05)** | ciepło **~01:45** + dłuższy cykl **~02:08–02:35** (−16 pp) + impuls **~04:36** → **55%@05** |
 | **Fakt rano** | śniadanie **na styk** z baterii (bez luki sieci jak wczoraj) · **zmywarka ~kilka min przed 9:00** |
 | **Wniosek** | przy Tnoc **~3°C** i cyklach ciepła **100%** to realistyczny **dolny** cel, jeśli śniadanie ma iść z baterii — nie ma dużego luzu; AGD po 9:00 już osobna decyzja vs PV |
+
+### Lekcja FC 15→16.10 — jasny dzień + zapomniane wyłączenie
+
+| | |
+|--|--|
+| **Decyzja @22** | SoC **63%** · Accu jutro **jasny/RF** (ENS **~22**) · FC **nie wyłączone** → **100%@~22:28** (~**3,7–3,8 kWh** / ~27 min) |
+| **Fakt rano** | min SoC **~29–30%** przed PV · bez importu śniadania |
+| **DZIEŃ** | kalendarz AGD: `pranie`×2 · `zmywarka` · `chleb` · `obiad` · `suszarka` — szczyt **13:35** z PV, bez sieci ([`NOTATKA_2026-10-16.md`](NOTATKA_2026-10-16.md)) |
+| **Wniosek** | przy **jasnym** jutrze i SoC@22 **≳50–60%** → **POMIŃ FC** (nawet jeśli w kalendarzu jest `pranie`); obowiązkowy **alarm stop FC**; typy eventów → §10.1 [`PROJEKT_APLIKACJA_MOBILNA.md`](PROJEKT_APLIKACJA_MOBILNA.md) |

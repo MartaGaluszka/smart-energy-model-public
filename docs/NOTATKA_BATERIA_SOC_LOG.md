@@ -43,6 +43,42 @@ Nie mylić z płytą (też ~2 kW, ale przy obecności / posiłku) — 5.09 bez g
 
 ## Log
 
+### 2026-10-15 → 16.10 — NOC (FC do 100% — zapomniane wyłączenie) + rano ~30% przed PV
+
+Accu **16** jasny→**RF** (Lumen **9 / 11%**) · ENS @05 **~22** · dzień pod pranie / mocne PV.  
+Raport: **zapomniane wyłączenie ładowania o 22:00** → poszło do **100%**; rano **~30%** zapasu zanim dach zaczął produkować.
+
+| Moment | SoC | Uwaga |
+|--------|----:|-------|
+| czw. **~21:57** | **63%** | przed FC (po wieczornym load) |
+| czw. **~22:01–~22:28** | **64%→100%** | **ForceCharge** · grid/bat **~11 kW** · **~27 min** · **+36–37 pp** ≈ **~3,7–3,8 kWh** z taniej nocy |
+| czw. **~22:28** | **100%** | FC domknięte (brak ręcznego stopu wcześniej) |
+| pt. **~06:00** | **66–67%** | po nocy ciepła |
+| pt. **~07:50** | **45%** | przed mocniejszym PV |
+| pt. **~08:30** | **30%** | min przed sensowną produkcją · PV **~0,9 kW** |
+| pt. **~08:40–08:45** | **29%** | PV **>1,3 kW** · dół SoC · potem ładuje |
+| pt. **~09:00** | **31%→↑** | dach przejmuje · **~10:00** już **~50%+** |
+
+**Werdykt:** przy Accu **jasny/RF** i ENS **~22** FC **nie było potrzebne** — **63%@22** pewnie starczyłoby na rano (min wyszło **~29–30%**, czyli tuż przy progu komfortu, ale **bez luki sieci**). Koszt pomyłki: **~4 kWh** taniego importu w nocy; zysk: spokojny bufor **~30%** przed PV i zero śniadania z sieci. Lekcja UI jak **13→14**: **timer / ręczne wyłączenie FC o 22:xx** — ForceCharge sam nie „wie”, że jutro jest słońce. Fox **16.10** do południa: generation już **~20 kWh**, gridConsumption **~0,4** (dzień słoneczny ratuje bilans).
+
+### 2026-10-16 — DZIEŃ (dużo AGD: 2× pranie · zmywarka · chleb · obiad · suszarka)
+
+Accu **jasny→RF** · raport użytkownika **~16:40** · Fox sync do **~15:57** (suszarka jeszcze poza DB).
+
+| Moment | Load / SoC (Fox) | Uwaga |
+|--------|------------------|-------|
+| rano **~08–09** | load peak **~3,9 kW** · SoC **29%→↑** | start PV + dom; pranie #1 w toku (raport: **2× pranie po ~2,5 h**, jedno po drugim) |
+| **~11–13** | load μ **~1,3** / peak **~2,9** · SoC **85%→99%** · PV **~3,9–4,6 kW** | pranie #2 / ciąg AGD · nadwyżka do sieci (grid ujemny) |
+| **~13:28–13:51** | load **2,2–3,9 kW** · PV **~4,0–4,3** · SoC **99%** · grid **~0** (eksport spada) | **13:35:** zmywarka **koniec** (~2 h) · chleb (Lidl) **~20 min do końca** · **indukcja** obiad + kawa |
+| **~14–16** | load niski · SoC **98–99%** · PV **~2–3,7** · eksport **~1–3 kW** | przerwa przed suszarką |
+| **~16:10→** | (raport) suszarka **od ~30 min**, zostało **~2 h** | poza ostatnim synciem Fox **15:57** — dograć SoC/load przy closeoucie |
+
+**Fox dzień (report do syncu):** generation **~20,4** · loads **~14,8** · feedin **~9,6** · gridConsumption **~0,4** (godz. load **13:00 = 2,1 kWh** najwyższa).
+
+**Werdykt w toku:** przy pełnej baterii i PV **~4 kW** cały szczyt **13:35** (zmywarka finisz + chleb + indukcja) **poszedł z dachu**, bez importu — idealny dzień na pranie/suszenie. Suszarka **~16–18** zejdzie z malejącym PV → część z baterii (**98%** zapas), ewentualnie lekki import wieczorem jeśli load > PV+bat. Closeout po końcu suszarki.
+
+**Kalendarz:** typy `pranie` / `suszarka` / `chleb` / `obiad` + pakiet „dzień prania” → §10.1 [`PROJEKT_APLIKACJA_MOBILNA.md`](PROJEKT_APLIKACJA_MOBILNA.md).
+
 ### 2026-10-14 → 15.10 — NOC + rano (FC 100% · śniadanie na styk · zmywarka ~9:00)
 
 Accu **15** Lumen **7 / 52%** → paper **RF** · ENS @05 **~15,5** · Tnoc (Accu/MB) **~3°C**.  
