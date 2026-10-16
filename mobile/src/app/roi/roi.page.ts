@@ -173,7 +173,7 @@ export class RoiPage implements OnInit {
     const body: RoiAssumptions = {
       capex_pln: this.netCapex,
       battery_capex_pln: null,
-      opex_pln_year: this.opex,
+      opex_pln_year: num(this.opex),
       inflation_pct: this.inflationPct,
       seller_baseline_pln_year: this.sellerBaseline,
     };
@@ -197,17 +197,10 @@ export class RoiPage implements OnInit {
   private applyAssumptions(row: RoiAssumptions): void {
     this.inflationPct = row.inflation_pct ?? 0;
     this.sellerBaseline = row.seller_baseline_pln_year;
-    const battery = row.battery_capex_pln ?? 0;
-    const capex = row.capex_pln ?? 0;
-    const known = (capex === 0 && battery === 0)
-      || (capex === 8800 && battery === 32000)
-      || (capex === 40800 && battery === 0)
-      || (capex === 11158 && battery === 0)
-      || (capex === 12382 && battery === 0)
-      || (capex === 12661.6 && battery === 0);
-    if (!known) {
-      // API trzyma już net CAPEX — nie rozbijamy wstecz; zostaw defaults + sync ulg.
-      this.opex = row.opex_pln_year ?? 0;
+    // Przegląd [zł/rok] z API gdy jest; inaczej zostaje domyślne 120.
+    // CAPEX z API to net — nie rozbijamy wstecz na panele/magazyn (zostają lokalne kwoty).
+    if (row.opex_pln_year != null && Number.isFinite(row.opex_pln_year)) {
+      this.opex = row.opex_pln_year;
     }
     this.syncSubsidiesFromCapex();
   }

@@ -17,6 +17,7 @@ describe('Tab2Page', () => {
     message: null,
     messageKind: null,
     rateLimited: false,
+    apiError: null,
   };
 
   beforeEach(async () => {

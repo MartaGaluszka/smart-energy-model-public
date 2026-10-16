@@ -4,6 +4,8 @@ import { ViewWillEnter } from '@ionic/angular';
 import { filter } from 'rxjs/operators';
 import { BatteryStateService } from './services/battery-state.service';
 
+export type BatteryTab = 'settings' | 'schedule' | 'analytics';
+
 @Component({
   selector: 'app-battery',
   templateUrl: './battery.page.html',
@@ -11,7 +13,13 @@ import { BatteryStateService } from './services/battery-state.service';
   standalone: false,
 })
 export class BatteryPage implements OnInit, ViewWillEnter {
-  activeTab = 'settings';
+  readonly tabs: ReadonlyArray<{ value: BatteryTab; label: string }> = [
+    { value: 'settings', label: 'Ustawienia' },
+    { value: 'schedule', label: 'Harmonogram' },
+    { value: 'analytics', label: 'Analityka' },
+  ];
+
+  activeTab: BatteryTab = 'settings';
 
   constructor(
     private readonly router: Router,
@@ -31,8 +39,12 @@ export class BatteryPage implements OnInit, ViewWillEnter {
     this.stateService.loadSettings(true);
   }
 
-  onTabChange(): void {
-    this.router.navigate(['/tabs/battery', this.activeTab]);
+  selectTab(tab: BatteryTab): void {
+    if (this.activeTab === tab) {
+      return;
+    }
+    this.activeTab = tab;
+    this.router.navigate(['/tabs/battery', tab]);
   }
 
   onSave(): void {
@@ -41,12 +53,12 @@ export class BatteryPage implements OnInit, ViewWillEnter {
 
   private syncTabFromUrl(): void {
     const url = this.router.url;
-    if (url.includes('/settings')) {
-      this.activeTab = 'settings';
-    } else if (url.includes('/schedule')) {
+    if (url.includes('/schedule')) {
       this.activeTab = 'schedule';
     } else if (url.includes('/analytics')) {
       this.activeTab = 'analytics';
+    } else {
+      this.activeTab = 'settings';
     }
   }
 }

@@ -13,6 +13,7 @@
     "cap:ios": "npm run deploy:sim",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:ui-regression": "ng test --include='**/battery.page.spec.ts' --include='**/roi.page.spec.ts' --browsers=ChromeHeadless --watch=false --progress=false",
     "lint": "ng lint"
   },
   "private": true,

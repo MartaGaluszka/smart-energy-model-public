@@ -5,21 +5,25 @@
     </ion-buttons>
     <ion-title class="font-serif">Bateria</ion-title>
   </ion-toolbar>
-  <ion-toolbar>
-    <ion-segment [(ngModel)]="activeTab" (ionChange)="onTabChange()">
-      <ion-segment-button value="settings">
-        <ion-label>Ustawienia</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="schedule">
-        <ion-label>Harmonogram</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="analytics">
-        <ion-label>Analityka</ion-label>
-      </ion-segment-button>
-    </ion-segment>
+  <ion-toolbar class="se-battery-tabs-toolbar">
+    <!-- Natywne przyciski zamiast ion-segment: na iOS segment czasem pokazuje tylko aktywny tab. -->
+    <div class="se-battery-tabs" role="tablist" aria-label="Sekcje baterii">
+      <button
+        type="button"
+        role="tab"
+        class="se-battery-tab"
+        *ngFor="let tab of tabs"
+        [attr.data-tab]="tab.value"
+        [class.se-battery-tab--active]="activeTab === tab.value"
+        [attr.aria-selected]="activeTab === tab.value"
+        (click)="selectTab(tab.value)"
+      >
+        {{ tab.label }}
+      </button>
+    </div>
   </ion-toolbar>
-  <ion-toolbar class="se-battery-advise">
-    <p class="se-battery-advise__text">
+  <ion-toolbar class="se-battery-advice">
+    <p class="se-battery-advice__text">
       💡 System doradza — nie steruje. Przycisk odblokujemy po walidacji.
     </p>
   </ion-toolbar>
@@ -32,9 +36,9 @@
 <!-- Global Save Footer - only show when there are unsaved changes -->
 <ion-footer *ngIf="!stateService.loading() && stateService.hasUnsavedChanges()">
   <ion-toolbar>
-    <ion-button 
-      expand="block" 
-      (click)="onSave()" 
+    <ion-button
+      expand="block"
+      (click)="onSave()"
       [disabled]="stateService.saving()"
       color="primary"
     >

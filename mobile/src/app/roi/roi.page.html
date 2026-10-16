@@ -123,9 +123,16 @@
                   </ion-content>
                 </ng-template>
               </ion-popover>
-              <ion-input type="number" inputmode="decimal" [value]="opex"
+              <input
+                type="number"
+                inputmode="decimal"
+                class="se-number-input"
+                data-testid="roi-opex"
+                [value]="opex"
                 placeholder="120"
-                (ionChange)="onNumber('opex', $any($event.target).value)"></ion-input>
+                (change)="onNumber('opex', $any($event.target).value)"
+                (input)="onNumber('opex', $any($event.target).value)"
+              />
             </ion-item>
             <div class="se-horizon">
               <div class="se-horizon__label">Horyzont <strong>{{ horizon }} lat</strong></div>
@@ -133,14 +140,28 @@
                 [value]="horizon" [pin]="true"
                 (ionChange)="onHorizon(+$any($event).detail.value)"></ion-range>
             </div>
-            <ion-item lines="none" class="se-field se-field--compact">
-              <ion-label position="stacked">Od</ion-label>
-              <ion-datetime-button datetime="dtRoiStart"></ion-datetime-button>
-            </ion-item>
-            <ion-item lines="none" class="se-field se-field--compact">
-              <ion-label position="stacked">Do</ion-label>
-              <ion-datetime-button datetime="dtRoiEnd"></ion-datetime-button>
-            </ion-item>
+            <div class="se-date-field">
+              <span class="se-date-field__label">Od</span>
+              <button
+                type="button"
+                class="se-date-trigger"
+                id="roi-start-trigger"
+                data-testid="roi-period-start"
+              >
+                {{ periodStart }}
+              </button>
+            </div>
+            <div class="se-date-field">
+              <span class="se-date-field__label">Do</span>
+              <button
+                type="button"
+                class="se-date-trigger"
+                id="roi-end-trigger"
+                data-testid="roi-period-end"
+              >
+                {{ periodEnd }}
+              </button>
+            </div>
           </div>
         </ion-card-content>
       </ion-card>
@@ -207,7 +228,8 @@
     </ng-container>
   </div>
 
-  <ion-modal [keepContentsMounted]="true">
+  <!-- trigger= zamiast ion-datetime-button: zawsze widać ISO datę w przycisku. -->
+  <ion-modal trigger="roi-start-trigger" [keepContentsMounted]="true">
     <ng-template>
       <ion-datetime
         id="dtRoiStart"
@@ -223,7 +245,7 @@
     </ng-template>
   </ion-modal>
 
-  <ion-modal [keepContentsMounted]="true">
+  <ion-modal trigger="roi-end-trigger" [keepContentsMounted]="true">
     <ng-template>
       <ion-datetime
         id="dtRoiEnd"
