@@ -223,35 +223,157 @@ export function estimateInsightPln(type: string): number | null {
 export function dayAdvisorLine(eventTypes: string[]): string {
   const keys = eventTypes.map((t) => eventTypeDef(t)?.value ?? t);
   if (keys.includes('pranie')) {
-    return 'Pranie w planie — przy dobrym PV wieczorem pomiń nocne FC.';
+    return 'Pranie jest w planie. Przy dobrej produkcji z dachu wieczorne ładowanie z sieci nie będzie potrzebne.';
   }
   if (keys.includes('kolacja')) {
-    return 'Kolacja jak śniadanie (~1,3–1,4 kWh) — czajnik/piekarnik z baterii; pilnuj SoC przed 22.';
+    return 'Kolacja zużywa podobną ilość energii jak śniadanie. Wieczorem instalacja już nie produkuje, więc przed 22 warto sprawdzić stan baterii.';
   }
   if (keys.includes('klimatyzacja')) {
-    return 'Upał w kalendarzu — na Home pojawi się sugestia wyłączenia AC.';
+    return 'W planie jest klimatyzacja. Na stronie głównej pojawi się podpowiedź, kiedy ją wyłączyć.';
   }
   if (keys.includes('wyjazd') || keys.includes('ferie')) {
-    return 'Wyjazd — łagodniejszy bufor, bez dokręcania SoC na zapas.';
+    return 'W planie jest wyjazd. Nie ma potrzeby trzymać baterii w pełni naładowanej.';
   }
   if (keys.includes('przetwory')) {
-    return 'Przetwory — następny dzień pilnuj SoC przed 22.';
+    return 'Przetwory zużywają dużo energii. Następnego dnia warto sprawdzić stan baterii przed 22.';
   }
   if (keys.includes('grzejnik_lazienka')) {
-    return 'Grzejnik łazienka — +~0,75 kWh do budżetu nocy.';
+    return 'Grzejnik w łazience zwiększy zużycie energii w nocy.';
   }
   if (keys.includes('podlogowka')) {
-    return 'Podłogówka — system szacuje kWh nocy z temperatury i cel SoC przed 22.';
+    return 'Podłogówka pracuje w nocy. Przy niższej temperaturze warto zostawić więcej energii w baterii przed 22.';
   }
   if (keys.includes('sniadanie')) {
-    return 'Śniadanie zaznaczone — wliczone w bufor rano.';
+    return 'Śniadanie przypada rano, zanim instalacja zacznie produkować. Energia pójdzie z baterii.';
   }
   if (keys.includes('obiad')) {
-    return 'Obiad w planie — krótkie piki; najlepiej przy PV / pełnej baterii.';
+    return 'Obiad to krótki wzrost zużycia. Najkorzystniej uruchomić go przy produkcji z dachu albo przy pełnej baterii.';
   }
   if (keys.length) {
-    const first = eventTypeDef(keys[0]);
-    return first?.insightHint ?? 'Doradca baterii uwzględni ten dzień.';
+    return 'Ten plan zostanie uwzględniony przy ustawieniu baterii.';
   }
-  return 'Zaznacz plan dnia — doradca dopasuje sugestię baterii.';
+  return 'Zaznacz plan dnia, a sprawdzimy, czy energii wystarczy.';
+}
+
+/** Domyślna pojemność, gdy ustawienia baterii nie mają wartości. */
+export const HOUSEHOLD_DEFAULT_CAPACITY_KWH = 10.36;
+
+export type DayBudgetVerdict = 'ok' | 'tight' | 'short' | 'empty';
+/** Dziś = produkcja Fox; kolejne dni = prognoza modelu. */
+export type PvBudgetSource = 'actual' | 'forecast' | null;
+
+export interface DayEnergyBudget {
+  planKwh: number;
+  pvKwh: number | null;
+  pvSource: PvBudgetSource;
+  socPercent: number | null;
+  batteryUsableKwh: number;
+  coverKwh: number | null;
+  verdict: DayBudgetVerdict;
+  summaryLine: string;
+}
+
+export function fmtKwh(n: number): string {
+  const rounded = Math.round(n * 10) / 10;
+  return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)).replace('.', ',');
+}
+
+/** Suma szacunków kWh z katalogu (wyjazd / ferie = 0). */
+export function sumPlannedEventKwh(eventTypes: string[]): number {
+  let sum = 0;
+  for (const t of eventTypes) {
+    const def = eventTypeDef(t);
+    if (def && def.estimatedKwh > 0 && def.defaultImpact !== 'down') {
+      sum += def.estimatedKwh;
+    }
+  }
+  return Math.round(sum * 100) / 100;
+}
+
+export function usableBatteryKwh(
+  socPercent: number | null | undefined,
+  capacityKwh: number | null | undefined,
+  reservePercent: number | null | undefined,
+): number {
+  const cap = capacityKwh != null && capacityKwh > 0 ? capacityKwh : HOUSEHOLD_DEFAULT_CAPACITY_KWH;
+  const reserve = reservePercent != null ? reservePercent : 20;
+  if (socPercent == null || !Number.isFinite(socPercent)) return 0;
+  const usablePct = Math.max(0, socPercent - reserve);
+  return Math.round(((usablePct / 100) * cap) * 100) / 100;
+}
+
+/** Czy plan ikon mieści się w prognozie dnia i energii z baterii powyżej rezerwy. */
+export function buildDayEnergyBudget(input: {
+  eventTypes: string[];
+  pvKwh?: number | null;
+  pvSource?: PvBudgetSource;
+  socPercent?: number | null;
+  capacityKwh?: number | null;
+  reservePercent?: number | null;
+}): DayEnergyBudget {
+  const planKwh = sumPlannedEventKwh(input.eventTypes);
+  const socPercent = input.socPercent ?? null;
+  const reservePercent = input.reservePercent ?? 20;
+  const capacityKwh =
+    input.capacityKwh != null && input.capacityKwh > 0
+      ? input.capacityKwh
+      : HOUSEHOLD_DEFAULT_CAPACITY_KWH;
+  const pvKwh =
+    input.pvKwh != null && Number.isFinite(input.pvKwh) ? Math.round(input.pvKwh * 10) / 10 : null;
+  const pvSource: PvBudgetSource = pvKwh != null ? input.pvSource ?? 'forecast' : null;
+  const roofWord = pvSource === 'actual' ? 'produkcja' : 'prognoza';
+  const batteryUsableKwh = usableBatteryKwh(socPercent, capacityKwh, reservePercent);
+  const coverKwh =
+    pvKwh != null
+      ? Math.round((pvKwh + batteryUsableKwh) * 100) / 100
+      : batteryUsableKwh > 0
+        ? batteryUsableKwh
+        : null;
+
+  let verdict: DayBudgetVerdict = 'empty';
+  let summaryLine = 'Zaznacz plan, a porównamy go z produkcją i baterią.';
+
+  if (planKwh <= 0) {
+    return {
+      planKwh: 0,
+      pvKwh,
+      pvSource,
+      socPercent,
+      batteryUsableKwh,
+      coverKwh,
+      verdict,
+      summaryLine,
+    };
+  }
+
+  if (coverKwh == null) {
+    verdict = 'tight';
+    summaryLine = `Plan to ok. ${fmtKwh(planKwh)} kWh. Brak danych o produkcji i baterii.`;
+  } else {
+    const gap = Math.round((planKwh - coverKwh) * 100) / 100;
+    if (pvKwh != null && planKwh <= pvKwh) {
+      verdict = 'ok';
+      summaryLine =
+        pvSource === 'actual'
+          ? `Dzisiejsza produkcja (ok. ${fmtKwh(pvKwh)} kWh) pokrywa plan.`
+          : `Prognoza (ok. ${fmtKwh(pvKwh)} kWh) pokrywa plan. Urządzenia najlepiej włączyć w godzinach największej produkcji.`;
+    } else if (planKwh <= coverKwh) {
+      verdict = 'tight';
+      summaryLine = `Sama ${roofWord} nie wystarczy. Razem z baterią (ok. ${fmtKwh(coverKwh)} kWh) plan powinien się zmieścić.`;
+    } else {
+      verdict = 'short';
+      summaryLine = `Brakuje ok. ${fmtKwh(gap)} kWh względem ${roofWord === 'produkcja' ? 'produkcji' : 'prognozy'} i baterii. Część planu warto przesunąć.`;
+    }
+  }
+
+  return {
+    planKwh,
+    pvKwh,
+    pvSource,
+    socPercent,
+    batteryUsableKwh,
+    coverKwh,
+    verdict,
+    summaryLine,
+  };
 }

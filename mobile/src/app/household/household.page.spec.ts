@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService, HouseholdEventDto } from '../services/api.service';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { HouseholdPage } from './household.page';
-import { dayAdvisorLine } from './household.types';
+import { buildDayEnergyBudget, dayAdvisorLine } from './household.types';
 
 describe('HouseholdPage (Rytm domu)', () => {
   let fixture: ComponentFixture<HouseholdPage>;
@@ -27,6 +27,10 @@ describe('HouseholdPage (Rytm domu)', () => {
       'getHouseholdEvents',
       'createHouseholdEvent',
       'deleteHouseholdEvent',
+      'getForecastHourly',
+      'getFoxOverview',
+      'getBatterySettings',
+      'getBatterySuggestion',
     ]);
     api.getHouseholdEvents.and.returnValue(of(sample));
     api.createHouseholdEvent.and.returnValue(
@@ -39,6 +43,31 @@ describe('HouseholdPage (Rytm domu)', () => {
       }),
     );
     api.deleteHouseholdEvent.and.returnValue(of(void 0));
+    api.getForecastHourly.and.returnValue(
+      of({ day: todayIsoLocal(), hours: [], total_kwh: 18, model_path: '' }),
+    );
+    api.getFoxOverview.and.returnValue(
+      of({
+        day: todayIsoLocal(),
+        pv_kwh: 27.5,
+        soc_percent: 79,
+        grid_import_kwh: 0,
+        grid_export_kwh: 0,
+        load_kwh: 0,
+        device_sn_display: 'x',
+        last_synced_at: null,
+        has_data: true,
+      }),
+    );
+    api.getBatterySettings.and.returnValue(
+      of({
+        battery_capacity_kwh: 10.36,
+        soc_reserve_percent: 22,
+      } as any),
+    );
+    api.getBatterySuggestion.and.returnValue(
+      of({ soc_now_percent: 79, soc_reserve_percent: 22 } as any),
+    );
 
     await TestBed.configureTestingModule({
       declarations: [HouseholdPage],
@@ -81,14 +110,32 @@ describe('HouseholdPage (Rytm domu)', () => {
     expect(component.focusDayIso).toBe(todayIsoLocal());
     expect(component.focusDay?.events[0].event_type).toBe('pranie');
     expect(component.focusDay?.advisorLine).toContain('Pranie');
+    expect(component.focusBudget?.planKwh).toBe(1.5);
+    expect(component.focusBudget?.pvKwh).toBe(27.5);
+    expect(component.focusBudget?.pvSource).toBe('actual');
+    expect(component.focusBudget?.socPercent).toBe(79);
+    expect(component.focusBudget?.verdict).toBe('ok');
+    expect(api.getForecastHourly).not.toHaveBeenCalled();
 
     const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="rhythm-budget"]')).toBeTruthy();
     expect(el.querySelector('[data-testid="rhythm-week"]')).toBeTruthy();
     expect(el.querySelector('[data-testid="rhythm-hero"]')).toBeTruthy();
     expect(el.querySelector('[data-testid="rhythm-axis"]')).toBeTruthy();
     expect(el.querySelectorAll('.se-rhythm-week__cell').length).toBe(7);
     expect(el.textContent).toContain('Rytm domu');
     expect(el.textContent).not.toContain('7 dni');
+  }));
+
+  it('uses the forecast label from tomorrow onward', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    const tomorrow = shiftIsoDate(todayIsoLocal(), 1);
+    component.selectDay(tomorrow);
+    tick();
+    expect(api.getForecastHourly).toHaveBeenCalledWith(tomorrow);
+    expect(component.focusBudget?.pvSource).toBe('forecast');
+    expect(component.focusBudget?.pvKwh).toBe(18);
   }));
 
   it('selectDay focuses another day on the strip', fakeAsync(() => {
@@ -190,6 +237,19 @@ describe('HouseholdPage (Rytm domu)', () => {
     expect(component.formError).toBeTruthy();
     expect(fixture.nativeElement.querySelector('[data-testid="form-save-error"]')).toBeTruthy();
   }));
+
+  it('buildDayEnergyBudget flags a short day when icons exceed forecast and battery', () => {
+    const budget = buildDayEnergyBudget({
+      eventTypes: ['pranie', 'suszarka', 'przetwory'],
+      pvKwh: 5,
+      socPercent: 30,
+      capacityKwh: 10.36,
+      reservePercent: 20,
+    });
+    expect(budget.planKwh).toBeGreaterThan(10);
+    expect(budget.verdict).toBe('short');
+    expect(budget.summaryLine).toContain('Brakuje');
+  });
 
   it('dayAdvisorLine distinguishes laundry vs empty', () => {
     expect(dayAdvisorLine(['pranie'])).toContain('Pranie');

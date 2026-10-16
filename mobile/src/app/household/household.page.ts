@@ -12,19 +12,28 @@ import {
   thermometerOutline,
   trashOutline,
 } from 'ionicons/icons';
-import { forkJoin, of, timeout } from 'rxjs';
+import { Observable, Subscription, forkJoin, of, timeout } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ApiService, HouseholdEventDto } from '../services/api.service';
+import {
+  ApiService,
+  BatterySettingsResponse,
+  BatterySuggestionResponse,
+  FoxOverviewResponse,
+  HouseholdEventDto,
+} from '../services/api.service';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { HOUSEHOLD_CUSTOM_ICONS, isHouseholdCustomIcon } from './household-icons';
 import {
+  DayEnergyBudget,
   HOUSEHOLD_EVENT_TYPES,
   HOUSEHOLD_SCENARIOS,
   HouseholdEventTypeDef,
   HouseholdScenario,
+  buildDayEnergyBudget,
   dayAdvisorLine,
   estimateInsightPln,
   eventTypeDef,
+  fmtKwh,
   isStackableEventType,
 } from './household.types';
 
@@ -73,6 +82,10 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   formTypes: string[] = ['pranie'];
   formError: string | null = null;
   insightBanner: string | null = null;
+  /** Porównanie ikon z prognozą dnia i SoC. Nie blokuje widoku tygodnia. */
+  focusBudget: DayEnergyBudget | null = null;
+  budgetLoading = false;
+  private budgetSub?: Subscription;
 
   constructor(
     private readonly api: ApiService,
@@ -110,6 +123,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   selectDay(dayIso: string): void {
     this.focusDayIso = dayIso;
     this.insightBanner = null;
+    this.refreshFocusBudget();
   }
 
   reload(): void {
@@ -128,13 +142,61 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
           this.focusDayIso = from;
         }
         this.loading = false;
+        this.refreshFocusBudget();
       },
       error: () => {
         this.loading = false;
         this.error = 'Nie udało się pobrać wydarzeń. Sprawdź API.';
         this.days = this.buildDays(from, this.horizonDays, []);
+        this.focusBudget = null;
       },
     });
+  }
+
+  /** Prognoza wybranego dnia + SoC. Osobno od listy ikon, z limitem czasu. */
+  refreshFocusBudget(): void {
+    const day = this.focusDay;
+    if (!day) {
+      this.focusBudget = null;
+      return;
+    }
+    const types = day.events.map((e) => e.event_type);
+    this.budgetLoading = true;
+    this.budgetSub?.unsubscribe();
+    const limited = <T>(source: Observable<T>) =>
+      source.pipe(timeout({ first: 8000 }), catchError(() => of(null as T | null)));
+    const useActual = day.isToday;
+    this.budgetSub = forkJoin({
+      forecast: useActual ? of(null) : limited(this.api.getForecastHourly(day.dayIso)),
+      fox: limited(this.api.getFoxOverview(useActual ? day.dayIso : undefined)),
+      settings: limited(this.api.getBatterySettings()),
+      suggestion: limited(this.api.getBatterySuggestion()),
+    }).subscribe(({ forecast, fox, settings, suggestion }) => {
+      const forecastPv =
+        forecast?.total_kwh != null
+          ? forecast.total_kwh
+          : forecast?.hours?.length
+            ? forecast.hours.reduce((s, h) => s + (h.predicted_kwh || 0), 0)
+            : null;
+      const foxRow = fox as FoxOverviewResponse | null;
+      const settingsRow = settings as BatterySettingsResponse | null;
+      const suggestionRow = suggestion as BatterySuggestionResponse | null;
+      const actualPv = foxRow?.has_data ? foxRow.pv_kwh : null;
+      this.focusBudget = buildDayEnergyBudget({
+        eventTypes: types,
+        pvKwh: useActual ? actualPv : forecastPv,
+        pvSource: useActual ? 'actual' : 'forecast',
+        socPercent: foxRow?.soc_percent ?? suggestionRow?.soc_now_percent ?? null,
+        capacityKwh: settingsRow?.battery_capacity_kwh ?? null,
+        reservePercent: settingsRow?.soc_reserve_percent ?? suggestionRow?.soc_reserve_percent ?? 20,
+      });
+      this.budgetLoading = false;
+    });
+  }
+
+  formatKwh(n: number | null | undefined): string {
+    if (n == null || !Number.isFinite(n)) return '—';
+    return fmtKwh(n);
   }
 
   openAdd(dayIso?: string): void {

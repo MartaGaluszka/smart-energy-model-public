@@ -15,8 +15,7 @@
 <ion-content [fullscreen]="true" class="se-household">
   <div class="se-page">
     <p class="se-household__lead">
-      Zaznacz plan na najbliższe dni — doradca baterii dopasuje sugestię.
-      Godziny AGD z dachu są w Prognozie; tu chodzi o intencję domu.
+      Zaznacz plan na najbliższe dni. Porównamy go z produkcją z dachu i ze stanem baterii.
     </p>
 
     <div class="se-rhythm-week" role="tablist" aria-label="Tydzień" data-testid="rhythm-week">
@@ -59,6 +58,30 @@
           <h2 class="font-serif se-rhythm-hero__date">{{ hero.label }}</h2>
         </div>
         <p class="se-rhythm-hero__advice">{{ hero.advisorLine }}</p>
+
+        <div
+          class="se-rhythm-budget"
+          *ngIf="focusBudget as budget"
+          data-testid="rhythm-budget"
+          [attr.data-verdict]="budget.verdict"
+        >
+          <div class="se-rhythm-budget__metrics">
+            <div>
+              <span>Ikony</span>
+              <strong>~{{ formatKwh(budget.planKwh) }} kWh</strong>
+            </div>
+            <div>
+              <span>{{ budget.pvSource === 'actual' ? 'Produkcja' : 'Prognoza' }}</span>
+              <strong>{{ budget.pvKwh != null ? formatKwh(budget.pvKwh) + ' kWh' : '—' }}</strong>
+            </div>
+            <div>
+              <span>Bateria</span>
+              <strong>{{ budget.socPercent != null ? (budget.socPercent | number:'1.0-0') + '%' : '—' }}</strong>
+            </div>
+          </div>
+          <p *ngIf="budget.planKwh > 0">{{ budget.summaryLine }}</p>
+          <p class="se-rhythm-budget__wait" *ngIf="budgetLoading">Sprawdzam prognozę…</p>
+        </div>
 
         <div class="se-rhythm-hero__events" *ngIf="hero.events.length">
           <div
