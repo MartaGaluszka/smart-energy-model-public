@@ -14,6 +14,20 @@ def _as_iso_date(value: object) -> str:
     return str(value)
 
 
+class HouseholdCustomTypeCreate(BaseModel):
+    label: str
+    icon: str
+    kwh: float
+
+
+class HouseholdCustomTypeResponse(BaseModel):
+    id: int
+    label: str
+    icon: str
+    kwh: float
+    archived: bool = False
+
+
 class HouseholdEventCreate(BaseModel):
     event_date: str
     event_type: str

@@ -7,10 +7,17 @@ import {
   airplaneOutline,
   basketOutline,
   calendarOutline,
+  carOutline,
   chevronDownOutline,
+  constructOutline,
+  flashOutline,
+  homeOutline,
+  laptopOutline,
+  leafOutline,
   sunnyOutline,
   thermometerOutline,
   trashOutline,
+  waterOutline,
 } from 'ionicons/icons';
 import { Observable, Subscription, forkJoin, of, timeout } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -19,17 +26,21 @@ import {
   BatterySettingsResponse,
   BatterySuggestionResponse,
   FoxOverviewResponse,
+  HouseholdCustomTypeDto,
   HouseholdEventDto,
 } from '../services/api.service';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { HOUSEHOLD_CUSTOM_ICONS, isHouseholdCustomIcon } from './household-icons';
 import {
   DayEnergyBudget,
+  HOUSEHOLD_CUSTOM_ICON_CHOICES,
   HOUSEHOLD_EVENT_TYPES,
+  HOUSEHOLD_G12W_SPREAD_PLN,
   HOUSEHOLD_SCENARIOS,
   HouseholdEventTypeDef,
   HouseholdScenario,
   buildDayEnergyBudget,
+  customTypeDef,
   dayAdvisorLine,
   estimateInsightPln,
   eventTypeDef,
@@ -63,6 +74,9 @@ export interface DayBucket {
 })
 export class HouseholdPage implements OnInit, ViewWillEnter {
   readonly typeCatalog = HOUSEHOLD_EVENT_TYPES;
+  readonly customIconChoices = HOUSEHOLD_CUSTOM_ICON_CHOICES;
+  /** Tyle znaków mieści się w jednej linii kafelka w siatce 3 kolumn. */
+  readonly customLabelMax = 12;
   readonly scenarios = HOUSEHOLD_SCENARIOS;
   /** Stały horyzont jak pasek Home — 7 dni. */
   readonly horizonDays = 7;
@@ -81,6 +95,16 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   /** Multi-select typów na jeden dzień. */
   formTypes: string[] = ['pranie'];
   formError: string | null = null;
+  /** Własne pozycje z API — ta sama siatka co katalog. */
+  customDefs: HouseholdEventTypeDef[] = [];
+  /** Ukryte z siatki, ale nadal opisują dni, które już je mają. */
+  private archivedDefs: HouseholdEventTypeDef[] = [];
+  showCustomForm = false;
+  savingCustom = false;
+  customName = '';
+  customIcon = 'car-outline';
+  customKwh = '';
+  customFormError: string | null = null;
   insightBanner: string | null = null;
   /** Porównanie ikon z prognozą dnia i SoC. Nie blokuje widoku tygodnia. */
   focusBudget: DayEnergyBudget | null = null;
@@ -101,6 +125,13 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
       airplaneOutline,
       sunnyOutline,
       chevronDownOutline,
+      carOutline,
+      flashOutline,
+      constructOutline,
+      homeOutline,
+      waterOutline,
+      laptopOutline,
+      leafOutline,
     });
   }
 
@@ -134,9 +165,15 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
       this.focusDayIso = from;
     }
     const to = shiftIsoDate(from, this.horizonDays - 1);
-    this.api.getHouseholdEvents(from, to).subscribe({
-      next: (rows) => {
-        this.events = rows ?? [];
+    forkJoin({
+      events: this.api.getHouseholdEvents(from, to),
+      customs: this.api.getHouseholdCustomTypes().pipe(catchError(() => of([] as HouseholdCustomTypeDto[]))),
+    }).subscribe({
+      next: ({ events, customs }) => {
+        const rows = customs ?? [];
+        this.customDefs = rows.filter((row) => !row.archived).map((row) => customTypeDef(row));
+        this.archivedDefs = rows.filter((row) => row.archived).map((row) => customTypeDef(row));
+        this.events = events ?? [];
         this.days = this.buildDays(from, this.horizonDays, this.events);
         if (!this.days.some((d) => d.dayIso === this.focusDayIso)) {
           this.focusDayIso = from;
@@ -189,6 +226,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
         socPercent: foxRow?.soc_percent ?? suggestionRow?.soc_now_percent ?? null,
         capacityKwh: settingsRow?.battery_capacity_kwh ?? null,
         reservePercent: settingsRow?.soc_reserve_percent ?? suggestionRow?.soc_reserve_percent ?? 20,
+        extraTypes: this.allCustomDefs(),
       });
       this.budgetLoading = false;
     });
@@ -203,6 +241,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     this.formDate = dayIso ?? this.focusDayIso ?? todayIsoLocal();
     this.formTypes = ['pranie'];
     this.formError = null;
+    this.showCustomForm = false;
     this.showAdd = true;
     this.insightBanner = null;
   }
@@ -210,8 +249,105 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   closeAdd(): void {
     this.showAdd = false;
     this.showDatePicker = false;
+    this.showCustomForm = false;
     this.saving = false;
+    this.savingCustom = false;
     this.formError = null;
+  }
+
+  isCustomType(value: string): boolean {
+    return /^c\d+$/.test(value);
+  }
+
+  async confirmRemoveCustom(def: HouseholdEventTypeDef, event: Event): Promise<void> {
+    event.stopPropagation();
+    event.preventDefault();
+    const id = Number(def.value.slice(1));
+    const alert = await this.alerts.create({
+      header: 'Usunąć własną ikonę?',
+      message: `„${def.label}” zniknie z listy. Dni, które już ją mają, zostaną bez zmian.`,
+      cssClass: 'se-alert',
+      buttons: [
+        { text: 'Anuluj', role: 'cancel' },
+        {
+          text: 'Usuń',
+          role: 'destructive',
+          handler: () => this.removeCustom(id, def.value),
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private removeCustom(id: number, value: string): void {
+    this.api.deleteHouseholdCustomType(id).subscribe({
+      next: () => {
+        const removed = this.customDefs.find((d) => d.value === value);
+        this.customDefs = this.customDefs.filter((d) => d.value !== value);
+        if (removed) {
+          this.archivedDefs = [...this.archivedDefs, removed];
+        }
+        this.formTypes = this.formTypes.filter((t) => t !== value);
+        this.days = this.buildDays(todayIsoLocal(), this.horizonDays, this.events);
+      },
+      error: () => {
+        this.formError = 'Nie udało się usunąć własnej ikony.';
+      },
+    });
+  }
+
+  private allCustomDefs(): HouseholdEventTypeDef[] {
+    return [...this.customDefs, ...this.archivedDefs];
+  }
+
+  pickCustomIcon(name: string, event?: Event): void {
+    event?.preventDefault();
+    this.customIcon = name;
+  }
+
+  openCustomForm(): void {
+    this.customName = '';
+    this.customIcon = 'car-outline';
+    this.customKwh = '';
+    this.customFormError = null;
+    this.showCustomForm = true;
+  }
+
+  closeCustomForm(): void {
+    this.showCustomForm = false;
+    this.savingCustom = false;
+    this.customFormError = null;
+  }
+
+  saveCustom(): void {
+    const label = this.customName.trim().replace(/\s+/g, ' ');
+    const kwh = Number(this.customKwh.trim().replace(',', '.'));
+    if (!label || label.length > this.customLabelMax) {
+      this.customFormError = `Nazwa może mieć najwyżej ${this.customLabelMax} znaków, żeby zmieściła się na kafelku.`;
+      return;
+    }
+    if (!Number.isFinite(kwh) || kwh <= 0 || kwh > 100) {
+      this.customFormError = 'Podaj zużycie w kWh, większe od zera i nie większe niż 100.';
+      return;
+    }
+    this.savingCustom = true;
+    this.customFormError = null;
+    this.api
+      .createHouseholdCustomType({ label, icon: this.customIcon, kwh: Math.round(kwh * 100) / 100 })
+      .pipe(timeout(15000))
+      .subscribe({
+        next: (row) => {
+          const def = customTypeDef(row);
+          this.customDefs = [...this.customDefs, def];
+          this.formTypes = [...this.formTypes, def.value];
+          this.savingCustom = false;
+          this.showCustomForm = false;
+        },
+        error: (err: unknown) => {
+          this.savingCustom = false;
+          this.customFormError = this.describeSaveError(err);
+        },
+      });
   }
 
   openDatePicker(): void {
@@ -262,9 +398,13 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     this.formTypes = [...this.formTypes.slice(0, idx), ...this.formTypes.slice(idx + 1)];
   }
 
+  get plannerTypes(): HouseholdEventTypeDef[] {
+    return [...this.typeCatalog, ...this.customDefs];
+  }
+
   get selectedDefs(): HouseholdEventTypeDef[] {
     return this.formTypes
-      .map((t) => eventTypeDef(t))
+      .map((t) => this.defFor(t))
       .filter((d): d is HouseholdEventTypeDef => !!d);
   }
 
@@ -279,16 +419,24 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     return this.selectedDefs.map((d) => d.label).join(' · ');
   }
 
+  private defFor(type: string): HouseholdEventTypeDef | undefined {
+    return (
+      this.customDefs.find((d) => d.value === type) ??
+      this.archivedDefs.find((d) => d.value === type) ??
+      eventTypeDef(type)
+    );
+  }
+
   typeDef(type: string): HouseholdEventTypeDef | undefined {
-    return eventTypeDef(type);
+    return this.defFor(type);
   }
 
   typeLabel(type: string): string {
-    return eventTypeDef(type)?.label ?? type;
+    return this.defFor(type)?.label ?? type;
   }
 
   typeIcon(type: string): string {
-    return eventTypeDef(type)?.icon ?? 'calendar-outline';
+    return this.defFor(type)?.icon ?? 'calendar-outline';
   }
 
   /** Własne SVG → data-URL na [src]; ionicons → name. */
@@ -297,7 +445,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   }
 
   typeTint(type: string): string {
-    return eventTypeDef(type)?.tint ?? 'muted';
+    return this.defFor(type)?.tint ?? 'muted';
   }
 
   eventSummary(day: DayBucket): string {
@@ -430,7 +578,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   private buildInsightMulti(defs: HouseholdEventTypeDef[]): string {
     if (defs.length === 1) {
       const def = defs[0];
-      const pln = estimateInsightPln(def.value);
+      const pln = this.plnFor(def);
       const money =
         pln != null
           ? ` Szacunek: ok. ${pln.toFixed(2).replace('.', ',')} zł (spread G12w).`
@@ -441,7 +589,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     let plnSum = 0;
     let any = false;
     for (const d of defs) {
-      const p = estimateInsightPln(d.value);
+      const p = this.plnFor(d);
       if (p != null) {
         plnSum += p;
         any = true;
@@ -450,7 +598,14 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     const money = any
       ? ` Szacunek łącznie: ok. ${plnSum.toFixed(2).replace('.', ',')} zł (spread G12w).`
       : '';
-    return `Dzięki zaznaczeniu: ${labels}. ${dayAdvisorLine(defs.map((d) => d.value))}${money}`;
+    return `Dzięki zaznaczeniu: ${labels}. ${dayAdvisorLine(defs.map((d) => d.value), this.allCustomDefs())}${money}`;
+  }
+
+  private plnFor(def: HouseholdEventTypeDef): number | null {
+    const known = estimateInsightPln(def.value);
+    if (known != null) return known;
+    if (def.estimatedKwh <= 0) return null;
+    return Math.round(def.estimatedKwh * HOUSEHOLD_G12W_SPREAD_PLN * 100) / 100;
   }
 
   private buildDays(
@@ -478,7 +633,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
         dayNum: d.toLocaleDateString('pl-PL', { day: 'numeric' }),
         isToday: dayIso === today,
         events: dayEvents,
-        advisorLine: dayAdvisorLine(dayEvents.map((e) => e.event_type)),
+        advisorLine: dayAdvisorLine(dayEvents.map((e) => e.event_type), this.allCustomDefs()),
       });
     }
     return out;

@@ -36,6 +36,32 @@ export const HOUSEHOLD_CUSTOM_ICONS: Record<string, string> = {
       `<circle cx="176" cy="120" r="14" fill="currentColor"/>` +
       `<path fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" d="M224 120h160"/>`,
   ),
+  /** Piekarnik — szafka z szybą i uchwytem, osobno od maszynki do chleba. */
+  'se-oven': ionDataUrl(
+    `<rect x="88" y="72" width="336" height="368" rx="32" fill="none" stroke="currentColor" stroke-width="32"/>` +
+      `<path fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" d="M88 168h336"/>` +
+      `<circle cx="168" cy="120" r="14" fill="currentColor"/>` +
+      `<circle cx="232" cy="120" r="14" fill="currentColor"/>` +
+      `<rect x="156" y="214" width="200" height="140" rx="18" fill="none" stroke="currentColor" stroke-width="24"/>` +
+      `<path fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" d="M200 400h112"/>`,
+  ),
+  /** Mac mini — płaska skrzynka. */
+  'se-mac-mini': ionDataUrl(
+    `<rect x="96" y="176" width="320" height="160" rx="28" fill="none" stroke="currentColor" stroke-width="32"/>` +
+      `<circle cx="256" cy="256" r="16" fill="currentColor"/>`,
+  ),
+  /** MacBook — ekran i klawiatura, bez znaku firmy. */
+  'se-macbook': ionDataUrl(
+    `<rect x="128" y="72" width="256" height="176" rx="16" fill="none" stroke="currentColor" stroke-width="32"/>` +
+      `<path fill="none" stroke="currentColor" stroke-width="32" stroke-linejoin="round" d="M72 280h368l-36 72H108z"/>`,
+  ),
+  /** Dreamy — odkurzacz, dysk z góry. */
+  'se-robot': ionDataUrl(
+    `<circle cx="256" cy="268" r="156" fill="none" stroke="currentColor" stroke-width="32"/>` +
+      `<circle cx="256" cy="248" r="40" fill="none" stroke="currentColor" stroke-width="24"/>` +
+      `<path fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" d="M168 360c24 28 56 44 88 44s64-16 88-44"/>` +
+      `<circle cx="256" cy="248" r="10" fill="currentColor"/>`,
+  ),
   'se-bread': ionDataUrl(
     `<path fill="none" stroke="currentColor" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" d="M96 220c0-56 48-100 112-112 28-40 88-56 136-28 56-8 112 32 120 88 40 16 64 56 56 100v48c0 44-36 80-80 80H152c-44 0-80-36-80-80v-40c0-20 4-40 24-56z"/>` +
       `<path fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" d="M168 248c24-20 48-28 72-28s48 8 72 28M248 300v72"/>`,

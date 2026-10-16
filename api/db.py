@@ -7,8 +7,8 @@ istniejące dane domenowe (FoxESS/pogoda/Tauron) są nadal czytane przez
 Ta warstwa (SQLAlchemy + `DATABASE_URL`) obsługuje wyłącznie NOWE tabele
 wprowadzone dla appki mobilnej: `app_users`, `user_secrets`,
 `user_tariff_overrides`, `household_events`, `roi_assumptions`,
-`battery_strategy_settings`, `notifications`, `push_subscriptions`,
-`advice_events`.
+`battery_strategy_settings`, `household_custom_types`, `notifications`,
+`push_subscriptions`, `advice_events`.
 
 Lokalnie oba światy domyślnie wskazują na ten sam plik SQLite (patrz
 `api/config.py::_default_database_url`), więc `sqlite3` (src/*) i SQLAlchemy
@@ -45,6 +45,7 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine, checkfirst=True)
     _ensure_battery_strategy_columns()
+    _ensure_custom_type_archived()
     _allow_household_event_duplicates()
 
 
@@ -86,6 +87,30 @@ def _ensure_battery_strategy_columns() -> None:
                     f'ADD COLUMN IF NOT EXISTS {col} {col_type}'
                 )
             )
+
+
+def _ensure_custom_type_archived() -> None:
+    """create_all nie dodaje kolumny do istniejącej tabeli własnych ikon."""
+    from sqlalchemy import text
+
+    url = settings.DATABASE_URL
+    with engine.begin() as conn:
+        if url.startswith('sqlite'):
+            existing = {
+                row[1]
+                for row in conn.execute(text('PRAGMA table_info(household_custom_types)')).fetchall()
+            }
+            if existing and 'archived' not in existing:
+                conn.execute(
+                    text('ALTER TABLE household_custom_types ADD COLUMN archived BOOLEAN DEFAULT 0')
+                )
+            return
+        conn.execute(
+            text(
+                'ALTER TABLE household_custom_types '
+                'ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE'
+            )
+        )
 
 
 def get_db_session():

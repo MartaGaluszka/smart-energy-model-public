@@ -167,6 +167,14 @@ export interface AcRuntimeResponse {
   note: string;
 }
 
+export interface HouseholdCustomTypeDto {
+  id: number;
+  label: string;
+  icon: string;
+  kwh: number;
+  archived?: boolean;
+}
+
 export interface HouseholdEventDto {
   id: number;
   event_date: string;
@@ -421,6 +429,34 @@ export class ApiService {
         { ac_power_kw },
         { headers: { Authorization: `Bearer ${token}` } },
       ),
+    );
+  }
+
+  getHouseholdCustomTypes(): Observable<HouseholdCustomTypeDto[]> {
+    return this.authed((token) =>
+      this.http.get<HouseholdCustomTypeDto[]>(`${this.baseUrl}/api/v1/household/custom-types`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  deleteHouseholdCustomType(id: number): Observable<void> {
+    return this.authed((token) =>
+      this.http.delete<void>(`${this.baseUrl}/api/v1/household/custom-types/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  createHouseholdCustomType(body: {
+    label: string;
+    icon: string;
+    kwh: number;
+  }): Observable<HouseholdCustomTypeDto> {
+    return this.authed((token) =>
+      this.http.post<HouseholdCustomTypeDto>(`${this.baseUrl}/api/v1/household/custom-types`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     );
   }
 

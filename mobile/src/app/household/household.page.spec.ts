@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService, HouseholdEventDto } from '../services/api.service';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { HouseholdPage } from './household.page';
-import { buildDayEnergyBudget, dayAdvisorLine } from './household.types';
+import { buildDayEnergyBudget, customTypeDef, dayAdvisorLine, tintForEstimatedKwh } from './household.types';
 
 describe('HouseholdPage (Rytm domu)', () => {
   let fixture: ComponentFixture<HouseholdPage>;
@@ -25,7 +25,10 @@ describe('HouseholdPage (Rytm domu)', () => {
   beforeEach(async () => {
     api = jasmine.createSpyObj('ApiService', [
       'getHouseholdEvents',
+      'getHouseholdCustomTypes',
       'createHouseholdEvent',
+      'createHouseholdCustomType',
+      'deleteHouseholdCustomType',
       'deleteHouseholdEvent',
       'getForecastHourly',
       'getFoxOverview',
@@ -33,6 +36,7 @@ describe('HouseholdPage (Rytm domu)', () => {
       'getBatterySuggestion',
     ]);
     api.getHouseholdEvents.and.returnValue(of(sample));
+    api.getHouseholdCustomTypes.and.returnValue(of([]));
     api.createHouseholdEvent.and.returnValue(
       of({
         id: 2,
@@ -204,18 +208,27 @@ describe('HouseholdPage (Rytm domu)', () => {
   it('exposes scenarios and full type catalog with meals first', () => {
     expect(component.scenarios.map((s) => s.id)).toEqual(['laundry', 'heat', 'away', 'floor']);
     const values = component.typeCatalog.map((t) => t.value);
-    expect(values.slice(0, 9)).toEqual([
+    expect(values.slice(0, 10)).toEqual([
       'sniadanie',
       'obiad',
       'kolacja',
       'zmywarka',
       'chleb',
+      'piekarnik',
       'grzejnik_lazienka',
       'podlogowka',
       'pranie',
       'suszarka',
     ]);
     expect(component.typeCatalog.find((t) => t.value === 'chleb')?.icon).toBe('se-bread');
+    expect(component.typeCatalog.find((t) => t.value === 'piekarnik')?.icon).toBe('se-oven');
+    expect(component.typeCatalog.find((t) => t.value === 'piekarnik')?.estimatedKwh).toBe(2);
+    expect(component.typeCatalog.find((t) => t.value === 'odkurzacz')?.icon).toBe('se-robot');
+    expect(component.typeCatalog.find((t) => t.value === 'odkurzacz')?.estimatedKwh).toBe(0.2);
+    expect(component.typeCatalog.find((t) => t.value === 'odkurzacz')?.tint).toBe('moss');
+    expect(component.typeCatalog.find((t) => t.value === 'mac_mini')?.estimatedKwh).toBe(0.2);
+    expect(component.typeCatalog.find((t) => t.value === 'macbook')?.estimatedKwh).toBe(1.12);
+    expect(component.typeCatalog.find((t) => t.value === 'macbook')?.tint).toBe('moss');
     expect(component.typeCatalog.find((t) => t.value === 'pranie')?.icon).toBe('se-washer');
     expect(component.typeCatalog.find((t) => t.value === 'sniadanie')?.icon).toBe('se-breakfast');
     expect(component.typeCatalog.find((t) => t.value === 'obiad')?.icon).toBe('se-utensils');
@@ -249,6 +262,22 @@ describe('HouseholdPage (Rytm domu)', () => {
     expect(budget.planKwh).toBeGreaterThan(10);
     expect(budget.verdict).toBe('short');
     expect(budget.summaryLine).toContain('Brakuje');
+  });
+
+  it('counts a custom tile in the day budget and paints a heavy load red', () => {
+    const def = customTypeDef({ id: 3, label: 'Ładowanie auta', icon: 'car-outline', kwh: 12 });
+    expect(tintForEstimatedKwh(12)).toBe('cost');
+    expect(tintForEstimatedKwh(0.2)).toBe('moss');
+    const budget = buildDayEnergyBudget({
+      eventTypes: ['c3'],
+      extraTypes: [def],
+      pvKwh: 5,
+      socPercent: 20,
+      capacityKwh: 10,
+      reservePercent: 20,
+    });
+    expect(budget.planKwh).toBe(12);
+    expect(dayAdvisorLine(['c3'], [def])).toContain('Ładowanie auta');
   });
 
   it('dayAdvisorLine distinguishes laundry vs empty', () => {

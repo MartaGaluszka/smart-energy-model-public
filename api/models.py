@@ -73,6 +73,20 @@ class UserTariffOverride(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+class HouseholdCustomType(Base):
+    """Własna pozycja planu (nazwa, ikona, kWh) — zostaje na kolejne dni."""
+
+    __tablename__ = 'household_custom_types'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('app_users.id', ondelete='CASCADE'), nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(40), nullable=False)
+    icon: Mapped[str] = mapped_column(String(40), nullable=False)
+    kwh: Mapped[float] = mapped_column(Float, nullable=False)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class HouseholdEvent(Base):
     __tablename__ = 'household_events'
 

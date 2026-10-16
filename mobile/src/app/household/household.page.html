@@ -51,7 +51,7 @@
     <p class="se-chart-error" *ngIf="error">{{ error }}</p>
 
     <ng-container *ngIf="!loading && focusDay as hero">
-      <section class="se-rhythm-hero" data-testid="rhythm-hero" [attr.data-tint]="hero.events[0] ? typeTint(hero.events[0].event_type) : 'muted'">
+      <section class="se-rhythm-hero" data-testid="rhythm-hero">
         <div class="se-rhythm-hero__meta">
           <span class="se-rhythm-hero__kicker" *ngIf="hero.isToday">dziś</span>
           <span class="se-rhythm-hero__kicker" *ngIf="!hero.isToday">{{ hero.weekday }}</span>
@@ -66,17 +66,17 @@
           [attr.data-verdict]="budget.verdict"
         >
           <div class="se-rhythm-budget__metrics">
-            <div>
+            <div class="se-rhythm-kpi">
+              <strong>~{{ formatKwh(budget.planKwh) }}<small> kWh</small></strong>
               <span>Ikony</span>
-              <strong>~{{ formatKwh(budget.planKwh) }} kWh</strong>
             </div>
-            <div>
+            <div class="se-rhythm-kpi se-rhythm-kpi--solar">
+              <strong>{{ budget.pvKwh != null ? formatKwh(budget.pvKwh) : '—' }}<small *ngIf="budget.pvKwh != null"> kWh</small></strong>
               <span>{{ budget.pvSource === 'actual' ? 'Produkcja' : 'Prognoza' }}</span>
-              <strong>{{ budget.pvKwh != null ? formatKwh(budget.pvKwh) + ' kWh' : '—' }}</strong>
             </div>
-            <div>
-              <span>Bateria</span>
+            <div class="se-rhythm-kpi se-rhythm-kpi--moss">
               <strong>{{ budget.socPercent != null ? (budget.socPercent | number:'1.0-0') + '%' : '—' }}</strong>
+              <span>Bateria</span>
             </div>
           </div>
           <p *ngIf="budget.planKwh > 0">{{ budget.summaryLine }}</p>
@@ -151,19 +151,7 @@
     </ion-header>
     <ion-content class="se-household-modal">
       <div class="se-page se-household-modal__page">
-        <div class="se-household-modal__date-row">
-          <span class="se-household-modal__date-label">Dzień</span>
-          <button
-            type="button"
-            class="se-household-modal__date"
-            id="hh-date-trigger"
-            (click)="openDatePicker()"
-          >
-            {{ formDate }}
-          </button>
-        </div>
-
-        <div class="se-rhythm-scenarios" role="group" aria-label="Szybki zestaw">
+        <div class="se-rhythm-scenarios" role="group" aria-label="Szybki zestaw" *ngIf="!showCustomForm">
           <button
             type="button"
             class="se-rhythm-scenario"
@@ -179,16 +167,18 @@
           </button>
         </div>
 
+        <ng-container *ngIf="!showCustomForm; else customForm">
         <p class="se-household-modal__label">Zaznacz co planujesz</p>
 
         <div class="se-household-type-grid" data-testid="type-multi-grid">
           <button
             type="button"
             class="se-household-type"
-            *ngFor="let t of typeCatalog"
+            *ngFor="let t of plannerTypes"
             [class.se-household-type--active]="isTypeSelected(t.value)"
             [attr.aria-pressed]="isTypeSelected(t.value)"
             [attr.data-tint]="t.tint"
+            [class.se-household-type--custom]="isCustomType(t.value)"
             (click)="toggleType(t.value)"
           >
             <ion-icon *ngIf="iconSrc(t.icon); else typeIon" [src]="iconSrc(t.icon)!"></ion-icon>
@@ -196,8 +186,16 @@
               <ion-icon [name]="t.icon"></ion-icon>
             </ng-template>
             <span>{{ t.shortLabel || t.label }}</span>
-            <span class="se-household-type__count" *ngIf="countOfType(t.value) > 1">
-              ×{{ countOfType(t.value) }}
+            <span
+              class="se-household-type__remove"
+              *ngIf="isCustomType(t.value)"
+              role="button"
+              tabindex="0"
+              aria-label="Usuń własną ikonę"
+              (click)="confirmRemoveCustom(t, $event)"
+            >×</span>
+            <span class="se-household-type__count" *ngIf="countOfType(t.value) > 0">
+              {{ countOfType(t.value) > 1 ? '×' + countOfType(t.value) : '1' }}
             </span>
             <span
               class="se-household-type__dec"
@@ -207,6 +205,10 @@
               aria-label="Usuń jeden cykl"
               (click)="removeOneType(t.value, $event)"
             >−</span>
+          </button>
+          <button type="button" class="se-household-type se-household-type--add" (click)="openCustomForm()">
+            <ion-icon name="add-outline"></ion-icon>
+            <span>Własna</span>
           </button>
         </div>
 
@@ -219,9 +221,47 @@
         </p>
 
         <p class="se-chart-error" *ngIf="formError" data-testid="form-save-error">{{ formError }}</p>
+        </ng-container>
+        <ng-template #customForm>
+          <button type="button" class="se-household-custom__back" (click)="closeCustomForm()">Wróć do ikon</button>
+          <p class="se-household-modal__label">Nowa ikona</p>
+          <label class="se-household-custom__field">
+            <span>Nazwa <em>{{ customName.length }}/{{ customLabelMax }}</em></span>
+            <input type="text" [maxlength]="customLabelMax" placeholder="np. Auto" [(ngModel)]="customName" />
+          </label>
+          <p class="se-household-modal__label">Ikona</p>
+          <div class="se-household-type-grid">
+            <button
+              type="button"
+              class="se-household-type se-household-type--pick"
+              *ngFor="let icon of customIconChoices"
+              [class.se-household-type--active]="customIcon === icon.name"
+              (pointerdown)="pickCustomIcon(icon.name, $event)"
+            >
+              <ion-icon [name]="icon.name"></ion-icon>
+              <span>{{ icon.label }}</span>
+            </button>
+          </div>
+          <label class="se-household-custom__field">
+            <span>Zużycie na jedno włączenie (kWh)</span>
+            <input type="text" inputmode="decimal" placeholder="np. 12" [(ngModel)]="customKwh" />
+          </label>
+          <p class="se-household-modal__hint-inline">
+            Wpisz kilowatogodziny, nie moc w kW. Kolor obwódki dobierze się sam.
+          </p>
+          <p class="se-chart-error" *ngIf="customFormError">{{ customFormError }}</p>
+          <button
+            type="button"
+            class="se-rhythm-hero__cta"
+            [disabled]="savingCustom"
+            (click)="saveCustom()"
+          >
+            {{ savingCustom ? 'Zapisuję…' : 'Dodaj pozycję' }}
+          </button>
+        </ng-template>
       </div>
     </ion-content>
-    <ion-footer class="ion-no-border se-household-modal__footer">
+    <ion-footer class="ion-no-border se-household-modal__footer" *ngIf="!showCustomForm">
       <ion-toolbar>
         <ion-button
           expand="block"

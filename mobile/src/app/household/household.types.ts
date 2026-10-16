@@ -7,7 +7,9 @@ export interface HouseholdEventTypeDef {
   /** Krótka etykieta w gęstej siatce modału (opcjonalnie). */
   shortLabel?: string;
   icon: string;
-  /** Klasa tła chipa (SCSS). */
+  /**
+   * Trzy stopnie obciążenia: zieleń = mało, złoto = średnio, czerwień = najwięcej.
+   */
   tint: 'moss' | 'solar' | 'grid' | 'muted' | 'cost';
   defaultImpact: HouseholdImpact;
   /** Szacunek kWh do insightu (MVP). */
@@ -78,14 +80,14 @@ export const HOUSEHOLD_EVENT_TYPES: ReadonlyArray<HouseholdEventTypeDef> = [
     icon: 'se-utensils',
     tint: 'solar',
     defaultImpact: 'up',
-    estimatedKwh: 1,
-    insightHint: 'Krótki pik — OK przy pełnej baterii i PV (szczyt dnia).',
+    estimatedKwh: 2.2,
+    insightHint: 'Więcej niż śniadanie i kolacja, ok. 2,2 kWh — najlepiej w szczycie produkcji.',
   },
   {
     value: 'kolacja',
     label: 'Kolacja',
     icon: 'se-plate',
-    tint: 'cost',
+    tint: 'solar',
     defaultImpact: 'up',
     estimatedKwh: 1.4,
     insightHint:
@@ -95,7 +97,7 @@ export const HOUSEHOLD_EVENT_TYPES: ReadonlyArray<HouseholdEventTypeDef> = [
     value: 'zmywarka',
     label: 'Zmywarka',
     icon: 'se-dishwasher',
-    tint: 'grid',
+    tint: 'moss',
     defaultImpact: 'up',
     estimatedKwh: 1.2,
     insightHint: 'Szczyt PV albo tania 13–15 / po 22.',
@@ -105,17 +107,26 @@ export const HOUSEHOLD_EVENT_TYPES: ReadonlyArray<HouseholdEventTypeDef> = [
     label: 'Pieczenie chleba',
     shortLabel: 'Chleb',
     icon: 'se-bread',
-    tint: 'muted',
+    tint: 'moss',
     defaultImpact: 'up',
     estimatedKwh: 0.8,
     insightHint: 'Lekkie obciążenie — można równolegle z innym AGD.',
+  },
+  {
+    value: 'piekarnik',
+    label: 'Piekarnik',
+    icon: 'se-oven',
+    tint: 'solar',
+    defaultImpact: 'up',
+    estimatedKwh: 2,
+    insightHint: 'Około 2 kWh, więcej niż maszynka do chleba. Najlepiej, gdy dach produkuje.',
   },
   {
     value: 'grzejnik_lazienka',
     label: 'Grzejnik łazienka',
     shortLabel: 'Grzejnik',
     icon: 'se-radiator',
-    tint: 'cost',
+    tint: 'moss',
     defaultImpact: 'up',
     estimatedKwh: 0.75,
     insightHint: 'Dodaje ~0,75 kWh do budżetu nocy przed FC.',
@@ -135,7 +146,7 @@ export const HOUSEHOLD_EVENT_TYPES: ReadonlyArray<HouseholdEventTypeDef> = [
     value: 'pranie',
     label: 'Pranie',
     icon: 'se-washer',
-    tint: 'grid',
+    tint: 'solar',
     defaultImpact: 'up',
     estimatedKwh: 1.5,
     insightHint: 'Najlepiej w szczycie PV; przy słońcu pomiń nocne FC.',
@@ -144,10 +155,38 @@ export const HOUSEHOLD_EVENT_TYPES: ReadonlyArray<HouseholdEventTypeDef> = [
     value: 'suszarka',
     label: 'Suszarka',
     icon: 'se-dryer',
-    tint: 'cost',
+    tint: 'solar',
     defaultImpact: 'up',
     estimatedKwh: 1.2,
     insightHint: 'Po praniu; cykl ~1–1,5 kWh przy SoC wysokim — wieczorem z baterii.',
+  },
+  {
+    value: 'odkurzacz',
+    label: 'Dreamy',
+    icon: 'se-robot',
+    tint: 'moss',
+    defaultImpact: 'up',
+    estimatedKwh: 0.2,
+    insightHint: 'Około 0,2 kWh na jedno przejście. Mało wobec reszty AGD.',
+  },
+  {
+    value: 'mac_mini',
+    label: 'Mac mini',
+    icon: 'se-mac-mini',
+    tint: 'moss',
+    defaultImpact: 'up',
+    estimatedKwh: 0.2,
+    insightHint: 'Zwykły dzień pracy, około 0,2 kWh. Mało wobec AGD.',
+  },
+  {
+    value: 'macbook',
+    label: 'MacBook Pro',
+    shortLabel: 'MacBook',
+    icon: 'se-macbook',
+    tint: 'moss',
+    defaultImpact: 'up',
+    estimatedKwh: 1.12,
+    insightHint: '8 godzin pracy przy 140 W to około 1,1 kWh.',
   },
   {
     value: 'przetwory',
@@ -163,7 +202,7 @@ export const HOUSEHOLD_EVENT_TYPES: ReadonlyArray<HouseholdEventTypeDef> = [
     label: 'Klimatyzacja / upał',
     shortLabel: 'AC / upał',
     icon: 'thermometer-outline',
-    tint: 'solar',
+    tint: 'cost',
     defaultImpact: 'up',
     estimatedKwh: 3,
     insightHint: 'Wyższa rezerwa SoC wieczorem — karta AC na Home.',
@@ -220,13 +259,16 @@ export function estimateInsightPln(type: string): number | null {
 }
 
 /** Jedno zdanie doradcy dla wybranego dnia (metafora rytmu, nie kW). */
-export function dayAdvisorLine(eventTypes: string[]): string {
+export function dayAdvisorLine(
+  eventTypes: string[],
+  extraTypes: ReadonlyArray<HouseholdEventTypeDef> = [],
+): string {
   const keys = eventTypes.map((t) => eventTypeDef(t)?.value ?? t);
   if (keys.includes('pranie')) {
     return 'Pranie jest w planie. Przy dobrej produkcji z dachu wieczorne ładowanie z sieci nie będzie potrzebne.';
   }
   if (keys.includes('kolacja')) {
-    return 'Kolacja zużywa podobną ilość energii jak śniadanie. Wieczorem instalacja już nie produkuje, więc przed 22 warto sprawdzić stan baterii.';
+    return 'Kolacja zużywa tyle samo energii co śniadanie. Wieczorem instalacja już nie produkuje, więc przed 22 warto sprawdzić stan baterii.';
   }
   if (keys.includes('klimatyzacja')) {
     return 'W planie jest klimatyzacja. Na stronie głównej pojawi się podpowiedź, kiedy ją wyłączyć.';
@@ -247,7 +289,26 @@ export function dayAdvisorLine(eventTypes: string[]): string {
     return 'Śniadanie przypada rano, zanim instalacja zacznie produkować. Energia pójdzie z baterii.';
   }
   if (keys.includes('obiad')) {
-    return 'Obiad to krótki wzrost zużycia. Najkorzystniej uruchomić go przy produkcji z dachu albo przy pełnej baterii.';
+    return 'Obiad zużywa więcej energii niż śniadanie i kolacja. Najkorzystniej ugotować go, gdy dach produkuje.';
+  }
+  if (keys.includes('piekarnik')) {
+    return 'Piekarnik zużywa około 2 kWh. Najkorzystniej włączyć go, gdy dach produkuje.';
+  }
+  if (keys.includes('odkurzacz')) {
+    return 'Dreamy zużywa niewiele, około 0,2 kWh na jedno przejście.';
+  }
+  if (keys.includes('mac_mini') && keys.includes('macbook')) {
+    return 'Mac mini i MacBook Pro przez 8 godzin to razem około 1,3 kWh.';
+  }
+  if (keys.includes('macbook')) {
+    return 'MacBook Pro przez 8 godzin przy ładowarce 140 W to około 1,1 kWh.';
+  }
+  if (keys.includes('mac_mini')) {
+    return 'Mac mini zużywa około 0,2 kWh w zwykły dzień pracy.';
+  }
+  const custom = extraTypes.find((d) => keys.includes(d.value));
+  if (custom) {
+    return `${custom.label} jest w planie, około ${fmtKwh(custom.estimatedKwh)} kWh.`;
   }
   if (keys.length) {
     return 'Ten plan zostanie uwzględniony przy ustawieniu baterii.';
@@ -278,11 +339,53 @@ export function fmtKwh(n: number): string {
   return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)).replace('.', ',');
 }
 
-/** Suma szacunków kWh z katalogu (wyjazd / ferie = 0). */
-export function sumPlannedEventKwh(eventTypes: string[]): number {
+/** Ikony do własnej pozycji — nazwy ionicons, bez własnych rysunków. */
+export const HOUSEHOLD_CUSTOM_ICON_CHOICES: ReadonlyArray<{ name: string; label: string }> = [
+  { name: 'car-outline', label: 'Auto' },
+  { name: 'flash-outline', label: 'Prąd' },
+  { name: 'construct-outline', label: 'Narzędzia' },
+  { name: 'thermometer-outline', label: 'Ciepło' },
+  { name: 'home-outline', label: 'Dom' },
+  { name: 'water-outline', label: 'Woda' },
+  { name: 'laptop-outline', label: 'Sprzęt' },
+  { name: 'leaf-outline', label: 'Ogród' },
+];
+
+/** Zieleń do ~1,2 kWh, złoto do ~2,5, wyżej czerwień. */
+export function tintForEstimatedKwh(kwh: number): 'moss' | 'solar' | 'cost' {
+  if (kwh <= 1.2) return 'moss';
+  if (kwh <= 2.5) return 'solar';
+  return 'cost';
+}
+
+export function customEventValue(id: number): string {
+  return `c${id}`;
+}
+
+export function customTypeDef(row: { id: number; label: string; icon: string; kwh: number }): HouseholdEventTypeDef {
+  return {
+    value: customEventValue(row.id),
+    label: row.label,
+    icon: row.icon,
+    tint: tintForEstimatedKwh(row.kwh),
+    defaultImpact: 'up',
+    estimatedKwh: row.kwh,
+    insightHint: `Około ${fmtKwh(row.kwh)} kWh na jedno włączenie.`,
+  };
+}
+
+function defForEvent(type: string, extraTypes: ReadonlyArray<HouseholdEventTypeDef> = []): HouseholdEventTypeDef | undefined {
+  return extraTypes.find((d) => d.value === type) ?? eventTypeDef(type);
+}
+
+/** Suma szacunków kWh z katalogu (wyjazd / ferie = 0). Własne pozycje dochodzą w extraTypes. */
+export function sumPlannedEventKwh(
+  eventTypes: string[],
+  extraTypes: ReadonlyArray<HouseholdEventTypeDef> = [],
+): number {
   let sum = 0;
   for (const t of eventTypes) {
-    const def = eventTypeDef(t);
+    const def = defForEvent(t, extraTypes);
     if (def && def.estimatedKwh > 0 && def.defaultImpact !== 'down') {
       sum += def.estimatedKwh;
     }
@@ -310,8 +413,9 @@ export function buildDayEnergyBudget(input: {
   socPercent?: number | null;
   capacityKwh?: number | null;
   reservePercent?: number | null;
+  extraTypes?: ReadonlyArray<HouseholdEventTypeDef>;
 }): DayEnergyBudget {
-  const planKwh = sumPlannedEventKwh(input.eventTypes);
+  const planKwh = sumPlannedEventKwh(input.eventTypes, input.extraTypes ?? []);
   const socPercent = input.socPercent ?? null;
   const reservePercent = input.reservePercent ?? 20;
   const capacityKwh =
