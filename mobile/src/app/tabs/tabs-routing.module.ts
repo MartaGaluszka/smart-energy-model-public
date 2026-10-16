@@ -36,6 +36,10 @@ const routes: Routes = [
         loadChildren: () => import('../battery/battery.module').then(m => m.BatteryPageModule)
       },
       {
+        path: 'household',
+        loadChildren: () => import('../household/household.module').then(m => m.HouseholdPageModule)
+      },
+      {
         path: '',
         redirectTo: '/tabs/tab1',
         pathMatch: 'full'

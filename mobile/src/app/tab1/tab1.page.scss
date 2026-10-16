@@ -381,3 +381,126 @@
   color: var(--text-muted);
   margin-top: 16px;
 }
+
+.se-cal-teaser__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.se-cal-teaser__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.se-cal-teaser__cta {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--moss);
+}
+
+.se-cal-teaser__loading {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.se-cal-teaser__days {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.se-cal-teaser__day {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--border) 28%, var(--surface));
+
+  &--today {
+    border-color: color-mix(in srgb, var(--solar) 45%, var(--border));
+    background: color-mix(in srgb, var(--solar) 12%, var(--surface));
+  }
+}
+
+.se-cal-teaser__wd {
+  font-size: 10px;
+  text-transform: capitalize;
+  color: var(--text-muted);
+}
+
+.se-cal-teaser__num {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.se-cal-teaser__ev {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &--empty {
+    color: var(--text-muted);
+  }
+}
+
+.se-cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin: 4px 0 8px;
+}
+
+.se-cal-week__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 6px 2px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  text-decoration: none;
+  color: inherit;
+  background: transparent;
+
+  &--today {
+    border-color: color-mix(in srgb, var(--solar) 40%, var(--border));
+    background: color-mix(in srgb, var(--solar) 10%, var(--surface));
+  }
+
+  &--busy .se-cal-week__num {
+    font-weight: 700;
+  }
+}
+
+.se-cal-week__wd {
+  font-size: 10px;
+  text-transform: capitalize;
+  color: var(--text-muted);
+}
+
+.se-cal-week__num {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.se-cal-week__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--moss);
+}

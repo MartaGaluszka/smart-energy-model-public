@@ -63,6 +63,39 @@
 
     <ion-spinner *ngIf="(sync$ | async)?.syncing && !(kpi$ | async)" class="se-spinner"></ion-spinner>
 
+    <ion-card class="se-card se-cal-teaser" button routerLink="/tabs/household" data-testid="home-cal-teaser">
+      <ion-card-content>
+        <div class="se-cal-teaser__head">
+          <span class="se-cal-teaser__title">Rytm domu · dziś–pojutrze</span>
+          <span class="se-cal-teaser__cta">Otwórz</span>
+        </div>
+        <p class="se-cal-teaser__loading" *ngIf="calendarLoading">Ładuję plan…</p>
+        <div class="se-cal-teaser__days" *ngIf="!calendarLoading">
+          <div class="se-cal-teaser__day" *ngFor="let day of calendarTeaser" [class.se-cal-teaser__day--today]="day.isToday">
+            <span class="se-cal-teaser__wd">{{ day.weekdayShort }}</span>
+            <span class="se-cal-teaser__num">{{ day.dayNum }}</span>
+            <span class="se-cal-teaser__ev" *ngIf="day.labels.length">{{ day.labels.join(' · ') }}</span>
+            <span class="se-cal-teaser__ev se-cal-teaser__ev--empty" *ngIf="!day.labels.length">brak planu</span>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <div class="se-cal-week" data-testid="home-cal-week" role="list" aria-label="Tydzień — kalendarz">
+      <a
+        class="se-cal-week__cell"
+        *ngFor="let day of calendarWeek"
+        role="listitem"
+        routerLink="/tabs/household"
+        [class.se-cal-week__cell--today]="day.isToday"
+        [class.se-cal-week__cell--busy]="day.count > 0"
+      >
+        <span class="se-cal-week__wd">{{ day.weekdayShort }}</span>
+        <span class="se-cal-week__num">{{ day.dayNum }}</span>
+        <span class="se-cal-week__dot" *ngIf="day.count > 0" [attr.aria-label]="day.count + ' wydarzeń'"></span>
+      </a>
+    </div>
+
     <!-- KPI grid — tylko żywe dane z API -->
     <ng-container *ngIf="kpi$ | async as kpi">
       <ion-grid class="se-kpi-grid">

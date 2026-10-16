@@ -239,9 +239,9 @@ Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 lin
 
 | ID | Pri | Zadanie | DoD |
 |----|-----|---------|-----|
-| T4.7 | P2 | `[~]` Tabela `household_events` + API CRUD | Typy: wakacje, urodziny, przetwory, ferie, **`klimatyzacja` / `upał`** (T4.5), **`grzejnik_lazienka`**, **`sniadanie`**. API `[x]`; UI kalendarza = T4.8. Kalibracje §10.1: `przetwory` **11.10** ~10,4 kWh · `grzejnik_lazienka` **12→13.10** +0,5–1,0 kWh/noc · `sniadanie` **13.10** ~1,3–1,5 kWh / peak **3,8** (indukcja+czajnik) |
-| T4.8 | P2 | UI kalendarz miesięczny + dodawanie wydarzenia | Ikony własne |
-| T4.9 | P2 | `[~]` Wpływ wydarzenia na treść sugestii | `klimatyzacja`/`upał` → karta AC (T4.5). **Bufor rano @22:** SoC &lt;30% gdy jutro robocze → krótki FC (case 11→12.10); dopisek gdy wczoraj `przetwory`. Reszta ↑/↓ load — później |
+| T4.7 | P2 | `[x]` Tabela `household_events` + API CRUD | Typy §10.1 (posiłki: `sniadanie`/`obiad`/`kolacja` + AGD + `wyjazd`). Kalibracja: suszarka **~1,2 kWh**; **kolacja ≈ śniadanie ~1,3–1,4 kWh** (ciepłe+czajnik; lekki case 16.10 był ~0,75). API `[x]`; UI = T4.8 |
+| T4.8 | P2 | `[x]` UI kalendarz kontekstowy (oś 3/7 dni) + Home | **2026-10-16:** `/tabs/household` **Rytm domu** — pasek 7 dni, bohater dnia + oś tygodnia (nie tabela AGD), scenariusze w sheetcie, toast insight + szacunek zł; teaser + pasek na Home. Spec: `household.page.spec.ts`. Siatka miesiąca — backlog |
+| T4.9 | P2 | `[x]` Wpływ wydarzenia na treść sugestii | `klimatyzacja`/`upał` → karta AC. Bufor rano + `przetwory`. `grzejnik_lazienka` → towel kWh; `pranie`+PV≳18+SoC≳55 → `laundry_sunny`; `wyjazd`/`ferie` → łagodniejszy bufor; **`podlogowka`** → `estimate_floor_heating_night_kwh(T)` + cel SoC@22; feed `household_context`. Testy: `test_household_calendar_planner.py` |
 | T4.10 | P2 | Tryby sezonowe (lato AC / zima ciepło + Wi‑Fi standby) | Linked z T4.3 |
 
 ---
@@ -336,7 +336,7 @@ Aktualizuj status w tej tabeli przy domknięciu fazy:
 | 1 Shell + sync + prognoza | `[x]` | 2026-07-28 | P0 zamknięte: Ionic Solar Graphite, 4 taby, Home KPI + sync Fox + banner §9.6 + sugestie, Prognoza z wykresem Chart.js + porównaniem błędu % vs rzeczywistość (T1.14, patrz wyżej). Screenshoty: `mobile/docs/screenshots/`. **Korekta 2026-07-28:** T1.13 był błędnie oznaczony jako gotowy 2026-07-27 — ekran Prognoza był w rzeczywistości placeholderem; dobudowany teraz razem z T1.14. **T1.10** `[x]` 2026-09-03 (40402 → 429 + karta na tab2). **T1.21–T1.24** `[x]` 2026-09-03 — UX Home: jeden baner doradczy, widget PLAN, CTA oszczędności, PLAN 24H + dedupe sugestii. Otwarte P1: T1.6 splash. P2: T1.11 pull-refresh, T1.15 cache prognoz (świadomie odłożone). |
 | 2 Symulator | `[~]` | 2026-07-29 | Backend (T2.1–T2.3) + **UI P0** (T2.4 formularz stawek, T2.5 wykres słupkowy) + **P1** (T2.6 mini tabela kWh, T2.7 netto/brutto VAT, T2.10 przebudowa UX + polski `ion-datetime`) na `/tabs/simulator`. Otwarte P2: T2.8 depozyt, T2.9 prefill z tauron_bills. |
 | 3 ROI | `[~]` | 2026-09-25 | **T3.3** ekran `/tabs/roi` (CAPEX netto, payback, ROI %). Zostaje **T3.4** wykres punktu zwrotu. |
-| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-09-03 | Refaktor drill-down T4.25–T4.30 + domknięcie UX (scroll, shared SCSS, wykres 24h, shadow 3×1, sezon segment). **T4.28a** kalkulator AC `[x]`. T4.5 AC: Home skrót + Analityka pełny widget. Brak: FCM (T4.22); kalendarz UI (T4.8); profil domu / obciążenia (backlog — docelowe miejsce mocy AC). |
+| 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-10-16 | Refaktor drill-down T4.25–T4.30 + UX. **T4.8/T4.9** kalendarz kontekstowy `[x]` (oś 3/7 + Home teaser/pasek + wire doradcy). Brak: FCM (T4.22); siatka miesiąca (opcjonalnie); profil domu / obciążenia (backlog — moc AC). |
 | 5 ML advice (bez control) | `[ ]` | | |
 | 6 Sterowanie Fox (po ~roku) | `[ ]` | | poza MVP |
 

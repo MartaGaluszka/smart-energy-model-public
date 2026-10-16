@@ -38,11 +38,18 @@ def create_event(
     current_user: AppUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> HouseholdEventResponse:
+    # Wiele cykli tego samego typu na dzień OK (2× zmywarka, 2× pranie…).
     row = HouseholdEvent(user_id=current_user.id, **body.model_dump())
     db.add(row)
     db.commit()
     db.refresh(row)
-    return HouseholdEventResponse(id=row.id, event_date=row.event_date, event_type=row.event_type, impact=row.impact, note=row.note)
+    return HouseholdEventResponse(
+        id=row.id,
+        event_date=row.event_date,
+        event_type=row.event_type,
+        impact=row.impact,
+        note=row.note,
+    )
 
 
 @router.delete('/events/{event_id}', status_code=204, response_model=None, summary='Usunięcie wydarzenia')

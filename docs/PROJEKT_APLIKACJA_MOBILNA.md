@@ -306,12 +306,14 @@ Suwaki G12w + plan ładowania nocą / rozładowania w szczycie; decyzja „czy �
 | `przetwory` | **11.10.2026** buraki 1 porcja (3 kg buraków · 1,5 kg cebuli · 1,5 kg papryki) | ~13:00–17:40 (~4,7 h) | **~10,4 kWh** | ~5,6 kW | `impact=up` · planuj ~**10 kWh** / 4–5 h w ciągu dnia (najlepiej gdy PV); SoC −25 pp w case |
 | `przetwory` → **nast. dzień roboczy** | **12.10.2026** po nd. przetwory: SoC **38%** @20:15 → **28%** @22:38; **brak na śniadanie** | noc + **05–08** | bojler **0,42** · bufor **0,58** · śniadanie **1,25** (razem **~2,3 kWh**) | 2,4 / 2,6 / 2,1 | Gate **SoC &lt;30% @~22** gdy jutro robocze → **`BUFOR RANO`** ~15 min; kwoty w env `BATTERY_MORNING_*_KWH` |
 | `grzejnik_lazienka` | **noc 12→13.10.2026** suszenie ręczników całą noc | **22:00–07:00** (ciągły) | **+0,5–1,0 kWh** (szacunek 40–100 W; baseline Fox ~0,17 kW — trudny do wyodrębnienia) | niski, stały | `impact=up` · przy evencie w kalendarzu **dodaj** do budżetu nocy przed tanim FC; **nie** polegać tylko na SoC ≥30% |
+| `podlogowka` | zima / chłodna jesień — cykle bufora ciepła (kalibracja **0,58 kWh**/cykl z 12–13.10; case **14.10** ~0,9 kWh przy Tnoc≲2°C) | **22:00–07:00** | **T×cykle:** T≥10→0 · 6–10→1× · 3–6→1,5× · 0–3→2× · −3–0→2,5× · &lt;−3→3× (`estimate_floor_heating_night_kwh`) | niski–średni, cykliczny | `impact=up` · event w kalendarzu → doradca **sam** liczy E_noc z Tśr jutra + cel SoC@22 (`suggested_soc_at_22_for_night_kwh`); dłuższy FC gdy &gt;1 cykl · aliasy: `ogrzewanie_podlogowe` |
 | `sniadanie` | **13.10.2026** jajecznica + kawiarka na indukcji + czajnik (herbata) | ~07:08–08:20 | **~1,3–1,5 kWh** (12.10: **1,25**) | **2,2 / 1,5 / 3,8** kW | `impact=up` · planuj **~1,3 kWh** przed PV; pik **~3,8 kW** = czajnik+indukcja równolegle (nie bojler) · późne `sniadanie` (~09) **nie** zmniejsza budżetu nocy przy zimnie — liczy się bufor do pierwszej sensownej PV (~8–9) |
 | `zmywarka` | **14.10** start ~10:00 SoC **~12%** (słabe PV) · **16.10** cykl ~2 h, koniec **~13:35** przy PV **~4 kW** / SoC **99%** | cykl **~1–2 h** | typowo **~1–1,5 kWh**/cykl | **~1,5–3 kW** | `impact=up` · **nie** w drogim **6–13** przy pustej baterii / ciemnym dniu · przy Accu **jasny/mix** + SoC wysoki → **szczyt PV (11–15)** OK (case **16.10** bez importu) · inaczej tania **13–15** / po **22** |
 | `pranie` | **16.10.2026** **2×** program po **~2,5 h**, jedno po drugim (rano→południe) | **~2,5 h**/cykl | ciągły load μ **~1–1,5 kW** w oknie prania (dom+AGD); godz. load **11–12** Fox **~1,4–1,5 kWh** | **~2–3 kW** (piki z innym AGD) | `impact=up` · **najlepiej dzień Accu jasny/RF + ENS ≳18** · start gdy PV już sensowne (**≳1–2 kW**, typowo po **~9**) · 2 cykle z rzędu OK jeśli SoC rośnie / bateria pełna · **nie** planować na CS4/pochmurno rano |
-| `suszarka` | **16.10.2026** start **~16:10**, program **~2–2,5 h** (po 2× praniu) | **~2–2,5 h** | do closeoutu po synciu (szacunek **~2–4 kWh**/cykl — doprecyzować EOD) | typowo **~1,5–2,5 kW** | `impact=up` · start **po praniu**, gdy PV jeszcze jest albo SoC **≳80%** · po **15–16** PV spada → zejdzie z **baterii**; przy niskim SoC / ciemnym dniu → tania **22–6** albo przesunąć na jutro słoneczne |
+| `suszarka` | **16.10.2026** start **~16:10**, finisz **~17:40** (po 2× praniu) | **~1,5 h** | Fox **16:10–17:40** load **~1,2 kWh** · SoC **98→94** · import **~0** | ciągły **~0,6–0,8 kW** (dom+suszarka) | `impact=up` · start **po praniu**, gdy PV jeszcze jest albo SoC **≳80%** · po **15–16** PV spada → zejdzie z **baterii**; kalibracja EOD: **~1,2 kWh**/cykl (nie 2–4) przy wysokim SoC |
 | `chleb` | **16.10.2026** maszynka Lidl · **~20 min do końca @13:35** (w tle zmywarka/obiad) | cykl pieczenia **~2–3 h** (finisz krótki) | niski–średni ciągły + finisz | **≲1–2 kW** (szacunek) | `impact=up` (lekki) · można równolegle z `zmywarka` / `obiad` przy PV **≳3–4 kW** · nie wymaga osobnego FC |
 | `obiad` / `indukcja` | **16.10.2026** gotowanie + kawa na indukcji **@13:35** (równolegle z finiszem zmywarki/chleba) | **~15–40 min** | w pakiecie ze zmywarką: load chwilowy **2–3,9 kW** @13:28–13:51 | **~2–4 kW** | `impact=up` · krótkie piki · przy SoC **~100%** + PV **~4 kW** cały pakiet **bez importu** (case **16.10**) · w drogiej strefie bez PV → zjada SoC szybko |
+| `kolacja` | **16.10.2026** lekka indukcja **~30 min** (Fox **~0,73 kWh**) — case „tylko gotowanie”; typowo też czajnik / piekarnik (parówki, frytki) jak śniadanie | **~17:45–18:15** (przykład) | **plan produktowy ~1,3–1,4 kWh** (= `sniadanie`); lekki case **~0,7** | peak **~3–4 kW** | `impact=up` · **bez PV** — z baterii · budżet **jak śniadanie** (ciepłe + herbata/czajnik ± piekarnik) · nie łączyć z pustą baterią przed szczytem drogi 17–22 · ostrzeż o SoC @22 |
 | meta: `force_charge` / stop | **13→14.10** plan 65%@22:35 → Fox **nie uciął** → **80%** · **15→16.10** zapomniane wyłączenie **63%→100%** (~22:01–22:28, **~3,7–3,8 kWh**) przy Accu **jasny** | tania **22:00+** | **+50 pp / ~30 min** ≈ **~5 kWh** @**10–11 kW** | **~9–12 kW** grid | kalendarz/apka: **alarm „wyłącz FC”** o zaplanowanym końcu · przy sugestii **POMIŃ** (Accu jasny / ENS ≳12–18 i SoC ≳50–60%) **nie** startować FC „na zapas” · case **15→16**: FC zbędne, rano i tak min **~30%** przed PV |
 
 **Pakiet „dzień prania” (kalibracja 16.10):**
@@ -331,11 +333,14 @@ Fox **16.10** (do ~15:57, przed końcem suszarki): generation **~20,4** · loads
 **Budżet taniej taryfy → rano (nauka, G12w 22–6):**
 
 ```text
-E_noc ≈ baza(~1,6–1,8 kWh) + grzejnik_lazienka(0,5–1,0 jeśli event)
-       + bojler(~0,4) + bufor_ciepła(~0,6 przy Tnoc≲5–6°C) + sniadanie(~1,3)
+E_noc ≈ bojler(~0,4) + sniadanie(~1,3)
+       + grzejnik_lazienka(0,5–1,0 jeśli event)
+       + podlogowka(T×cykle ~0,58 kWh)  LUB  bufor_ciepła(~0,6 przy Tnoc≲5–6°C bez eventu)
 ΔSoC_pp ≈ E_noc / 0,104          # BATTERY_CAPACITY ≈ 10,36 kWh
-cel_SoC@22 ≥ minSoc(10%) + ΔSoC + margines(5–10 pp)
+cel_SoC@22 ≥ minSoc(10%) + ΔSoC + margines(~8 pp)
 ```
+
+Przy evencie `podlogowka` próg BUFOR RANO = **cel SoC@22 z budżetu** (nie sztywne 30%).
 
 Case **12→13.10:** SoC **50% @22** (powyżej progu BUFOR RANO **30%**) → sugestia „starczy”; ex post **10% @07**, śniadanie z sieci. Powód: wieczór już **86→50%**, Tnoc **~5°C** → bufor, bojler **~02:52**, **grzejnik łazienkowy**, potem śniadanie indukcja+czajnik. **50% @22 ≈ budżet nocy bez śniadania.**
 

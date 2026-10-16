@@ -505,6 +505,45 @@ def _morning_buffer_towel_heater_kwh() -> float:
     return float(os.getenv('BATTERY_MORNING_TOWEL_HEATER_KWH', '0.75'))
 
 
+def estimate_floor_heating_night_kwh(night_temp_c: float | None = None) -> float:
+    """Szacunek kWh podłogówki na noc (kalendarz `podlogowka`) vs T nocna.
+
+    Kalibracje: 1 cykl bufora ~0,58 kWh (12–13.10); przy Tnoc≲5°C często 2 cykle;
+    przy Tnoc≲2°C dłuższe / mocniejsze (case 14.10 ~0,9 kWh + więcej).
+    ``night_temp_c`` = Tśr nocy / jutra (proxy Tnoc).
+    """
+    cycle = float(os.getenv('BATTERY_MORNING_HEAT_BUFFER_KWH', '0.58'))
+    if night_temp_c is None:
+        return round(cycle * 2.0, 2)  # zima bez prognozy T — ostrożnie 2 cykle
+    t = float(night_temp_c)
+    if t >= 10.0:
+        return 0.0
+    if t >= 6.0:
+        return round(cycle * 1.0, 2)
+    if t >= 3.0:
+        return round(cycle * 1.5, 2)
+    if t >= 0.0:
+        return round(cycle * 2.0, 2)
+    if t >= -3.0:
+        return round(cycle * 2.5, 2)
+    return round(cycle * 3.0, 2)
+
+
+def suggested_soc_at_22_for_night_kwh(
+    night_kwh: float,
+    *,
+    capacity_kwh: float | None = None,
+    fox_min_percent: float = 10.0,
+    margin_pp: float = 8.0,
+) -> float:
+    """cel SoC@22 ≈ minFox + E_noc/capa×100 + margines (PROJEKT §10.1)."""
+    cap = _b2_capacity_kwh(capacity_kwh)
+    if cap <= 0:
+        return 30.0
+    need = float(fox_min_percent) + (max(0.0, float(night_kwh)) / cap) * 100.0 + float(margin_pp)
+    return round(min(100.0, max(0.0, need)), 1)
+
+
 def _morning_buffer_short_fc(
     *,
     soc_percent: float,
@@ -516,18 +555,46 @@ def _morning_buffer_short_fc(
     fc_max_minutes: float | None,
     start_h: int,
     after_przetwory: bool = False,
+    towel_heater: bool = False,
+    breakfast_tomorrow: bool = True,
+    floor_heating: bool = False,
+    floor_heating_kwh: float | None = None,
 ) -> ChargeTonightCloudyRule:
     """Jesień/zima: SoC < 30% przed 22:00 gdy jutro robocze — nie polegaj tylko na minSoc Fox 10%."""
-    minutes = _cap_fc_minutes(_morning_buffer_fc_minutes(), fc_max_minutes)
+    breakfast = _morning_buffer_breakfast_kwh() if breakfast_tomorrow else 0.0
+    boiler = _morning_buffer_boiler_kwh()
+    towel = _morning_buffer_towel_heater_kwh() if towel_heater else 0.0
+    if floor_heating:
+        heat = (
+            float(floor_heating_kwh)
+            if floor_heating_kwh is not None
+            else estimate_floor_heating_night_kwh(tomorrow_temp_c)
+        )
+        heat_label = 'podłogówka'
+    else:
+        heat = _morning_buffer_heat_kwh()
+        heat_label = 'bufor ciepła'
+    morning_loads = breakfast + boiler + heat + towel
+    # Dłuższy FC gdy podłogówka zimą zjada więcej niż 1 cykl (~0,58 kWh).
+    base_min = _morning_buffer_fc_minutes()
+    if floor_heating and heat > _morning_buffer_heat_kwh() + 0.05:
+        extra = (heat / max(0.01, _morning_buffer_heat_kwh()) - 1.0) * 8.0
+        base_min = base_min + max(0.0, extra)
+    minutes = _cap_fc_minutes(base_min, fc_max_minutes)
     delta = _delta_soc_for_minutes(minutes)
     target = min(100.0, soc_percent + delta)
     cap = _b2_capacity_kwh(capacity_kwh)
     end_h, end_m = _fc_end_clock(start_h, minutes)
     pv_txt = f'~{tomorrow_pv_kwh:.0f} kWh' if tomorrow_pv_kwh is not None else 'brak prognozy'
-    breakfast = _morning_buffer_breakfast_kwh()
-    boiler = _morning_buffer_boiler_kwh()
-    heat = _morning_buffer_heat_kwh()
-    morning_loads = breakfast + boiler + heat
+    bits: list[str] = []
+    if breakfast_tomorrow:
+        bits.append(f'śniadanie ~{breakfast:.1f} kWh')
+    bits.append(f'bojler ~{boiler:.1f} kWh')
+    bits.append(f'{heat_label} ~{heat:.1f} kWh')
+    if towel_heater:
+        bits.append(f'grzejnik łazienka ~{towel:.1f} kWh')
+    loads_txt = ' · '.join(bits)
+    soc_hint = suggested_soc_at_22_for_night_kwh(morning_loads, capacity_kwh=capacity_kwh)
     extra = (
         ' Po dniu z przetworami SoC bywa za niski na bufor ciepła + śniadanie.'
         if after_przetwory
@@ -544,11 +611,11 @@ def _morning_buffer_short_fc(
         body=(
             f'SoC {soc_percent:.0f}% < {_morning_buffer_soc_floor():.0f}% o ~{start_h:02d}:00 '
             f'(jutro dzień roboczy — szczyt 6–13). Nawet gdy jutro PV {pv_txt} — dach nie pokryje '
-            f'śniadania przed PV. Kalibracja 12.10: śniadanie ~{breakfast:.1f} kWh · bojler ~{boiler:.1f} kWh · '
-            f'bufor ciepła ~{heat:.1f} kWh (razem ~{morning_loads:.1f} kWh). '
+            f'obciążenia przed PV. Kalibracja 12.10: {loads_txt} (razem ~{morning_loads:.1f} kWh). '
             f'Włącz ForceCharge {start_h:02d}:00, wyłącz o {end_h:02d}:{end_m:02d} '
             f'(~{minutes:.0f} min / +{delta:.0f} pp ≈ {delta / 100.0 * cap:.1f} kWh). '
-            f'Cel: ≥25–30% do 6:00, nie tylko rezerwa Fox 10%.{extra} '
+            f'Cel: ≥25–30% do 6:00 (orientacyjnie SoC@22 ≳{soc_hint:.0f}% przy tym budżecie nocy), '
+            f'nie tylko rezerwa Fox 10%.{extra} '
             f'Sugestia doradcza, bez automatyki.'
         ),
         target_soc_percent=target,
@@ -571,6 +638,12 @@ def evaluate_charge_tonight_cloudy(
     fc_max_minutes: float | None = None,
     night_start_hour: int = 22,
     after_przetwory: bool = False,
+    towel_heater: bool = False,
+    breakfast_tomorrow: bool = True,
+    laundry_skip: bool = False,
+    travel_mild_buffer: bool = False,
+    floor_heating: bool = False,
+    floor_heating_kwh: float | None = None,
 ) -> ChargeTonightCloudyRule:
     """Czysta reguła produktowa (bez I/O) — advise-only.
 
@@ -579,6 +652,8 @@ def evaluate_charge_tonight_cloudy(
     - Wiosna III–V (§E) / lato: krótki FC gdy SoC niski i jutro słabe PV.
     Drobny brak (< ~2 kWh / < 15 pp) pomijamy — cykl vs spread G12w.
     ``fc_max_minutes`` / ``night_start_hour`` — preferencje UI (nie pełnić całej baterii).
+    Kalendarz: ``laundry_skip`` (pranie+słońce+SoC) → POMIŃ FC; ``travel_mild_buffer`` →
+    bez bufora rano; ``towel_heater`` / ``floor_heating`` / ``breakfast_tomorrow`` → budżet nocy.
     """
     as_of = as_of or datetime.now()
     start_h = int(night_start_hour) if 0 <= int(night_start_hour) <= 23 else 22
@@ -625,16 +700,39 @@ def evaluate_charge_tonight_cloudy(
     tomorrow_d = as_of.date() + timedelta(days=1)
     tomorrow_workday = not (is_weekend(tomorrow_d) or is_public_holiday(tomorrow_d))
     # Bufor rano (11→12.10): SoC <30% przed 22, gdy *jutro* robocze — także nd.→pn.
+    # Wyjazd/ferie: łagodniejszy bufor — nie wymuszaj krótkiego FC na pusty dom.
+    # Podłogówka: próg SoC@22 z budżetu nocy (T×cykle), nie tylko stałe 30%.
+    floor_kwh_est = (
+        float(floor_heating_kwh)
+        if floor_heating_kwh is not None
+        else (estimate_floor_heating_night_kwh(tomorrow_temp_c) if floor_heating else 0.0)
+    )
+    night_budget_for_floor = 0.0
+    if floor_heating:
+        night_budget_for_floor = (
+            (_morning_buffer_breakfast_kwh() if breakfast_tomorrow else 0.0)
+            + _morning_buffer_boiler_kwh()
+            + floor_kwh_est
+            + (_morning_buffer_towel_heater_kwh() if towel_heater else 0.0)
+        )
+    floor_soc_gate = (
+        suggested_soc_at_22_for_night_kwh(night_budget_for_floor, capacity_kwh=capacity_kwh)
+        if floor_heating
+        else _morning_buffer_soc_floor()
+    )
     morning_buffer_candidate = (
         (autumn or winter_b2)
         and tomorrow_workday
+        and not travel_mild_buffer
         and soc_percent is not None
-        and soc_percent < _morning_buffer_soc_floor()
+        and soc_percent < (floor_soc_gate if floor_heating else _morning_buffer_soc_floor())
     )
     if as_of.hour >= 22:
         return _empty()
     if soc_percent is None:
         return _empty()
+    if laundry_skip:
+        return _empty(skip_reason='laundry_sunny')
     if today_off and not morning_buffer_candidate:
         return _empty()
 
@@ -697,6 +795,10 @@ def evaluate_charge_tonight_cloudy(
                     fc_max_minutes=fc_max_minutes,
                     start_h=start_h,
                     after_przetwory=after_przetwory,
+                    towel_heater=towel_heater,
+                    breakfast_tomorrow=breakfast_tomorrow,
+                    floor_heating=floor_heating,
+                    floor_heating_kwh=floor_kwh_est if floor_heating else None,
                 )
             if soc_percent < reserve:
                 target = reserve
@@ -774,6 +876,10 @@ def evaluate_charge_tonight_cloudy(
                 fc_max_minutes=fc_max_minutes,
                 start_h=start_h,
                 after_przetwory=after_przetwory,
+                towel_heater=towel_heater,
+                breakfast_tomorrow=breakfast_tomorrow,
+                floor_heating=floor_heating,
+                floor_heating_kwh=floor_kwh_est if floor_heating else None,
             )
         if soc_percent < reserve:
             target = reserve

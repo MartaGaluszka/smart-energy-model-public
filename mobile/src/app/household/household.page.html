@@ -1,0 +1,238 @@
+<ion-header class="se-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/more" text="Więcej"></ion-back-button>
+    </ion-buttons>
+    <ion-title class="font-serif">Rytm domu</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openAdd()" aria-label="Dodaj plan">
+        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="se-household">
+  <div class="se-page">
+    <p class="se-household__lead">
+      Zaznacz plan na najbliższe dni — doradca baterii dopasuje sugestię.
+      Godziny AGD z dachu są w Prognozie; tu chodzi o intencję domu.
+    </p>
+
+    <div class="se-rhythm-week" role="tablist" aria-label="Tydzień" data-testid="rhythm-week">
+      <button
+        type="button"
+        role="tab"
+        class="se-rhythm-week__cell"
+        *ngFor="let day of days"
+        [class.se-rhythm-week__cell--today]="day.isToday"
+        [class.se-rhythm-week__cell--focus]="day.dayIso === focusDayIso"
+        [class.se-rhythm-week__cell--busy]="day.events.length > 0"
+        [attr.aria-selected]="day.dayIso === focusDayIso"
+        (click)="selectDay(day.dayIso)"
+      >
+        <span class="se-rhythm-week__wd">{{ day.weekdayShort }}</span>
+        <span class="se-rhythm-week__num">{{ day.dayNum }}</span>
+        <span class="se-rhythm-week__dot" *ngIf="day.events.length"></span>
+      </button>
+    </div>
+
+    <div
+      class="se-rhythm-toast"
+      *ngIf="insightBanner"
+      data-testid="rhythm-insight"
+      role="status"
+    >
+      {{ insightBanner }}
+    </div>
+
+    <div class="se-center" *ngIf="loading">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+    <p class="se-chart-error" *ngIf="error">{{ error }}</p>
+
+    <ng-container *ngIf="!loading && focusDay as hero">
+      <section class="se-rhythm-hero" data-testid="rhythm-hero" [attr.data-tint]="hero.events[0] ? typeTint(hero.events[0].event_type) : 'muted'">
+        <div class="se-rhythm-hero__meta">
+          <span class="se-rhythm-hero__kicker" *ngIf="hero.isToday">dziś</span>
+          <span class="se-rhythm-hero__kicker" *ngIf="!hero.isToday">{{ hero.weekday }}</span>
+          <h2 class="font-serif se-rhythm-hero__date">{{ hero.label }}</h2>
+        </div>
+        <p class="se-rhythm-hero__advice">{{ hero.advisorLine }}</p>
+
+        <div class="se-rhythm-hero__events" *ngIf="hero.events.length">
+          <div
+            class="se-household-chip"
+            *ngFor="let ev of hero.events"
+            [attr.data-tint]="typeTint(ev.event_type)"
+          >
+            <ion-icon
+              *ngIf="iconSrc(typeIcon(ev.event_type)); else chipIon"
+              [src]="iconSrc(typeIcon(ev.event_type))!"
+            ></ion-icon>
+            <ng-template #chipIon>
+              <ion-icon [name]="typeIcon(ev.event_type)"></ion-icon>
+            </ng-template>
+            <span class="se-household-chip__label">{{ chipLabel(ev, hero.events) }}</span>
+            <button
+              type="button"
+              class="se-household-chip__del"
+              (click)="confirmDelete(ev)"
+              aria-label="Usuń"
+            >
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+
+        <button type="button" class="se-rhythm-hero__cta" (click)="openAdd(hero.dayIso)">
+          {{ hero.events.length ? 'Dodaj kolejny plan' : 'Zaplanuj ten dzień' }}
+        </button>
+      </section>
+
+      <div class="se-rhythm-axis" data-testid="rhythm-axis" *ngIf="timelineDays.length">
+        <div class="se-rhythm-axis__title">Reszta tygodnia</div>
+        <button
+          type="button"
+          class="se-rhythm-row"
+          *ngFor="let day of timelineDays"
+          (click)="selectDay(day.dayIso)"
+        >
+          <span class="se-rhythm-row__rail" aria-hidden="true">
+            <span class="se-rhythm-row__dot" [class.se-rhythm-row__dot--busy]="day.events.length"></span>
+          </span>
+          <span class="se-rhythm-row__body">
+            <span class="se-rhythm-row__day">
+              <strong>{{ day.weekdayShort }}</strong>
+              {{ day.label }}
+            </span>
+            <span class="se-rhythm-row__sum" [class.se-rhythm-row__sum--empty]="!day.events.length">
+              {{ eventSummary(day) }}
+            </span>
+          </span>
+        </button>
+      </div>
+    </ng-container>
+  </div>
+</ion-content>
+
+<ion-modal class="se-household-plan-modal" [isOpen]="showAdd" (didDismiss)="closeAdd()">
+  <ng-template>
+    <ion-header class="se-header">
+      <ion-toolbar>
+        <ion-title class="font-serif">Plan dnia</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="closeAdd()">Anuluj</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="se-household-modal">
+      <div class="se-page se-household-modal__page">
+        <div class="se-household-modal__date-row">
+          <span class="se-household-modal__date-label">Dzień</span>
+          <button
+            type="button"
+            class="se-household-modal__date"
+            id="hh-date-trigger"
+            (click)="openDatePicker()"
+          >
+            {{ formDate }}
+          </button>
+        </div>
+
+        <div class="se-rhythm-scenarios" role="group" aria-label="Szybki zestaw">
+          <button
+            type="button"
+            class="se-rhythm-scenario"
+            *ngFor="let s of scenarios"
+            [class.se-rhythm-scenario--active]="isScenarioActive(s)"
+            (click)="pickScenario(s)"
+          >
+            <ion-icon *ngIf="iconSrc(s.icon); else scenIon" [src]="iconSrc(s.icon)!"></ion-icon>
+            <ng-template #scenIon>
+              <ion-icon [name]="s.icon"></ion-icon>
+            </ng-template>
+            <span>{{ s.label }}</span>
+          </button>
+        </div>
+
+        <p class="se-household-modal__label">Zaznacz co planujesz</p>
+
+        <div class="se-household-type-grid" data-testid="type-multi-grid">
+          <button
+            type="button"
+            class="se-household-type"
+            *ngFor="let t of typeCatalog"
+            [class.se-household-type--active]="isTypeSelected(t.value)"
+            [attr.aria-pressed]="isTypeSelected(t.value)"
+            [attr.data-tint]="t.tint"
+            (click)="toggleType(t.value)"
+          >
+            <ion-icon *ngIf="iconSrc(t.icon); else typeIon" [src]="iconSrc(t.icon)!"></ion-icon>
+            <ng-template #typeIon>
+              <ion-icon [name]="t.icon"></ion-icon>
+            </ng-template>
+            <span>{{ t.shortLabel || t.label }}</span>
+            <span class="se-household-type__count" *ngIf="countOfType(t.value) > 1">
+              ×{{ countOfType(t.value) }}
+            </span>
+            <span
+              class="se-household-type__dec"
+              *ngIf="countOfType(t.value) > 0 && isStackable(t.value)"
+              role="button"
+              tabindex="0"
+              aria-label="Usuń jeden cykl"
+              (click)="removeOneType(t.value, $event)"
+            >−</span>
+          </button>
+        </div>
+
+        <p class="se-household-modal__hint-inline se-household-modal__stack-hint">
+          Kliknij ponownie tę samą ikonkę, by dodać kolejny wpis (×2…). Minus (−) odejmuje.
+        </p>
+
+        <p class="se-household-modal__picked" *ngIf="formTypes.length">
+          {{ formTypes.length }} wybrane
+        </p>
+
+        <p class="se-chart-error" *ngIf="formError" data-testid="form-save-error">{{ formError }}</p>
+      </div>
+    </ion-content>
+    <ion-footer class="ion-no-border se-household-modal__footer">
+      <ion-toolbar>
+        <ion-button
+          expand="block"
+          class="se-btn-primary"
+          [disabled]="saving || !formDate || !formTypes.length"
+          (click)="save()"
+        >
+          <ion-spinner *ngIf="saving" name="crescent" slot="start"></ion-spinner>
+          {{ saveLabel }}
+        </ion-button>
+      </ion-toolbar>
+    </ion-footer>
+  </ng-template>
+</ion-modal>
+
+<!-- Jak ROI/Symulator: ion-datetime (moss), nie natywny niebieski picker iOS. -->
+<ion-modal
+  class="se-household-date-modal"
+  [isOpen]="showDatePicker"
+  (didDismiss)="closeDatePicker()"
+  [keepContentsMounted]="true"
+>
+  <ng-template>
+    <ion-datetime
+      class="se-household-datetime"
+      color="success"
+      presentation="date"
+      locale="pl-PL"
+      [firstDayOfWeek]="1"
+      [showDefaultButtons]="true"
+      doneText="Gotowe"
+      cancelText="Anuluj"
+      [value]="formDate"
+      (ionChange)="onFormDate($any($event.target).value)"
+    ></ion-datetime>
+  </ng-template>
+</ion-modal>

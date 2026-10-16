@@ -1,0 +1,614 @@
+.se-household {
+  --background: var(--bg);
+}
+
+.se-household__lead {
+  margin: 0 4px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* —— Pasek tygodnia (nawigacja, nie horyzont 3/7) —— */
+.se-rhythm-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.se-rhythm-week__cell {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 56px;
+  margin: 0;
+  padding: 6px 2px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+
+  &--today .se-rhythm-week__num {
+    color: var(--solar-pressed);
+  }
+
+  &--focus {
+    border-color: color-mix(in srgb, var(--solar) 45%, var(--border));
+    background: color-mix(in srgb, var(--solar) 12%, var(--surface));
+  }
+
+  &--busy .se-rhythm-week__num {
+    font-weight: 700;
+  }
+}
+
+.se-rhythm-week__wd {
+  font-size: 10px;
+  text-transform: capitalize;
+  color: var(--text-muted);
+}
+
+.se-rhythm-week__num {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.se-rhythm-week__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--moss);
+}
+
+/* —— Toast po zapisie (nie osobna karta insight) —— */
+.se-rhythm-toast {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border-left: 3px solid var(--moss);
+  background: color-mix(in srgb, var(--moss) 10%, var(--surface));
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text);
+  animation: se-rhythm-in 280ms ease-out;
+}
+
+@keyframes se-rhythm-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* —— Bohater dnia —— */
+.se-rhythm-hero {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 16px 14px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--solar) 10%, var(--surface)) 0%,
+      var(--surface) 55%
+    );
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 60%, transparent);
+
+  &[data-tint='moss'] {
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--moss) 12%, var(--surface)) 0%,
+      var(--surface) 55%
+    );
+  }
+  &[data-tint='grid'] {
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--grid) 10%, var(--surface)) 0%,
+      var(--surface) 55%
+    );
+  }
+  &[data-tint='cost'] {
+    background: linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--cost) 8%, var(--surface)) 0%,
+      var(--surface) 55%
+    );
+  }
+}
+
+.se-rhythm-hero__meta {
+  margin-bottom: 8px;
+}
+
+.se-rhythm-hero__kicker {
+  display: inline-block;
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  color: var(--text-muted);
+}
+
+.se-rhythm-hero__date {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+  text-transform: capitalize;
+}
+
+.se-rhythm-hero__advice {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.se-rhythm-hero__events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.se-rhythm-hero__cta {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--solar) 40%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--solar) 16%, var(--surface));
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* —— Oś „reszta tygodnia” —— */
+.se-rhythm-axis__title {
+  margin: 0 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.se-rhythm-row {
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 0 4px 0 2px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.se-rhythm-row__rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--border);
+    transform: translateX(-50%);
+  }
+}
+
+.se-rhythm-row:first-of-type .se-rhythm-row__rail::before {
+  top: 18px;
+}
+
+.se-rhythm-row:last-of-type .se-rhythm-row__rail::before {
+  bottom: calc(100% - 22px);
+}
+
+.se-rhythm-row__dot {
+  position: relative;
+  z-index: 1;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+
+  &--busy {
+    border-color: var(--moss);
+    background: var(--moss);
+  }
+}
+
+.se-rhythm-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.se-rhythm-row:last-of-type .se-rhythm-row__body {
+  border-bottom: none;
+}
+
+.se-rhythm-row__day {
+  font-size: 13px;
+  color: var(--text);
+
+  strong {
+    text-transform: capitalize;
+    margin-right: 6px;
+  }
+}
+
+.se-rhythm-row__sum {
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &--empty {
+    color: var(--text-muted);
+  }
+}
+
+/* —— Chipy (tylko w bohaterze) —— */
+.se-household-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 8px 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--border) 35%, var(--surface));
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+
+  ion-icon {
+    font-size: 16px;
+    color: var(--text-muted);
+  }
+
+  &[data-tint='moss'] {
+    background: color-mix(in srgb, var(--moss) 16%, var(--surface));
+    border-color: color-mix(in srgb, var(--moss) 35%, var(--border));
+    ion-icon { color: var(--moss); }
+  }
+  &[data-tint='solar'] {
+    background: color-mix(in srgb, var(--solar) 18%, var(--surface));
+    border-color: color-mix(in srgb, var(--solar) 40%, var(--border));
+    ion-icon { color: var(--solar-pressed); }
+  }
+  &[data-tint='grid'] {
+    background: color-mix(in srgb, var(--grid) 14%, var(--surface));
+    border-color: color-mix(in srgb, var(--grid) 30%, var(--border));
+    ion-icon { color: var(--grid); }
+  }
+  &[data-tint='cost'] {
+    background: color-mix(in srgb, var(--cost) 12%, var(--surface));
+    border-color: color-mix(in srgb, var(--cost) 28%, var(--border));
+    ion-icon { color: var(--cost); }
+  }
+}
+
+.se-household-chip__label {
+  min-width: 0;
+}
+
+.se-household-chip__del {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  margin: 0;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  ion-icon { font-size: 14px; }
+}
+
+/* Plan dnia — lekko rozmyte tło (jak kalendarz / alert). */
+.se-household-plan-modal {
+  --backdrop-opacity: 0.35;
+
+  &::part(backdrop) {
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    background: rgba(26, 29, 33, 0.28);
+  }
+}
+
+/* —— Modal: gęsty layout (mniej scrolla) —— */
+.se-household-modal__page {
+  padding-bottom: 8px;
+}
+
+.se-household-modal__date-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.se-household-modal__date-label {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.se-household-modal__date {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1;
+  margin: 0;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Karta kalendarza — nie pod Dynamic Island / status bar. */
+.se-household-date-modal {
+  --width: fit-content;
+  --height: fit-content;
+  --max-width: 92%;
+  --border-radius: 16px;
+  --backdrop-opacity: 0.4;
+  --box-shadow: 0 12px 40px rgba(26, 29, 33, 0.2);
+  align-items: center;
+  justify-content: center;
+
+  &::part(backdrop) {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    background: rgba(26, 29, 33, 0.35);
+  }
+
+  &::part(content) {
+    margin-top: calc(env(safe-area-inset-top, 0px) + 56px);
+    margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+    overflow: hidden;
+    border: 1.5px solid var(--moss);
+    outline: none;
+  }
+}
+
+.se-household-datetime {
+  --background: var(--bg);
+  width: 100%;
+  max-width: 340px;
+  margin-inline: auto;
+
+  &::part(calendar-day) {
+    color: var(--text);
+  }
+
+  &::part(month-year-button) {
+    background: color-mix(in srgb, var(--moss) 14%, var(--surface));
+    border-radius: 16px;
+    padding: 4px 12px;
+    color: var(--moss);
+  }
+
+  &.month-year-picker-open::part(month-year-button) {
+    background: var(--moss);
+    color: #fff;
+  }
+}
+
+.se-household-modal__label {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.se-household-modal__picked {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.se-rhythm-scenarios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.se-rhythm-scenario {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 16px;
+    color: var(--text-muted);
+  }
+
+  &--active {
+    border-color: var(--solar-pressed);
+    box-shadow: inset 0 0 0 1px var(--solar-pressed);
+    background: color-mix(in srgb, var(--solar) 12%, var(--surface));
+
+    ion-icon { color: var(--solar-pressed); }
+  }
+}
+
+.se-household-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.se-household-type {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 4px;
+  min-height: 56px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text);
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 20px;
+    color: var(--text-muted);
+  }
+
+  &--active {
+    border-color: var(--solar-pressed);
+    box-shadow: inset 0 0 0 1px var(--solar-pressed);
+    background: color-mix(in srgb, var(--solar) 12%, var(--surface));
+
+    ion-icon { color: var(--solar-pressed); }
+  }
+}
+
+.se-household-type__count {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--moss);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.se-household-type__dec {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 60%, var(--surface));
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.se-household-modal__stack-hint {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.se-household-modal__footer {
+  ion-toolbar {
+    --background: var(--bg);
+    --border-width: 0;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .se-btn-primary {
+    margin: 0;
+  }
+}
+
+.se-field {
+  --background: transparent;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  margin-bottom: 8px;
+}
+
+.se-btn-primary {
+  --background: var(--solar);
+  --background-activated: var(--solar-pressed);
+  --color: #1a1d21;
+  margin: 8px 0 24px;
+  font-weight: 600;
+}
+
+.se-center {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.se-chart-error {
+  color: var(--cost);
+  font-size: 13px;
+  margin: 8px 4px;
+}

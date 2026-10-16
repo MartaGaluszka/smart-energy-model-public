@@ -8,12 +8,23 @@ import {
   AcRuntimeResponse,
   BatteryPlanHour,
   BatterySuggestionResponse,
+  HouseholdEventDto,
 } from '../services/api.service';
 import { HomeDataService, HomeKpi, SyncStatus, Suggestion } from '../services/home-data.service';
 import { BatteryStateService } from '../battery/services/battery-state.service';
-import { todayIsoLocal } from '../utils/date-utils';
+import { eventTypeDef } from '../household/household.types';
+import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 
 Chart.register(...registerables);
+
+export interface HomeCalendarDay {
+  dayIso: string;
+  weekdayShort: string;
+  dayNum: string;
+  isToday: boolean;
+  labels: string[];
+  count: number;
+}
 
 @Component({
   selector: 'app-tab1',
@@ -36,6 +47,10 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
   acRuntime: AcRuntimeResponse | null = null;
   acPowerKw = 1.2;
   planHours: BatteryPlanHour[] = [];
+  /** T4.8: teaser dziś–pojutrze + pasek 7 dni. */
+  calendarTeaser: HomeCalendarDay[] = [];
+  calendarWeek: HomeCalendarDay[] = [];
+  calendarLoading = false;
   private pvByHour: (number | null)[] = [];
   private chart?: Chart;
   private viewReady = false;
@@ -46,6 +61,7 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
   private shadowSub?: Subscription;
   private suggestionsSub?: Subscription;
   private planSub?: Subscription;
+  private calendarSub?: Subscription;
   private readonly suggestionsSubject = new BehaviorSubject<Suggestion[]>([]);
 
   constructor(
@@ -63,6 +79,7 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
       this.socReserve = row?.soc_reserve_percent ?? 20;
     });
     this.reloadSuggestions();
+    this.reloadHouseholdCalendar();
   }
 
   ngAfterViewInit(): void {
@@ -76,6 +93,7 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
     this.suggestionsSub?.unsubscribe();
     this.acSub?.unsubscribe();
     this.planSub?.unsubscribe();
+    this.calendarSub?.unsubscribe();
     clearTimeout(this.acPreviewTimer);
     clearTimeout(this.acPersistTimer);
     this.chart?.destroy();
@@ -87,6 +105,7 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
     this.reloadSuggestions();
     this.reloadAc();
     this.reloadPlanChart();
+    this.reloadHouseholdCalendar();
   }
 
   formatSavingsNumber(value: number | null): string {
@@ -195,6 +214,57 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
       next: (rows) => this.suggestionsSubject.next(rows),
       error: () => this.suggestionsSubject.next([]),
     });
+  }
+
+  private reloadHouseholdCalendar(): void {
+    const from = todayIsoLocal();
+    const to = shiftIsoDate(from, 6);
+    this.calendarLoading = true;
+    this.calendarSub?.unsubscribe();
+    this.calendarSub = this.api.getHouseholdEvents(from, to).subscribe({
+      next: (rows) => {
+        const week = this.buildCalendarDays(from, 7, rows ?? []);
+        this.calendarWeek = week;
+        this.calendarTeaser = week.slice(0, 3);
+        this.calendarLoading = false;
+      },
+      error: () => {
+        const empty = this.buildCalendarDays(from, 7, []);
+        this.calendarWeek = empty;
+        this.calendarTeaser = empty.slice(0, 3);
+        this.calendarLoading = false;
+      },
+    });
+  }
+
+  private buildCalendarDays(
+    fromIso: string,
+    count: number,
+    events: HouseholdEventDto[],
+  ): HomeCalendarDay[] {
+    const today = todayIsoLocal();
+    const byDay = new Map<string, HouseholdEventDto[]>();
+    for (const e of events) {
+      const list = byDay.get(e.event_date) ?? [];
+      list.push(e);
+      byDay.set(e.event_date, list);
+    }
+    const out: HomeCalendarDay[] = [];
+    for (let i = 0; i < count; i++) {
+      const dayIso = shiftIsoDate(fromIso, i);
+      const d = new Date(`${dayIso}T12:00:00`);
+      const dayEvents = byDay.get(dayIso) ?? [];
+      const labels = dayEvents.map((e) => eventTypeDef(e.event_type)?.label ?? e.event_type);
+      out.push({
+        dayIso,
+        weekdayShort: d.toLocaleDateString('pl-PL', { weekday: 'short' }),
+        dayNum: d.toLocaleDateString('pl-PL', { day: 'numeric' }),
+        isToday: dayIso === today,
+        labels: labels.slice(0, 2),
+        count: dayEvents.length,
+      });
+    }
+    return out;
   }
 
   private reloadPlanChart(): void {

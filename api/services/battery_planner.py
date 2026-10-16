@@ -644,6 +644,104 @@ def is_ac_event_type(event_type: str | None) -> bool:
     return (event_type or '').strip().lower() in AC_EVENT_TYPES
 
 
+# §10.1 — typy wpływające na doradcę nocnego / Home.
+LAUNDRY_EVENT_TYPES = frozenset({'pranie'})
+TOWEL_EVENT_TYPES = frozenset({'grzejnik_lazienka'})
+BREAKFAST_EVENT_TYPES = frozenset({'sniadanie'})
+TRAVEL_EVENT_TYPES = frozenset({'wyjazd', 'ferie', 'wakacje'})
+FLOOR_HEATING_EVENT_TYPES = frozenset({'podlogowka', 'ogrzewanie_podlogowe', 'podłoga'})
+# PV jutro (ENS) powyżej którego + SoC wysoki → POMIŃ FC przed dniem prania.
+LAUNDRY_SKIP_PV_KWH = float(os.getenv('BATTERY_LAUNDRY_SKIP_PV_KWH', '18'))
+LAUNDRY_SKIP_SOC_PERCENT = float(os.getenv('BATTERY_LAUNDRY_SKIP_SOC_PERCENT', '55'))
+
+
+def _normalize_event_type(event_type: str | None) -> str:
+    key = (event_type or '').strip().lower()
+    aliases = {
+        'upal': 'klimatyzacja',
+        'upał': 'klimatyzacja',
+        'ac': 'klimatyzacja',
+        'wakacje': 'ferie',
+        'ogrzewanie_podlogowe': 'podlogowka',
+        'podłoga': 'podlogowka',
+        'podlogowka_zima': 'podlogowka',
+    }
+    return aliases.get(key, key)
+
+
+def events_for_day(db, user_id: int, day: date | None = None) -> list[str]:
+    """Lista znormalizowanych typów wydarzeń z kalendarza na dany dzień."""
+    from api.models import HouseholdEvent
+
+    try:
+        target = (day or date.today()).isoformat()
+        rows = (
+            db.query(HouseholdEvent.event_type)
+            .filter(HouseholdEvent.user_id == user_id, HouseholdEvent.event_date == target)
+            .all()
+        )
+        return [_normalize_event_type(r.event_type) for r in rows if r.event_type]
+    except Exception:
+        return []
+
+
+def night_budget_extras_kwh(
+    *,
+    tonight_types: list[str] | None = None,
+    tomorrow_types: list[str] | None = None,
+    night_temp_c: float | None = None,
+) -> float:
+    """Dodatkowe kWh do budżetu nocy: grzejnik łazienka + podłogówka (T×cykle)."""
+    from src.optimization.battery_advisor import (
+        _morning_buffer_towel_heater_kwh,
+        estimate_floor_heating_night_kwh,
+    )
+
+    tonight = set(tonight_types or [])
+    tomorrow = set(tomorrow_types or [])
+    extra = 0.0
+    if tonight & TOWEL_EVENT_TYPES or tomorrow & TOWEL_EVENT_TYPES:
+        extra += float(_morning_buffer_towel_heater_kwh())
+    if tonight & FLOOR_HEATING_EVENT_TYPES or tomorrow & FLOOR_HEATING_EVENT_TYPES:
+        extra += float(estimate_floor_heating_night_kwh(night_temp_c))
+    return extra
+
+
+def should_skip_fc_for_laundry(
+    *,
+    tomorrow_types: list[str] | None,
+    tomorrow_pv_kwh: float | None,
+    soc_percent: float | None,
+    pv_threshold: float | None = None,
+    soc_threshold: float | None = None,
+) -> bool:
+    """Pranie jutro + słońce + SoC wysoki → POMIŃ nocne FC (kalibracja 15→16.10)."""
+    types = set(tomorrow_types or [])
+    if not (types & LAUNDRY_EVENT_TYPES):
+        return False
+    if tomorrow_pv_kwh is None or soc_percent is None:
+        return False
+    pv_cut = LAUNDRY_SKIP_PV_KWH if pv_threshold is None else float(pv_threshold)
+    soc_cut = LAUNDRY_SKIP_SOC_PERCENT if soc_threshold is None else float(soc_threshold)
+    return tomorrow_pv_kwh >= pv_cut and soc_percent >= soc_cut
+
+
+def has_travel_mode(types: list[str] | None) -> bool:
+    return bool(set(types or []) & TRAVEL_EVENT_TYPES)
+
+
+def has_breakfast(types: list[str] | None) -> bool:
+    return bool(set(types or []) & BREAKFAST_EVENT_TYPES)
+
+
+def has_towel_heater(types: list[str] | None) -> bool:
+    return bool(set(types or []) & TOWEL_EVENT_TYPES)
+
+
+def has_floor_heating(types: list[str] | None) -> bool:
+    return bool(set(types or []) & FLOOR_HEATING_EVENT_TYPES)
+
+
 def resolve_ac_power_kw(settings_row, override: float | None = None) -> float:
     if override is not None and override > 0:
         return float(override)
@@ -654,34 +752,57 @@ def resolve_ac_power_kw(settings_row, override: float | None = None) -> float:
 
 def today_is_ac_day(db, user_id: int, day: date | None = None) -> bool:
     """True gdy w kalendarzu jest dziś klimatyzacja/upał — tylko wtedy karta na Home."""
-    from api.models import HouseholdEvent
-
-    try:
-        target = (day or date.today()).isoformat()
-        rows = (
-            db.query(HouseholdEvent.event_type)
-            .filter(HouseholdEvent.user_id == user_id, HouseholdEvent.event_date == target)
-            .all()
-        )
-        return any(is_ac_event_type(r.event_type) for r in rows)
-    except Exception:
-        return False
+    return any(is_ac_event_type(t) for t in events_for_day(db, user_id, day))
 
 
 def yesterday_had_przetwory(db, user_id: int, day: date | None = None) -> bool:
     """True gdy wczoraj w kalendarzu było `przetwory` — wzmacnia treść bufora rano @22."""
-    from api.models import HouseholdEvent
+    target = (day or date.today()) - timedelta(days=1)
+    return 'przetwory' in events_for_day(db, user_id, target)
 
-    try:
-        target = ((day or date.today()) - timedelta(days=1)).isoformat()
-        rows = (
-            db.query(HouseholdEvent.event_type)
-            .filter(HouseholdEvent.user_id == user_id, HouseholdEvent.event_date == target)
-            .all()
-        )
-        return any((r.event_type or '').strip().lower() == 'przetwory' for r in rows)
-    except Exception:
-        return False
+
+def household_night_flags(
+    db,
+    user_id: int,
+    as_of: datetime | None = None,
+    *,
+    tomorrow_pv_kwh: float | None = None,
+    soc_percent: float | None = None,
+    night_temp_c: float | None = None,
+) -> dict:
+    """Flagi kalendarza pod evaluate_charge_tonight_cloudy / feed."""
+    from src.optimization.battery_advisor import estimate_floor_heating_night_kwh
+
+    as_of = as_of or datetime.now()
+    d = as_of.date()
+    tonight = events_for_day(db, user_id, d)
+    tomorrow = events_for_day(db, user_id, d + timedelta(days=1))
+    floor = has_floor_heating(tonight) or has_floor_heating(tomorrow)
+    floor_kwh = estimate_floor_heating_night_kwh(night_temp_c) if floor else 0.0
+    extras = night_budget_extras_kwh(
+        tonight_types=tonight,
+        tomorrow_types=tomorrow,
+        night_temp_c=night_temp_c,
+    )
+    towel = has_towel_heater(tonight) or has_towel_heater(tomorrow)
+    breakfast_tomorrow = has_breakfast(tomorrow)
+    travel = has_travel_mode(tonight) or has_travel_mode(tomorrow)
+    laundry_skip = should_skip_fc_for_laundry(
+        tomorrow_types=tomorrow,
+        tomorrow_pv_kwh=tomorrow_pv_kwh,
+        soc_percent=soc_percent,
+    )
+    return {
+        'tonight_types': tonight,
+        'tomorrow_types': tomorrow,
+        'extra_night_kwh': extras,
+        'towel_heater': towel,
+        'breakfast_tomorrow': breakfast_tomorrow,
+        'travel_mild_buffer': travel,
+        'laundry_skip': laundry_skip,
+        'floor_heating': floor,
+        'floor_heating_kwh': floor_kwh,
+    }
 
 
 def _ac_night_window(as_of: datetime) -> tuple[datetime, datetime, float]:
@@ -947,17 +1068,45 @@ def _compose_home_suggestion(
     start_h = _settings_night_start(settings_row)
     fc_max = effective_fc_max(settings_row, season)
     after_przetwory = bool(db is not None and user_id is not None and yesterday_had_przetwory(db, user_id, d))
+    tomorrow_pv = get_archived_day_pv_kwh(tomorrow_s)
+    tomorrow_t = get_day_mean_temp_c(tomorrow_s)
+    hh = (
+        household_night_flags(
+            db,
+            user_id,
+            as_of,
+            tomorrow_pv_kwh=tomorrow_pv,
+            soc_percent=soc_now,
+            night_temp_c=tomorrow_t,
+        )
+        if db is not None and user_id is not None
+        else {
+            'towel_heater': False,
+            'breakfast_tomorrow': True,
+            'travel_mild_buffer': False,
+            'laundry_skip': False,
+            'floor_heating': False,
+            'floor_heating_kwh': 0.0,
+        }
+    )
     night_rule = evaluate_charge_tonight_cloudy(
         soc_percent=soc_now,
-        tomorrow_pv_kwh=get_archived_day_pv_kwh(tomorrow_s),
+        tomorrow_pv_kwh=tomorrow_pv,
         as_of=as_of,
-        tomorrow_temp_c=get_day_mean_temp_c(tomorrow_s),
+        tomorrow_temp_c=tomorrow_t,
         capacity_kwh=(
             settings_row.battery_capacity_kwh if settings_row and settings_row.battery_capacity_kwh else None
         ),
         fc_max_minutes=fc_max,
         night_start_hour=start_h,
         after_przetwory=after_przetwory,
+        towel_heater=bool(hh.get('towel_heater')),
+        # śniadanie w budżecie zawsze (baseline kalibracji); event kalendarza nie wyłącza
+        breakfast_tomorrow=True,
+        laundry_skip=bool(hh.get('laundry_skip')),
+        travel_mild_buffer=bool(hh.get('travel_mild_buffer')),
+        floor_heating=bool(hh.get('floor_heating')),
+        floor_heating_kwh=float(hh.get('floor_heating_kwh') or 0.0) or None,
     )
 
     weekend = is_weekend(d) or is_public_holiday(d)
@@ -1004,6 +1153,9 @@ def _compose_home_suggestion(
     elif night_rule.skip_reason == 'wear':
         night_rec, night_label = False, 'pomiń (niewiele brakuje vs zużycie baterii)'
         aft_rec, aft_label = _aft_for_peak_season() if (winter or autumn) else (False, 'rzadko potrzebne')
+    elif night_rule.skip_reason == 'laundry_sunny':
+        night_rec, night_label = False, 'pomiń (pranie jutro + słońce + SoC)'
+        aft_rec, aft_label = _aft_for_peak_season() if (winter or autumn) else (False, 'rzadko potrzebne')
     elif night_rule.skip_reason in ('covered', 'full'):
         night_rec, night_label = (
             False,
@@ -1040,6 +1192,12 @@ def _compose_home_suggestion(
         action = (
             'Niewiele brakuje do celu — spread G12w nie pokrywa zużycia cyklu LFP. '
             'Zostaw rezerwę, ewentualnie 13–15. System tylko doradza — bez automatyki.'
+        )
+    elif night_rule.skip_reason == 'laundry_sunny':
+        rec = 'POMIŃ FC (PRANIE + SŁOŃCE)'
+        action = (
+            'W kalendarzu jutro pranie, prognoza PV wysoka i SoC już wystarczy — '
+            'nie ładuj na zapas. AGD w szczycie PV (ok. 11–15). System tylko doradza.'
         )
     elif winter:
         rec = 'REŻIM ZIMA'

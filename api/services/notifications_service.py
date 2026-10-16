@@ -25,6 +25,23 @@ from api.services.advice_events import record_advice_event
 NOTIF_TYPE_CHEAP_WINDOW = 'cheap_window'
 NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY = 'charge_tonight_cloudy'
 NOTIF_TYPE_SOC16_RESERVE = 'soc_reserve'
+NOTIF_TYPE_HOUSEHOLD_CONTEXT = 'household_context'
+
+# Szacunek zł insightu = kWh × spread G12w (jak mobile household.types).
+_HOUSEHOLD_G12W_SPREAD_PLN = 0.36
+_HOUSEHOLD_INSIGHT_KWH = {
+    'klimatyzacja': 3.0,
+    'pranie': 1.5,
+    'suszarka': 1.2,
+    'zmywarka': 1.2,
+    'sniadanie': 1.4,
+    'obiad': 1.0,
+    'kolacja': 1.4,
+    'chleb': 0.8,
+    'przetwory': 10.0,
+    'grzejnik_lazienka': 0.75,
+    'podlogowka': 1.2,
+}
 
 SuggestionContext = Literal['morning', 'pre_cheap', 'peak']
 
@@ -265,18 +282,34 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
     tomorrow_pv = get_day_pv_forecast_sum(tomorrow_s, as_of=as_of)
     tomorrow_t = get_day_mean_temp_c(tomorrow_s)
     after_przetwory = False
+    hh: dict = {}
     try:
-        from api.services.battery_planner import yesterday_had_przetwory
+        from api.services.battery_planner import household_night_flags, yesterday_had_przetwory
 
         after_przetwory = yesterday_had_przetwory(db, user_id, as_of.date())
+        hh = household_night_flags(
+            db,
+            user_id,
+            as_of,
+            tomorrow_pv_kwh=tomorrow_pv,
+            soc_percent=snap.soc_percent,
+            night_temp_c=tomorrow_t,
+        )
     except Exception:
         after_przetwory = False
+        hh = {}
     rule = evaluate_charge_tonight_cloudy(
         soc_percent=snap.soc_percent,
         tomorrow_pv_kwh=tomorrow_pv,
         as_of=as_of,
         tomorrow_temp_c=tomorrow_t,
         after_przetwory=after_przetwory,
+        towel_heater=bool(hh.get('towel_heater')),
+        breakfast_tomorrow=True,
+        laundry_skip=bool(hh.get('laundry_skip')),
+        travel_mild_buffer=bool(hh.get('travel_mild_buffer')),
+        floor_heating=bool(hh.get('floor_heating')),
+        floor_heating_kwh=float(hh.get('floor_heating_kwh') or 0.0) or None,
     )
     if not rule.triggered:
         return None
@@ -294,6 +327,8 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
             'target_soc_percent': rule.target_soc_percent,
             'fc_minutes': rule.fc_minutes,
             'recommendation': rule.recommendation,
+            'laundry_skip': bool(hh.get('laundry_skip')),
+            'towel_heater': bool(hh.get('towel_heater')),
         },
         ensure_ascii=False,
     )
@@ -304,6 +339,91 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
         day_key=day_key,
         title=rule.title,
         body=rule.body,
+        payload=payload,
+    )
+
+
+def maybe_upsert_household_context(db: Session, user_id: int) -> Notification | None:
+    """T4.8/T4.9: baner „Dzięki zaznaczeniu…” + szacunek zł w feedzie Home."""
+    try:
+        from api.services.battery_planner import events_for_day
+    except Exception:
+        return None
+
+    as_of = datetime.now()
+    d = as_of.date()
+    today_types = events_for_day(db, user_id, d)
+    tomorrow_types = events_for_day(db, user_id, d + timedelta(days=1))
+    # Preferuj najbliższe „ciężkie” wydarzenie (dziś, potem jutro).
+    pick = None
+    for t in today_types + tomorrow_types:
+        if t in _HOUSEHOLD_INSIGHT_KWH or t in ('wyjazd', 'ferie'):
+            pick = t
+            break
+    if pick is None:
+        _mark_unread_type_read(db, user_id, NOTIF_TYPE_HOUSEHOLD_CONTEXT)
+        return None
+
+    labels = {
+        'sniadanie': 'Śniadanie',
+        'obiad': 'Obiad / indukcja',
+        'kolacja': 'Kolacja',
+        'pranie': 'Pranie',
+        'suszarka': 'Suszarka',
+        'zmywarka': 'Zmywarka',
+        'chleb': 'Pieczenie chleba',
+        'przetwory': 'Przetwory',
+        'klimatyzacja': 'Klimatyzacja / upał',
+        'grzejnik_lazienka': 'Grzejnik łazienka',
+        'podlogowka': 'Podłogówka (zima)',
+        'wyjazd': 'Wyjazd',
+        'ferie': 'Ferie / wakacje',
+    }
+    hints = {
+        'sniadanie': 'Budżet ~1,3 kWh przed PV — wpływa na bufor rano.',
+        'obiad': 'Krótki pik — OK przy pełnej baterii i PV (szczyt dnia).',
+        'kolacja': 'Jak śniadanie ~1,3–1,4 kWh (ciepłe + czajnik/piekarnik) — wieczór bez PV; pilnuj SoC @22.',
+        'pranie': 'Najlepiej w szczycie PV; przy słońcu pomiń nocne FC.',
+        'suszarka': 'Po praniu; cykl ~1–1,5 kWh przy SoC wysokim — wieczorem z baterii.',
+        'zmywarka': 'Szczyt PV albo tania 13–15 / po 22.',
+        'chleb': 'Lekkie obciążenie — można równolegle z innym AGD.',
+        'przetwory': 'Duży load — następny dzień: pilnuj SoC @22.',
+        'klimatyzacja': 'Wyższa rezerwa SoC wieczorem — karta AC na Home.',
+        'grzejnik_lazienka': 'Dodaje ~0,75 kWh do budżetu nocy przed FC.',
+        'podlogowka': 'Doradca szacuje kWh nocy z T (cykle bufora) i cel SoC@22.',
+        'wyjazd': 'Niższe zużycie — łagodniejszy bufor / standby.',
+        'ferie': 'Tryb urlopowy — mniej obciążenia domu.',
+    }
+    label = labels.get(pick, pick)
+    hint = hints.get(pick, 'Doradca baterii uwzględni kontekst.')
+    kwh = _HOUSEHOLD_INSIGHT_KWH.get(pick)
+    money = ''
+    estimate_pln = None
+    if kwh is not None and kwh > 0:
+        estimate_pln = round(kwh * _HOUSEHOLD_G12W_SPREAD_PLN, 2)
+        money = (
+            f' Szacunek wpływu na rachunek: ok. {str(estimate_pln).replace(".", ",")} zł (spread G12w).'
+        )
+    title = f'Dzięki zaznaczeniu: {label}'
+    body = f'{hint}{money}'
+    day_key = d.isoformat()
+    payload = json.dumps(
+        {
+            'rule': NOTIF_TYPE_HOUSEHOLD_CONTEXT,
+            'day': day_key,
+            'event_type': pick,
+            'estimate_pln': estimate_pln,
+            'estimate_kwh': kwh,
+        },
+        ensure_ascii=False,
+    )
+    return _upsert_day_notification(
+        db,
+        user_id,
+        notif_type=NOTIF_TYPE_HOUSEHOLD_CONTEXT,
+        day_key=day_key,
+        title=title,
+        body=body,
         payload=payload,
     )
 
@@ -377,6 +497,7 @@ def generate_suggestions_for_user(
         'cheap_window': maybe_upsert_cheap_window(db, user_id, ctx),
         'charge_tonight_cloudy': maybe_upsert_charge_tonight_cloudy(db, user_id),
         'soc_reserve': maybe_upsert_soc16_reserve(db, user_id),
+        'household_context': maybe_upsert_household_context(db, user_id),
     }
 
 
@@ -393,10 +514,11 @@ def generate_suggestions_for_all_users(
         'cheap_window': 0,
         'charge_tonight_cloudy': 0,
         'soc_reserve': 0,
+        'household_context': 0,
     }
     for user in users:
         result = generate_suggestions_for_user(db, user.id, ctx)
-        for key in ('cheap_window', 'charge_tonight_cloudy', 'soc_reserve'):
+        for key in ('cheap_window', 'charge_tonight_cloudy', 'soc_reserve', 'household_context'):
             if result.get(key) is not None:
                 summary[key] += 1
     return summary

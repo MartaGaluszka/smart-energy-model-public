@@ -296,3 +296,43 @@ ion-content::part(scroll) {
 ion-content::part(scroll)::-webkit-scrollbar {
   display: none;
 }
+
+/* Alert / overlay — moss zamiast systemowego niebieskiego obrysu (iOS). */
+ion-alert.se-alert {
+  --backdrop-opacity: 0.4;
+}
+
+ion-alert.se-alert::part(backdrop) {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  background: rgba(26, 29, 33, 0.35);
+}
+
+ion-alert.se-alert .alert-wrapper {
+  border: 1.5px solid var(--moss);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: 0 12px 40px rgba(26, 29, 33, 0.2);
+  outline: none;
+}
+
+ion-alert.se-alert .alert-head {
+  padding-bottom: 4px;
+}
+
+ion-alert.se-alert .alert-title {
+  font-family: var(--font-serif);
+  color: var(--text);
+}
+
+ion-alert.se-alert .alert-message {
+  color: var(--text-muted);
+}
+
+ion-alert.se-alert .alert-button.alert-button-role-cancel {
+  color: var(--solar-pressed);
+}
+
+ion-alert.se-alert .alert-button.alert-button-role-destructive {
+  color: var(--cost);
+}

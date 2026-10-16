@@ -45,6 +45,15 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine, checkfirst=True)
     _ensure_battery_strategy_columns()
+    _allow_household_event_duplicates()
+
+
+def _allow_household_event_duplicates() -> None:
+    """Wiele cykli AGD na dzień (2× zmywarka…) — zdejmij unikaty z wcześniejszej ochrony."""
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        conn.execute(text('DROP INDEX IF EXISTS uq_household_events_user_date_type'))
 
 
 def _ensure_battery_strategy_columns() -> None:

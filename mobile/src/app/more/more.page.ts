@@ -3,6 +3,7 @@ import { addIcons } from 'ionicons';
 import {
   batteryChargingOutline,
   calculatorOutline,
+  calendarOutline,
   cashOutline,
   flashOutline,
   partlySunnyOutline,
@@ -22,6 +23,7 @@ export class MorePage {
       calculatorOutline,
       trendingUpOutline,
       batteryChargingOutline,
+      calendarOutline,
       flashOutline,
       partlySunnyOutline,
       cashOutline,

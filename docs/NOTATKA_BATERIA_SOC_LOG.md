@@ -61,9 +61,9 @@ Raport: **zapomniane wyłączenie ładowania o 22:00** → poszło do **100%**; 
 
 **Werdykt:** przy Accu **jasny/RF** i ENS **~22** FC **nie było potrzebne** — **63%@22** pewnie starczyłoby na rano (min wyszło **~29–30%**, czyli tuż przy progu komfortu, ale **bez luki sieci**). Koszt pomyłki: **~4 kWh** taniego importu w nocy; zysk: spokojny bufor **~30%** przed PV i zero śniadania z sieci. Lekcja UI jak **13→14**: **timer / ręczne wyłączenie FC o 22:xx** — ForceCharge sam nie „wie”, że jutro jest słońce. Fox **16.10** do południa: generation już **~20 kWh**, gridConsumption **~0,4** (dzień słoneczny ratuje bilans).
 
-### 2026-10-16 — DZIEŃ (dużo AGD: 2× pranie · zmywarka · chleb · obiad · suszarka)
+### 2026-10-16 — DZIEŃ (dużo AGD: 2× pranie · zmywarka · chleb · obiad · suszarka · kolacja)
 
-Accu **jasny→RF** · raport użytkownika **~16:40** · Fox sync do **~15:57** (suszarka jeszcze poza DB).
+Accu **jasny→RF** · raport użytkownika **~16:40** · Fox sync do **~18:17**.
 
 | Moment | Load / SoC (Fox) | Uwaga |
 |--------|------------------|-------|
@@ -71,13 +71,14 @@ Accu **jasny→RF** · raport użytkownika **~16:40** · Fox sync do **~15:57** 
 | **~11–13** | load μ **~1,3** / peak **~2,9** · SoC **85%→99%** · PV **~3,9–4,6 kW** | pranie #2 / ciąg AGD · nadwyżka do sieci (grid ujemny) |
 | **~13:28–13:51** | load **2,2–3,9 kW** · PV **~4,0–4,3** · SoC **99%** · grid **~0** (eksport spada) | **13:35:** zmywarka **koniec** (~2 h) · chleb (Lidl) **~20 min do końca** · **indukcja** obiad + kawa |
 | **~14–16** | load niski · SoC **98–99%** · PV **~2–3,7** · eksport **~1–3 kW** | przerwa przed suszarką |
-| **~16:10→** | (raport) suszarka **od ~30 min**, zostało **~2 h** | poza ostatnim synciem Fox **15:57** — dograć SoC/load przy closeoucie |
+| **~16:10–17:40** | load ciągły **~0,6–0,8 kW** · suma **~1,2 kWh** · SoC **98→94** · import **~0** | **suszarka** finisz (po 2× praniu); PV spada **~1,9→0** |
+| **~17:45–18:15** | load **~0,73 kWh** · peak **3,37 kW** · SoC **93→87** (−6 pp) · import **~0,02** | **kolacja** ~30 min na indukcji (bez PV) — z baterii |
 
-**Fox dzień (report do syncu):** generation **~20,4** · loads **~14,8** · feedin **~9,6** · gridConsumption **~0,4** (godz. load **13:00 = 2,1 kWh** najwyższa).
+**Fox dzień (report do ~18:17):** generation **~20,4** · loads **~14,8+** · feedin **~9,6** · gridConsumption **~0,4** (godz. load **13:00 = 2,1 kWh** najwyższa).
 
-**Werdykt w toku:** przy pełnej baterii i PV **~4 kW** cały szczyt **13:35** (zmywarka finisz + chleb + indukcja) **poszedł z dachu**, bez importu — idealny dzień na pranie/suszenie. Suszarka **~16–18** zejdzie z malejącym PV → część z baterii (**98%** zapas), ewentualnie lekki import wieczorem jeśli load > PV+bat. Closeout po końcu suszarki.
+**Werdykt:** szczyt **13:35** (zmywarka + chleb + obiad) **z dachu**. Suszarka **~1,2 kWh** z baterii przy SoC **≳90%** — OK. Kolacja wieczorem **~0,75 kWh / peak 3,4 kW** (lekka indukcja) — typ `kolacja` w kalendarzu (§10.1). **Update planowania:** budżet `kolacja` = jak `sniadanie` **~1,3–1,4 kWh** (często czajnik + ciepłe / piekarnik); case 16.10 był dolnym końcem.
 
-**Kalendarz:** typy `pranie` / `suszarka` / `chleb` / `obiad` + pakiet „dzień prania” → §10.1 [`PROJEKT_APLIKACJA_MOBILNA.md`](PROJEKT_APLIKACJA_MOBILNA.md).
+**Kalendarz:** typy `pranie` / `suszarka` / `chleb` / `obiad` / `kolacja` + pakiet „dzień prania” → §10.1 [`PROJEKT_APLIKACJA_MOBILNA.md`](PROJEKT_APLIKACJA_MOBILNA.md).
 
 ### 2026-10-14 → 15.10 — NOC + rano (FC 100% · śniadanie na styk · zmywarka ~9:00)
 
