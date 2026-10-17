@@ -58,6 +58,22 @@
   gap: 4px 8px;
 }
 
+.se-form-grid--capex {
+  align-items: end;
+}
+
+.se-form-grid--capex > .se-field {
+  --min-height: 0;
+}
+
+.se-form-grid--capex > .se-field ion-label {
+  display: flex;
+  align-items: flex-end;
+  min-height: 2.8em;
+  line-height: 1.35;
+  white-space: normal;
+}
+
 .se-form-grid--params {
   gap: 6px 10px;
   align-items: end;
