@@ -103,6 +103,8 @@ Fox próbki co ~5 min. PV w oknie **~3,4–4,3 kW**. Sieć przy śniadaniu i zmy
 
 **Kalendarz:** `sniadanie` · `zmywarka` · `wiertarka` · `odkurzacz_reczny` (notatki, bez kWh ikony) · `podlogowka` raz, cykle w notatce. `household_events` na **17.10**.
 
+**~20:07:** wiatrak sufitowy był w użyciu i właśnie stanął (zgłoszenie). Ostatnia próbka Fox **18:17**, load **0,24 kW** — wiatrak nie ma osobnego kWh.
+
 ### 2026-10-14 → 15.10 — NOC + rano (FC 100% · śniadanie na styk · zmywarka ~9:00)
 
 Accu **15** Lumen **7 / 52%** → paper **RF** · ENS @05 **~15,5** · Tnoc (Accu/MB) **~3°C**.  
