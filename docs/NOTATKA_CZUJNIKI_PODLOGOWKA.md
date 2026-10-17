@@ -246,6 +246,21 @@ Zł w dół przy load/HDD ≈ 0 i Z1 w dół → **nie przypisywać czujnikom**.
 
 ---
 
+## Podłogówka a bufor CWU — od sezonu zimnego (zapis 17.10.2026)
+
+Fox widzi **jeden** kształt: plateau około **2,3–3,6 kW** przez kilka–kilkadziesiąt minut. Tak grzeje podłoga i tak grzeje bufor wody użytkowej. Po kilowatach ich nie rozdzielimy.
+
+Nazwę nadaje **sezon i temperatura nocy**, nie detektor.
+
+| Kiedy | Co to jest | W Rytmie i w budżecie nocy |
+|-------|------------|----------------------------|
+| **Lato** i każda noc z **Tnoc ≥ 10°C** | bufor **CWU** (woda użytkowa), bez podłogówki | zostaje w budżecie jako bufor (~0,6 kWh). **Nie** nazywać podłogówką i **nie** wkładać do zdania „zostaje na dziś” |
+| **Sezon zimny XI–II**, gdy Tnoc spada poniżej progu, przy którym podłoga się załącza (dziś w `estimate_floor_heating_night_kwh`: **T &lt; 10°C**, im zimniej tym więcej cykli) | **podłogówka** | pakiet sztywny razem ze śniadaniem, obiadem i kolacją. Elastyczne zostają tylko sprzęty, które mogą poczekać na słońce |
+
+Jesień (do końca X) bez tej automatycznej nalepki: kafelek `podlogowka` w kalendarzu wstawiamy ręcznie, gdy wiadomo, że podłoga idzie. Przełączenie nazwy cyklu Fox (podłoga vs CWU) włączamy **od listopada**, razem z sezonem zimnym — żeby letni bufor CWU nigdy nie został podłogówką.
+
+---
+
 ## Notatki do wpisania 2026
 
 - Obecność / wyjazd (jak kajaki 5.09) — `household_events`  
@@ -254,6 +269,7 @@ Zł w dół przy load/HDD ≈ 0 i Z1 w dół → **nie przypisywać czujnikom**.
 - [x] **18.09.2026** — obserwacja podłogi IX 2025 vs czujniki IX 2026 + Fox/pogoda (§ Obserwacja 18.09.2026)
 - [x] **08.10.2026** — 1–8.10 2025 vs 2026: podłogówka jeszcze **nie** widoczna w nocy 00–04 (§ Obserwacja 08.10.2026); poranek 05–07 = pieczenie, nie wliczać
 - [x] **13.10.2026** — dzienny cykl **15:10–15:46** ~1,7 kWh / SoC −18 pp (§ Obserwacja 13.10.2026); rano bufor ~06:10
+- [ ] **Od XI (sezon zimny):** cykl Fox 2,3–3,6 kW nazywać podłogówką tylko przy Tnoc &lt; 10°C; latem i przy Tnoc ≥ 10°C ten sam kształt to bufor CWU, nie podłogówka
 - [ ] Sprawdzić **04.10** (plateau nocne) w logu sterowników, jeśli jest
 - [ ] Zapisać w `household_events` pieczenie chleba (np. **07.10 ~05:10–07:00**), żeby odfiltrować poranek przy werdykcie
 - [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD) + link September 2025 vs 2026 (canvas lokalny — tylko prywatne)
