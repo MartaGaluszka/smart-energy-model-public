@@ -214,27 +214,40 @@ def build_daily_counter_table(
     variable: str = PVE_COUNTER_VARIABLE,
     start: str | None = None,
     end: str | None = None,
+    rows: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Tabela dzienna (wszystkie dni) — używana przez compare_foxess_metrics."""
-    where = ['variable = ?']
-    params: list = [variable]
-    if start:
-        where.append('date(timestamp) >= ?')
-        params.append(start)
-    if end:
-        where.append('date(timestamp) <= ?')
-        params.append(end)
+    """Tabela dzienna (wszystkie dni) — używana przez compare_foxess_metrics.
 
-    df = pd.read_sql(
-        f'''
-        SELECT date(timestamp) AS day, timestamp, value
-        FROM foxess_timeseries
-        WHERE {' AND '.join(where)}
-        ORDER BY timestamp
-        ''',
-        conn,
-        params=params,
-    )
+    ``rows`` — już wczytane wiersze (kolumny day, timestamp, value), żeby jeden
+    odczyt licznika obsłużył wiele odcinków bez ponownego skanu tabeli.
+    """
+    if rows is not None:
+        df = rows
+        if start:
+            df = df[df['day'] >= start]
+        if end:
+            df = df[df['day'] <= end]
+        df = df.copy()
+    else:
+        where = ['variable = ?']
+        params: list = [variable]
+        if start:
+            where.append('date(timestamp) >= ?')
+            params.append(start)
+        if end:
+            where.append('date(timestamp) <= ?')
+            params.append(end)
+
+        df = pd.read_sql(
+            f'''
+            SELECT date(timestamp) AS day, timestamp, value
+            FROM foxess_timeseries
+            WHERE {' AND '.join(where)}
+            ORDER BY timestamp
+            ''',
+            conn,
+            params=params,
+        )
     if df.empty:
         return pd.DataFrame(columns=['day', f'ts_{variable}'])
 

@@ -270,20 +270,121 @@ def _energy_cost(zone1_kwh: float, zone2_kwh: float, rates: TariffRatesCreate) -
     return energy + total_kwh * per_kwh_fees
 
 
-def _daily_counter_kwh(conn, variable: str, seg_start: str, seg_end: str):
+def _sqlite_utc_day(timestamps):
+    """Ten sam dzień co SQLite ``date(timestamp)``: offset → UTC, bez offsetu zostaje jak jest.
+
+    Kawałki bajtów zamiast ``date()`` w SQL — tamto skanuje cały licznik przy każdym odcinku.
+    """
+    import numpy as np
+    import pandas as pd
+
+    if len(timestamps) == 0:
+        return pd.Series(dtype=str)
+    raw = timestamps.to_numpy().astype('S32')
+    chars = raw.view('S1').reshape(len(raw), -1)
+    days = chars[:, 0:10].copy().view('S10').ravel().astype('datetime64[D]')
+    hour = chars[:, 11:13].copy().view('S2').ravel().astype(np.int16)
+    minute = chars[:, 14:16].copy().view('S2').ravel().astype(np.int16)
+    sign = chars[:, 19]
+    has_off = (sign == b'+') | (sign == b'-')
+    off = np.zeros(len(raw), dtype=np.int16)
+    if has_off.any():
+        off_h = chars[has_off, 20:22].copy().view('S2').ravel().astype(np.int16)
+        off_m = chars[has_off, 23:25].copy().view('S2').ravel().astype(np.int16)
+        off[has_off] = off_h * 60 + off_m
+        off[sign == b'-'] *= -1
+    utc_min = hour.astype(np.int32) * 60 + minute - off
+    shift = np.zeros(len(raw), dtype=np.int8)
+    shift[has_off & (utc_min < 0)] = -1
+    shift[has_off & (utc_min >= 24 * 60)] = 1
+    shifted = days + shift.astype('timedelta64[D]')
+    return pd.Series(shifted.astype(str), index=timestamps.index)
+
+
+# Pokrywający indeks: sam odczyt timestamp+value, bez skoku do wiersza tabeli (2,5 GB).
+_COUNTER_INDEX = {
+    'gridConsumption': 'idx_foxess_ts_grid_consumption',
+    'feedin': 'idx_foxess_ts_feedin',
+    'PVEnergyTotal': 'idx_foxess_ts_pv_total',
+}
+
+
+def _load_counter_rows(conn, variable: str, start: str, end: str):
+    """Jeden odczyt licznika na zmienną. ``date(timestamp)`` w SQL skanuje cały licznik;
+    dzień UTC liczymy w Pythonie, potem ucinamy do okresu."""
+    import sqlite3
+
+    import pandas as pd
+
+    index = _COUNTER_INDEX.get(variable)
+    if index is None:
+        df = pd.read_sql(
+            'SELECT timestamp, value FROM foxess_timeseries WHERE variable = ?',
+            conn,
+            params=(variable,),
+        )
+    else:
+        # Nazwa z whitelisty — dosłowny warunek, żeby SQLite wziął indeks częściowy.
+        sql = (
+            f'SELECT timestamp, value FROM foxess_timeseries INDEXED BY {index} '
+            f"WHERE variable = '{variable}'"
+        )
+        try:
+            df = pd.read_sql(sql, conn)
+        except (sqlite3.OperationalError, pd.errors.DatabaseError):
+            df = pd.read_sql(
+                'SELECT timestamp, value FROM foxess_timeseries WHERE variable = ?',
+                conn,
+                params=(variable,),
+            )
+    if df.empty:
+        df['day'] = pd.Series(dtype=str)
+        return df
+    df['day'] = _sqlite_utc_day(df['timestamp'])
+    df = df[(df['day'] >= start) & (df['day'] <= end)]
+    # Ta sama kolejność co ORDER BY timestamp — groupby „last” bierze ostatni odczyt doby.
+    return df.sort_values('timestamp', kind='mergesort')
+
+
+def _zones(timestamps):
+    """G12w jak ``classify_zone``: weekend i święto całe tanie, w tygodniu 22–6 i 13–15."""
+    import numpy as np
+    import pandas as pd
+
+    from src.optimization.g12w_tariff import PL_PUBLIC_HOLIDAYS
+
+    if len(timestamps) == 0:
+        return timestamps
+    hours = timestamps.dt.hour.to_numpy()
+    weekend = timestamps.dt.weekday.to_numpy() >= 5
+    holiday = timestamps.dt.normalize().isin(pd.to_datetime(list(PL_PUBLIC_HOLIDAYS))).to_numpy()
+    cheap = (hours >= 22) | (hours < 6) | ((hours >= 13) & (hours < 15))
+    return pd.Series(np.where(weekend | holiday | cheap, 2, 1), index=timestamps.index)
+
+
+def _slice_days(series, seg_start: str, seg_end: str):
+    import pandas as pd
+
+    if series is None or len(series) == 0:
+        return pd.Series(dtype=float)
+    return series.loc[(series.index >= seg_start) & (series.index <= seg_end)]
+
+
+def _daily_counter_kwh(conn, variable: str, seg_start: str, seg_end: str, rows=None):
     """Dzienna energia [kWh] z licznika skumulowanego `foxess_timeseries` (lifetime counter),
     Δ dnia — ta sama metoda co `PVEnergyTotal` (zob. `src/data/foxess_pv_total.py`), tylko
     zastosowana też do `gridConsumption` (pobór z sieci) i `feedin` (oddanie do sieci).
 
     Pobieramy z jednodniowym zapasem PRZED `seg_start`, żeby metoda hybrydowa miała dostęp
     do `prev_last` nawet gdy pierwszy dzień segmentu akurat ma reset licznika (`min == 0`).
+    ``rows`` — wspólny odczyt całego okresu; okno odcinka i tak liczy się osobno.
     """
-    from datetime import timedelta
-
     from src.data.foxess_pv_total import build_daily_counter_table
 
     lookback_start = (_iso_to_date(seg_start) - timedelta(days=1)).isoformat()
-    df = build_daily_counter_table(conn, variable=variable, start=lookback_start, end=seg_end)
+    df = build_daily_counter_table(
+        conn, variable=variable, start=lookback_start, end=seg_end, rows=rows,
+    )
     return df[df['day'] >= seg_start].set_index('day')[f'ts_{variable}']
 
 
@@ -321,9 +422,23 @@ def _sum_segments(analyzer, segments: list[tuple[str, str, TariffRatesCreate]]) 
     """
     import pandas as pd
 
-    from src.optimization.g12w_tariff import classify_zone as g12w_zone
+    from src.data.foxess_pv_total import build_daily_counter_table
 
     conn = analyzer.connect()
+
+    # Licznik każdej zmiennej czytamy raz. Δ doby jest ciągłe między miesiącami,
+    # więc jeden przebieg hybrydowy wystarcza — odcinek taryfy tylko wycina dni.
+    counter_daily: dict = {}
+    if segments:
+        period_lookback = (_iso_to_date(min(seg[0] for seg in segments)) - timedelta(days=1)).isoformat()
+        period_end = max(seg[1] for seg in segments)
+        for variable in ('gridConsumption', 'feedin', 'PVEnergyTotal'):
+            rows = _load_counter_rows(conn, variable, period_lookback, period_end)
+            table = build_daily_counter_table(conn, variable, rows=rows)
+            if table.empty:
+                counter_daily[variable] = pd.Series(dtype=float)
+            else:
+                counter_daily[variable] = table.set_index('day')[f'ts_{variable}']
 
     baseline_energy = 0.0
     actual_energy = 0.0
@@ -343,7 +458,7 @@ def _sum_segments(analyzer, segments: list[tuple[str, str, TariffRatesCreate]]) 
             params=(seg_start, seg_end),
         )
         load_df['timestamp'] = _parse_local_timestamps(load_df['timestamp'])
-        load_df['zone'] = load_df['timestamp'].apply(g12w_zone)
+        load_df['zone'] = _zones(load_df['timestamp'])
         baseline_energy += _energy_cost(
             load_df[load_df['zone'] == 1]['load_energy_kwh'].sum(),
             load_df[load_df['zone'] == 2]['load_energy_kwh'].sum(),
@@ -358,7 +473,7 @@ def _sum_segments(analyzer, segments: list[tuple[str, str, TariffRatesCreate]]) 
         )
         grid_df['timestamp'] = _parse_local_timestamps(grid_df['timestamp'])
         grid_df['day'] = grid_df['timestamp'].dt.strftime('%Y-%m-%d')
-        grid_df['zone'] = grid_df['timestamp'].apply(g12w_zone)
+        grid_df['zone'] = _zones(grid_df['timestamp'])
         grid_df['import_z1'] = grid_df['grid_import_kwh'].where(grid_df['zone'] == 1, 0.0)
         grid_df['import_z2'] = grid_df['grid_import_kwh'].where(grid_df['zone'] == 2, 0.0)
         grid_df['pv_pos'] = grid_df['pv_energy_kwh'].clip(lower=0)
@@ -370,9 +485,9 @@ def _sum_segments(analyzer, segments: list[tuple[str, str, TariffRatesCreate]]) 
             raw_pv=('pv_pos', 'sum'),
         )
 
-        counter_import = _daily_counter_kwh(conn, 'gridConsumption', seg_start, seg_end)
-        counter_export = _daily_counter_kwh(conn, 'feedin', seg_start, seg_end)
-        counter_pv = _daily_counter_kwh(conn, 'PVEnergyTotal', seg_start, seg_end)
+        counter_import = _slice_days(counter_daily.get('gridConsumption'), seg_start, seg_end)
+        counter_export = _slice_days(counter_daily.get('feedin'), seg_start, seg_end)
+        counter_pv = _slice_days(counter_daily.get('PVEnergyTotal'), seg_start, seg_end)
 
         for day, row in raw_daily.iterrows():
             raw_import_total = row['raw_import_z1'] + row['raw_import_z2']

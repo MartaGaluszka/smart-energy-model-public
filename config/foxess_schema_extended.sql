@@ -13,6 +13,13 @@ CREATE TABLE IF NOT EXISTS foxess_timeseries (
 
 CREATE INDEX IF NOT EXISTS idx_foxess_ts_time ON foxess_timeseries(timestamp);
 CREATE INDEX IF NOT EXISTS idx_foxess_ts_var ON foxess_timeseries(variable);
+-- Liczniki energii do rachunku/ROI: odczyt bez skanowania całej tabeli.
+CREATE INDEX IF NOT EXISTS idx_foxess_ts_grid_consumption
+    ON foxess_timeseries(timestamp, value) WHERE variable = 'gridConsumption';
+CREATE INDEX IF NOT EXISTS idx_foxess_ts_feedin
+    ON foxess_timeseries(timestamp, value) WHERE variable = 'feedin';
+CREATE INDEX IF NOT EXISTS idx_foxess_ts_pv_total
+    ON foxess_timeseries(timestamp, value) WHERE variable = 'PVEnergyTotal';
 
 CREATE TABLE IF NOT EXISTS foxess_device_meta (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
