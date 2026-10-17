@@ -556,3 +556,75 @@ export function morningHeatLine(input: {
   }
   return `Do rana potrzeba ok. ${fmtKwh(need)} kWh: grzanie jak ostatnia noc ${fmtKwh(night)} kWh i dom w tle ${fmtKwh(background)} kWh. Powyżej 10% jest ok. ${fmtKwh(have)} kWh. Brakuje ok. ${fmtKwh(-left)} kWh — potem grzanie idzie z sieci.`;
 }
+
+/** Urządzenia, które warto włączyć w godzinach produkcji z dachu. */
+const PV_PLAN: Record<string, { phrase: string; hours: number }> = {
+  pranie: { phrase: 'pranie', hours: 2 },
+  suszarka: { phrase: 'suszarkę', hours: 1.5 },
+  zmywarka: { phrase: 'zmywarkę', hours: 2 },
+  obiad: { phrase: 'obiad', hours: 1 },
+  piekarnik: { phrase: 'piekarnik', hours: 1.5 },
+  odkurzacz: { phrase: 'Dreamy', hours: 1 },
+  chleb: { phrase: 'pieczenie chleba', hours: 2 },
+  przetwory: { phrase: 'przetwory', hours: 3 },
+};
+
+export interface ApplianceWindow {
+  names: string;
+  /** „11:00 – 14:00” */
+  span: string;
+}
+
+export function dayHasPvPlan(eventTypes: readonly string[]): boolean {
+  return eventTypes.some((type) => PV_PLAN[eventTypeDef(type)?.value ?? type] != null);
+}
+
+function joinPhrases(phrases: string[]): string {
+  const shown = phrases.slice(0, 3);
+  if (phrases.length > 3) shown[shown.length - 1] = 'inne';
+  if (shown.length <= 1) return shown[0] ?? '';
+  if (shown.length === 2) return `${shown[0]} i ${shown[1]}`;
+  return `${shown.slice(0, -1).join(', ')} i ${shown[shown.length - 1]}`;
+}
+
+/**
+ * Najdłuższe sensowne okno pod plan: suma czasów urządzeń (2–5 h)
+ * w ciągu dnia, tam gdzie prognoza godzinowa jest najmocniejsza.
+ */
+export function bestApplianceWindow(
+  eventTypes: readonly string[],
+  hours: ReadonlyArray<{ hour: number; predictedKwh: number }>,
+): ApplianceWindow | null {
+  const planned = eventTypes
+    .map((type) => PV_PLAN[eventTypeDef(type)?.value ?? type])
+    .filter((row): row is { phrase: string; hours: number } => row != null);
+  if (!planned.length || !hours.length) return null;
+  const phrases: string[] = [];
+  for (const row of planned) {
+    if (!phrases.includes(row.phrase)) phrases.push(row.phrase);
+  }
+  const spanHours = Math.min(5, Math.max(2, Math.ceil(planned.reduce((sum, row) => sum + row.hours, 0))));
+  const byHour = new Map<number, number>();
+  for (const row of hours) {
+    if (Number.isFinite(row.predictedKwh)) byHour.set(row.hour, row.predictedKwh);
+  }
+  let bestStart = -1;
+  let bestScore = 0;
+  for (let start = 7; start <= 20 - spanHours; start += 1) {
+    let score = 0;
+    for (let hour = start; hour < start + spanHours; hour += 1) {
+      score += byHour.get(hour) ?? 0;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestStart = start;
+    }
+  }
+  if (bestStart < 0 || bestScore < spanHours * 0.6) return null;
+  const end = bestStart + spanHours;
+  const clock = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
+  return {
+    names: joinPhrases(phrases),
+    span: `${clock(bestStart)} – ${clock(end)}`,
+  };
+}

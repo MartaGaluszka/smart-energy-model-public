@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { AlertController, ToastController, ViewWillEnter } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -30,6 +31,7 @@ import {
   HouseholdCustomTypeDto,
   HouseholdEventDto,
 } from '../services/api.service';
+import { ForecastBridgeService } from '../services/forecast-bridge.service';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { HOUSEHOLD_CUSTOM_ICONS, isHouseholdCustomIcon } from './household-icons';
 import {
@@ -40,6 +42,8 @@ import {
   HOUSEHOLD_SCENARIOS,
   HouseholdEventTypeDef,
   HouseholdScenario,
+  ApplianceWindow,
+  bestApplianceWindow,
   buildDayEnergyBudget,
   customTypeDef,
   dayAdvisorLine,
@@ -109,6 +113,8 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   insightBanner: string | null = null;
   /** Porównanie ikon z prognozą dnia i SoC. Nie blokuje widoku tygodnia. */
   focusBudget: DayEnergyBudget | null = null;
+  /** Okno godzinowe pod urządzenia z planu, policzone z prognozy. */
+  focusWindow: ApplianceWindow | null = null;
   budgetLoading = false;
   /** Zmierzone kWh bufora na dzień (Fox), zamiast katalogowego 1,2. */
   private floorHeatByDay: Record<string, number> = {};
@@ -120,6 +126,8 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     private readonly api: ApiService,
     private readonly alerts: AlertController,
     private readonly toasts: ToastController,
+    private readonly router: Router,
+    private readonly forecastBridge: ForecastBridgeService,
   ) {
     addIcons({
       calendarOutline,
@@ -211,12 +219,13 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     }
     const types = day.events.map((e) => e.event_type);
     this.budgetLoading = true;
+    this.focusWindow = null;
     this.budgetSub?.unsubscribe();
     const limited = <T>(source: Observable<T>) =>
       source.pipe(timeout({ first: 8000 }), catchError(() => of(null as T | null)));
     const useActual = day.isToday;
     this.budgetSub = forkJoin({
-      forecast: useActual ? of(null) : limited(this.api.getForecastHourly(day.dayIso)),
+      forecast: limited(this.api.getForecastHourly(day.dayIso)),
       fox: limited(this.api.getFoxOverview(useActual ? day.dayIso : undefined)),
       settings: limited(this.api.getBatterySettings()),
       suggestion: limited(this.api.getBatterySuggestion()),
@@ -242,8 +251,19 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
         floorHeatKwh: this.floorHeatByDay[day.dayIso] ?? null,
         nightHeatKwh: day.isToday ? this.nightHeatByDay[day.dayIso] ?? null : null,
       });
+      this.focusWindow = bestApplianceWindow(
+        types,
+        (forecast?.hours ?? []).map((row) => ({ hour: row.hour, predictedKwh: row.predicted_kwh })),
+      );
       this.budgetLoading = false;
     });
+  }
+
+  openForecast(): void {
+    const day = this.focusDay;
+    if (!day) return;
+    this.forecastBridge.open(day.dayIso);
+    void this.router.navigate(['/tabs/tab3']);
   }
 
   formatKwh(n: number | null | undefined): string {
@@ -595,7 +615,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
       const pln = this.plnFor(def);
       const money =
         pln != null
-          ? ` Szacunek: ok. ${pln.toFixed(2).replace('.', ',')} zł (spread G12w).`
+          ? ` Szacowany koszt: ok. ${pln.toFixed(2).replace('.', ',')} zł.`
           : '';
       return `Dzięki zaznaczeniu „${def.label}”: ${def.insightHint}${money}`;
     }
@@ -610,7 +630,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
       }
     }
     const money = any
-      ? ` Szacunek łącznie: ok. ${plnSum.toFixed(2).replace('.', ',')} zł (spread G12w).`
+      ? ` Szacowany koszt łącznie: ok. ${plnSum.toFixed(2).replace('.', ',')} zł.`
       : '';
     return `Dzięki zaznaczeniu: ${labels}. ${dayAdvisorLine(defs.map((d) => d.value), this.allCustomDefs())}${money}`;
   }

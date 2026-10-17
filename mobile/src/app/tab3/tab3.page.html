@@ -68,7 +68,7 @@
     </div>
 
     <!-- Wykres godzinowy -->
-    <ion-card class="se-card se-chart-card">
+    <ion-card class="se-card se-chart-card" id="forecast-chart">
       <ion-card-content>
         <div class="se-chart-wrap">
           <canvas #forecastCanvas></canvas>
@@ -172,12 +172,18 @@
 
     <!-- T1.20: kiedy włączyć AGD (progi mocy + top godziny) -->
     <ng-container *ngIf="!state.error && (state.applianceThresholds.length || state.applianceTips.length)">
-      <div class="se-section-title">
+      <div class="se-section-title" id="agd-window">
         <ion-icon name="home-outline"></ion-icon>
         <span>Kiedy włączyć AGD</span>
       </div>
       <ion-card class="se-card se-agd">
         <ion-card-content>
+          <p class="se-agd__plan" *ngIf="planFromRhythm">
+            {{ selectedIsToday ? 'Zgodnie z dzisiejszym planem domowym (' : 'Zgodnie z planem domowym (' }}<a
+              class="se-agd__plan-link"
+              routerLink="/tabs/household"
+            >Rytm domu</a>).
+          </p>
           <p class="se-agd__intro">
             Sugestia doradcza — jedna kombinacja AGD mieszcząca się w prognozowanej mocy
             z dachu (suma ≤ prognoza). Progi poniżej = moc pojedynczego urządzenia.

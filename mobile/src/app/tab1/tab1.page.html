@@ -171,12 +171,32 @@
       <ion-card-content>
         <p class="se-battery__plan-title">PLAN: TRYB {{ planModeAdjective(bat.season) }}</p>
         <ul class="se-battery__plan">
-          <li>- Cel: {{ planGoal(bat) }}</li>
-          <li>- Rezerwa SoC: {{ bat.soc_reserve_percent | number:'1.0-0' }}% (obecnie: {{ formatSoc(bat.soc_now_percent) }}%)</li>
-          <li>- Ładowanie G12w: {{ planG12w(bat) }}</li>
+          <li>Cel: {{ planGoal(bat) }}</li>
+          <li>Bateria (SoC): Aktualnie {{ formatSoc(bat.soc_now_percent) }}% (rezerwa: {{ bat.soc_reserve_percent | number:'1.0-0' }}%)</li>
         </ul>
       </ion-card-content>
     </ion-card>
+
+    <div class="se-balance-row">
+      <div class="se-balance-cell" *ngIf="battery$ | async as bat">
+        <ion-icon name="flash-outline" aria-hidden="true"></ion-icon>
+        <span class="se-balance-cell__text">
+          <span class="se-balance-cell__label">G12w</span>
+          <strong>{{ planG12wShort(bat) }}</strong>
+        </span>
+      </div>
+      <a class="se-balance-cell se-balance-cell--link" routerLink="/tabs/battery" aria-label="Otwórz zysk i plan baterii">
+        <ion-icon name="wallet-outline" aria-hidden="true"></ion-icon>
+        <span class="se-balance-cell__text">
+          <span class="se-balance-cell__label">Zysk</span>
+          <strong class="se-balance-cell__gain">
+            <ng-container *ngIf="shadowLoading">…</ng-container>
+            <ng-container *ngIf="!shadowLoading">{{ formatSavingsNumber(shadowMonthPln) }} zł</ng-container>
+          </strong>
+        </span>
+        <ion-icon class="se-balance-cell__go" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+      </a>
+    </div>
 
     <ng-container *ngIf="battery$ | async as bat">
       <ion-card
@@ -245,32 +265,25 @@
       </ion-card-content>
     </ion-card>
 
-    <ion-card class="se-card se-shadow-teaser" button routerLink="/tabs/battery">
-      <ion-card-content>
-        <div class="se-shadow-teaser__row">
-          <span class="se-shadow-teaser__cta">
-            Oszczędności i plan 24h. Zysk w tym miesiącu:
-            <ng-container *ngIf="shadowLoading">…</ng-container>
-            <ng-container *ngIf="!shadowLoading">
-              <span class="se-shadow-teaser__gain">{{ formatSavingsNumber(shadowMonthPln) }} zł</span>
-            </ng-container>
-            👉
-          </span>
-        </div>
-      </ion-card-content>
-    </ion-card>
-
-    <div class="se-section-title">
-      <ion-icon name="notifications-outline"></ion-icon>
-      <span>Sugestie</span>
-    </div>
     <ng-container *ngIf="suggestions$ | async as suggestions">
-      <ion-card class="se-card" *ngFor="let s of suggestions">
-        <ion-card-content class="se-suggestion">
-          <span class="se-suggestion__title">{{ s.title }}</span>
-          <span class="se-suggestion__body">{{ s.body }}</span>
-        </ion-card-content>
-      </ion-card>
+      <button
+        type="button"
+        class="se-suggest-toggle"
+        *ngIf="suggestions.length"
+        [attr.aria-expanded]="suggestionsOpen"
+        (click)="toggleSuggestions()"
+      >
+        <span>Sugestie ({{ suggestions.length }}) — dotknij, aby {{ suggestionsOpen ? 'zwinąć' : 'rozwinąć' }}</span>
+        <ion-icon [name]="suggestionsOpen ? 'chevron-up-outline' : 'chevron-down-outline'" aria-hidden="true"></ion-icon>
+      </button>
+      <ng-container *ngIf="suggestionsOpen">
+        <ion-card class="se-card se-suggestion-card" *ngFor="let s of suggestions">
+          <ion-card-content class="se-suggestion">
+            <span class="se-suggestion__title" *ngIf="suggestionShowsTitle(s)">{{ suggestionTitle(s) }}</span>
+            <span class="se-suggestion__body">{{ s.body }}</span>
+          </ion-card-content>
+        </ion-card>
+      </ng-container>
       <p *ngIf="!suggestions.length" class="se-demo-note">Brak nowych sugestii.</p>
     </ng-container>
   </div>

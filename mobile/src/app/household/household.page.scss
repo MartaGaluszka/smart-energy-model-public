@@ -136,6 +136,26 @@
   }
 }
 
+.se-rhythm-bridge {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+  cursor: pointer;
+
+  &__link {
+    font-weight: 600;
+    color: var(--solar-pressed);
+  }
+}
+
 .se-rhythm-budget {
   margin: 0 0 12px;
 

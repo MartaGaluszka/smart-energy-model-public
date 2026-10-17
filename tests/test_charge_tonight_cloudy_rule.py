@@ -147,9 +147,8 @@ def test_october_morning_buffer_when_soc_below_30_despite_sunny():
     assert rule_nd.fc_minutes == 15.0
     assert '22:00' in rule_nd.body
     assert 'przetworami' in rule_nd.body
-    assert 'śniadanie ~1.2 kWh' in rule_nd.body or 'śniadanie ~1.3 kWh' in rule_nd.body
-    assert 'bojler ~0.4 kWh' in rule_nd.body
-    assert 'bufor ciepła ~0.6 kWh' in rule_nd.body
+    assert 'śniadanie, bojler, bufor' in rule_nd.body
+    assert '2,2 kWh' in rule_nd.body or '2,3 kWh' in rule_nd.body
     assert rule_nd.target_soc_percent == 28.0 + 25.0  # 15 min ≈ +25 pp
 
     rule_pn = evaluate_charge_tonight_cloudy(

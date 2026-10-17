@@ -1,6 +1,8 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ViewWillEnter } from '@ionic/angular';
 import { Chart, ChartDataset, Plugin, registerables } from 'chart.js';
+import { addIcons } from 'ionicons';
+import { chevronDownOutline, chevronForwardOutline, chevronUpOutline, flashOutline, walletOutline } from 'ionicons/icons';
 import { BehaviorSubject, Observable, Subscription, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
@@ -51,6 +53,8 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
   calendarTeaser: HomeCalendarDay[] = [];
   calendarWeek: HomeCalendarDay[] = [];
   calendarLoading = false;
+  /** Pełne karty sugestii są schowane, dopóki ktoś nie rozwinie listy. */
+  suggestionsOpen = false;
   private pvByHour: (number | null)[] = [];
   private chart?: Chart;
   private viewReady = false;
@@ -68,7 +72,9 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
     readonly homeData: HomeDataService,
     private readonly api: ApiService,
     private readonly batteryState: BatteryStateService,
-  ) {}
+  ) {
+    addIcons({ chevronDownOutline, chevronForwardOutline, chevronUpOutline, flashOutline, walletOutline });
+  }
 
   ngOnInit() {
     this.kpi$ = this.homeData.getKpi();
@@ -140,14 +146,14 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
 
   planGoal(bat: BatterySuggestionResponse): string {
     if (!bat.force_charge_night_recommended && !bat.force_charge_afternoon_recommended) {
-      return 'Wystarczy PV. Dziś bez ładowania z sieci.';
+      return 'Zasilanie wyłącznie z PV. Dziś bez ładowania z sieci.';
     }
     return bat.charge_when_summary || 'Doładuj w taniej G12w.';
   }
 
   planG12w(bat: BatterySuggestionResponse): string {
     if (!bat.force_charge_night_recommended && !bat.force_charge_afternoon_recommended) {
-      return 'Pomiń (noc i popołudnie)';
+      return 'Postój (brak ładowania w nocy i popołudniu)';
     }
     const night = bat.force_charge_night_recommended
       ? bat.force_charge_night_label || 'noc'
@@ -156,6 +162,27 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
       ? bat.force_charge_afternoon_label || 'popołudnie'
       : 'Pomiń';
     return `Noc: ${night}; popołudnie: ${afternoon}`;
+  }
+
+  /** Krótka etykieta do wiersza z ikoną — bez zdania o nocy i popołudniu. */
+  planG12wShort(bat: BatterySuggestionResponse): string {
+    if (!bat.force_charge_night_recommended && !bat.force_charge_afternoon_recommended) {
+      return 'Bez ładowania';
+    }
+    return this.planG12w(bat);
+  }
+
+  toggleSuggestions(): void {
+    this.suggestionsOpen = !this.suggestionsOpen;
+  }
+
+  /** Nazwa urządzenia jest już w Rytmie. Tu zostaje sam werdykt. */
+  suggestionShowsTitle(item: Suggestion): boolean {
+    return item.kind !== 'household_context';
+  }
+
+  suggestionTitle(item: Suggestion): string {
+    return item.title.replace(/^🔔\s*/, '').replace(/^Sugestia:\s*/i, '').trim();
   }
 
   private reloadShadowMonth(): void {

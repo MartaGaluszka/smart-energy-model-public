@@ -585,18 +585,20 @@ def _morning_buffer_short_fc(
     target = min(100.0, soc_percent + delta)
     cap = _b2_capacity_kwh(capacity_kwh)
     end_h, end_m = _fc_end_clock(start_h, minutes)
-    pv_txt = f'~{tomorrow_pv_kwh:.0f} kWh' if tomorrow_pv_kwh is not None else 'brak prognozy'
-    bits: list[str] = []
+
+    def _pl(value: float) -> str:
+        return f'{value:.1f}'.replace('.', ',')
+
+    names: list[str] = []
     if breakfast_tomorrow:
-        bits.append(f'śniadanie ~{breakfast:.1f} kWh')
-    bits.append(f'bojler ~{boiler:.1f} kWh')
-    bits.append(f'{heat_label} ~{heat:.1f} kWh')
+        names.append('śniadanie')
+    names.append('bojler')
+    names.append('bufor' if heat_label == 'bufor ciepła' else heat_label)
     if towel_heater:
-        bits.append(f'grzejnik łazienka ~{towel:.1f} kWh')
-    loads_txt = ' · '.join(bits)
-    soc_hint = suggested_soc_at_22_for_night_kwh(morning_loads, capacity_kwh=capacity_kwh)
+        names.append('grzejnik')
+    loads_txt = ', '.join(names)
     extra = (
-        ' Po dniu z przetworami SoC bywa za niski na bufor ciepła + śniadanie.'
+        ' Po dniu z przetworami stan baterii bywa za niski na bufor ciepła i śniadanie.'
         if after_przetwory
         else ''
     )
@@ -607,16 +609,15 @@ def _morning_buffer_short_fc(
         soc_below=soc_below,
         weak_pv_below=weak_pv_below,
         recommendation=f'ŁADUJ OD {start_h:02d}:00 (BUFOR RANO)',
-        title=f'Sugestia: krótki FC od {start_h:02d}:00 (SoC < {_morning_buffer_soc_floor():.0f}%)',
+        title=f'Sugestia: krótkie ładowanie od {start_h:02d}:00',
         body=(
-            f'SoC {soc_percent:.0f}% < {_morning_buffer_soc_floor():.0f}% o ~{start_h:02d}:00 '
-            f'(jutro dzień roboczy — szczyt 6–13). Nawet gdy jutro PV {pv_txt} — dach nie pokryje '
-            f'obciążenia przed PV. Kalibracja 12.10: {loads_txt} (razem ~{morning_loads:.1f} kWh). '
-            f'Włącz ForceCharge {start_h:02d}:00, wyłącz o {end_h:02d}:{end_m:02d} '
-            f'(~{minutes:.0f} min / +{delta:.0f} pp ≈ {delta / 100.0 * cap:.1f} kWh). '
-            f'Cel: ≥25–30% do 6:00 (orientacyjnie SoC@22 ≳{soc_hint:.0f}% przy tym budżecie nocy), '
-            f'nie tylko rezerwa Fox 10%.{extra} '
-            f'Sugestia doradcza, bez automatyki.'
+            f'Niski stan baterii ({soc_percent:.0f}% przed {start_h:02d}:00) '
+            f'przy jutrzejszym porannym szczycie (6:00–13:00). '
+            f'Prognozowane zużycie przed uruchomieniem PV wynosi ok. {_pl(morning_loads)} kWh '
+            f'({loads_txt}). '
+            f'Zalecenie: Włącz ForceCharge na {minutes:.0f} minut '
+            f'({start_h:02d}:00–{end_h:02d}:{end_m:02d}), '
+            f'aby podnieść poziom baterii do bezpiecznych 25–30% przed porankiem.{extra}'
         ),
         target_soc_percent=target,
         fc_minutes=minutes,

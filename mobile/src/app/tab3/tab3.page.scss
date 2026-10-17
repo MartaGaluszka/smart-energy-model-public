@@ -251,6 +251,25 @@
   }
 }
 
+.se-agd__plan {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.se-agd__plan-link {
+  display: inline-block;
+  margin: 0 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--solar) 18%, var(--surface, #fff));
+  color: var(--solar-pressed);
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .se-agd__intro {
   margin: 0 0 10px;
   font-size: 13px;

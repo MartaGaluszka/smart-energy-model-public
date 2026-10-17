@@ -236,8 +236,15 @@ def maybe_upsert_cheap_window(
             'Jeśli SoC jest niski, rozważ doładowanie z sieci.'
         )
     else:
-        title = f'🔔 Tanie ładowanie nocne ({window})'
-        body = pv_line
+        if 'cała doba tanio' in nxt:
+            title = '🔔 Weekendowa strefa całodobowa'
+            body = (
+                f'Niska taryfa przez całą dobę. Prognoza PV wynosi ok. {today_pv:.0f} kWh'
+                f' – doładuj z sieci tylko wtedy, gdy stan baterii jest krytyczny.'
+            )
+        else:
+            title = f'🔔 Tanie ładowanie nocne ({window})'
+            body = pv_line
 
     payload = json.dumps(
         {
@@ -389,7 +396,10 @@ def maybe_upsert_household_context(db: Session, user_id: int) -> Notification | 
     }
     hints = {
         'sniadanie': 'Budżet ~1,3 kWh przed PV — wpływa na bufor rano.',
-        'obiad': 'Krótki pik — OK przy pełnej baterii i PV (szczyt dnia).',
+        'obiad': (
+            'Krótki skok poboru — w pełni bezpieczny przy pełnej baterii '
+            'i szczycie produkcji z PV.'
+        ),
         'kolacja': 'Jak śniadanie ~1,3–1,4 kWh (ciepłe + czajnik/piekarnik) — wieczór bez PV; pilnuj SoC @22.',
         'pranie': 'Najlepiej w szczycie PV; przy słońcu pomiń nocne FC.',
         'suszarka': 'Po praniu; cykl ~1–1,5 kWh przy SoC wysokim — wieczorem z baterii.',
@@ -414,7 +424,7 @@ def maybe_upsert_household_context(db: Session, user_id: int) -> Notification | 
     if kwh is not None and kwh > 0:
         estimate_pln = round(kwh * _HOUSEHOLD_G12W_SPREAD_PLN, 2)
         money = (
-            f' Szacunek wpływu na rachunek: ok. {str(estimate_pln).replace(".", ",")} zł (spread G12w).'
+            f' Szacowany koszt: ok. {str(estimate_pln).replace(".", ",")} zł.'
         )
     title = f'Dzięki zaznaczeniu: {label}'
     body = f'{hint}{money}'

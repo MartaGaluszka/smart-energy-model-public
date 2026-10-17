@@ -1,7 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { IonicModule } from '@ionic/angular';
+import { Subject, of } from 'rxjs';
 
 import { ExploreContainerComponentModule } from '../explore-container/explore-container.module';
+import { ApiService } from '../services/api.service';
+import { ForecastBridgeService } from '../services/forecast-bridge.service';
+import { ForecastDataService } from '../services/forecast-data.service';
 
 import {
   defaultRunLabelForHour,
@@ -73,7 +77,27 @@ describe('Tab3Page', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [Tab3Page],
-      imports: [IonicModule.forRoot(), ExploreContainerComponentModule]
+      imports: [IonicModule.forRoot(), ExploreContainerComponentModule],
+      providers: [
+        {
+          provide: ForecastDataService,
+          useValue: {
+            getState: () => new Subject(),
+            goToday: () => undefined,
+            loadDay: () => undefined,
+            reload: () => undefined,
+            focusPrognozaTab: () => undefined,
+          },
+        },
+        {
+          provide: ApiService,
+          useValue: { getHouseholdEvents: () => of([]) },
+        },
+        {
+          provide: ForecastBridgeService,
+          useValue: { consume: () => null, hasPending: () => false, open: () => undefined },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Tab3Page);

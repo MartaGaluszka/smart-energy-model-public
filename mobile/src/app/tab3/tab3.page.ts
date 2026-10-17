@@ -1,11 +1,14 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
-import { RefresherCustomEvent, ViewDidEnter } from '@ionic/angular';
+import { IonContent, RefresherCustomEvent, ViewDidEnter } from '@ionic/angular';
 import { Chart, registerables } from 'chart.js';
 import { addIcons } from 'ionicons';
 import { chevronBackOutline, chevronForwardOutline, gitCompareOutline, homeOutline } from 'ionicons/icons';
-import { Subscription } from 'rxjs';
-import { ForecastValidationDailyRow, ForecastValidationHourlyRow } from '../services/api.service';
+import { Subscription, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { ApiService, ForecastValidationDailyRow, ForecastValidationHourlyRow, HouseholdEventDto } from '../services/api.service';
+import { ForecastBridgeService } from '../services/forecast-bridge.service';
 import { ForecastDataService, ForecastState } from '../services/forecast-data.service';
+import { dayHasPvPlan } from '../household/household.types';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { MAX_FUTURE_DAYS } from '../services/forecast-data.service';
 
@@ -76,6 +79,7 @@ export function defaultRunLabelForViewedDay(
   standalone: false,
 })
 export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
+  @ViewChild(IonContent) private content?: IonContent;
   @ViewChild('forecastCanvas') private canvasRef?: ElementRef<HTMLCanvasElement>;
 
   state: ForecastState = {
@@ -108,8 +112,17 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
 
   /** Domyślnie wg godziny zegara; użytkownik może przełączyć ręcznie. */
   selectedRunLabel: string = defaultRunLabelForHour();
+  /** Dzień ma w Rytmie urządzenia, które warto włączyć przy produkcji z dachu. */
+  planFromRhythm = false;
 
-  constructor(private readonly forecastData: ForecastDataService) {
+  private planNoteDay = '';
+  private scrollToPlan = false;
+
+  constructor(
+    private readonly forecastData: ForecastDataService,
+    private readonly api: ApiService,
+    private readonly forecastBridge: ForecastBridgeService,
+  ) {
     addIcons({ chevronBackOutline, chevronForwardOutline, gitCompareOutline, homeOutline });
   }
 
@@ -117,7 +130,9 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
     this.sub = this.forecastData.getState().subscribe((state) => {
       this.state = state;
       this.syncRunTabToDay(state.day);
+      this.refreshPlanNote(state.day);
       this.renderChart(state);
+      this.maybeScrollToForecast();
     });
   }
 
@@ -127,7 +142,44 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
    * Zawsze wracamy na Dziś + domyślne okno (Poranna/Południowa/Popołudniowa).
    */
   ionViewDidEnter(): void {
+    const fromPlan = this.forecastBridge.consume();
+    if (fromPlan) {
+      this.scrollToPlan = true;
+      this.syncedRunDay = fromPlan;
+      this.selectedRunLabel = defaultRunLabelForViewedDay(fromPlan);
+      this.forecastData.loadDay(fromPlan);
+      return;
+    }
+    this.scrollToPlan = false;
     this.resetToTodayView();
+  }
+
+  private refreshPlanNote(day: string): void {
+    const iso = (day || '').slice(0, 10);
+    if (!iso || iso === this.planNoteDay) return;
+    this.planNoteDay = iso;
+    this.planFromRhythm = false;
+    this.api
+      .getHouseholdEvents(iso, iso)
+      .pipe(catchError(() => of([] as HouseholdEventDto[])))
+      .subscribe((rows) => {
+        if (this.planNoteDay !== iso) return;
+        this.planFromRhythm = dayHasPvPlan(rows.map((row) => row.event_type));
+      });
+  }
+
+  private maybeScrollToForecast(): void {
+    if (!this.scrollToPlan || this.state.loading) return;
+    this.scrollToPlan = false;
+    setTimeout(() => void this.scrollToAnchor(), 80);
+  }
+
+  private async scrollToAnchor(): Promise<void> {
+    const el = document.getElementById('agd-window') ?? document.getElementById('forecast-chart');
+    if (!el || !this.content) return;
+    const scrollEl = await this.content.getScrollElement();
+    const top = el.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop;
+    await this.content.scrollToPoint(0, Math.max(0, top - 8), 350);
   }
 
   private resetToTodayView(): void {

@@ -1,11 +1,12 @@
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular';
 import { of, throwError } from 'rxjs';
 import { ApiService, HouseholdEventDto } from '../services/api.service';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { HouseholdPage } from './household.page';
-import { applyMeasuredFloorHeat, buildDayEnergyBudget, customTypeDef, dayAdvisorLine, morningHeatLine, tintForEstimatedKwh } from './household.types';
+import { applyMeasuredFloorHeat, bestApplianceWindow, buildDayEnergyBudget, customTypeDef, dayAdvisorLine, morningHeatLine, tintForEstimatedKwh } from './household.types';
 
 describe('HouseholdPage (Rytm domu)', () => {
   let fixture: ComponentFixture<HouseholdPage>;
@@ -80,6 +81,7 @@ describe('HouseholdPage (Rytm domu)', () => {
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
       providers: [
         { provide: ApiService, useValue: api },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
         {
           provide: AlertController,
           useValue: {
@@ -121,7 +123,7 @@ describe('HouseholdPage (Rytm domu)', () => {
     expect(component.focusBudget?.pvSource).toBe('actual');
     expect(component.focusBudget?.socPercent).toBe(79);
     expect(component.focusBudget?.verdict).toBe('ok');
-    expect(api.getForecastHourly).not.toHaveBeenCalled();
+    expect(api.getForecastHourly).toHaveBeenCalledWith(todayIsoLocal());
 
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('[data-testid="rhythm-budget"]')).toBeTruthy();
@@ -166,7 +168,7 @@ describe('HouseholdPage (Rytm domu)', () => {
 
     expect(api.createHouseholdEvent).toHaveBeenCalled();
     expect(component.insightBanner).toContain('Dzięki zaznaczeniu');
-    expect(component.insightBanner).toContain('Szacunek');
+    expect(component.insightBanner).toContain('Szacowany koszt');
     expect(component.insightBanner).toContain('zł');
     expect(fixture.nativeElement.querySelector('[data-testid="rhythm-insight"]')).toBeTruthy();
   }));
@@ -309,6 +311,24 @@ describe('HouseholdPage (Rytm domu)', () => {
     });
     expect(short).toContain('Brakuje');
     expect(morningHeatLine({ socPercent: 90, capacityKwh: 10.36, nightHeatKwh: 0, now: evening })).toBeNull();
+  });
+
+  it('picks the sunniest hours for laundry', () => {
+    const window = bestApplianceWindow(
+      ['pranie', 'suszarka'],
+      [
+        { hour: 9, predictedKwh: 0.4 },
+        { hour: 10, predictedKwh: 1.2 },
+        { hour: 11, predictedKwh: 3.8 },
+        { hour: 12, predictedKwh: 4.1 },
+        { hour: 13, predictedKwh: 3.2 },
+        { hour: 14, predictedKwh: 1.1 },
+        { hour: 15, predictedKwh: 0.3 },
+      ],
+    );
+    expect(window?.names).toBe('pranie i suszarkę');
+    expect(window?.span).toBe('10:00 – 14:00');
+    expect(bestApplianceWindow(['sniadanie'], [{ hour: 12, predictedKwh: 4 }])).toBeNull();
   });
 
   it('dayAdvisorLine distinguishes laundry vs empty', () => {
