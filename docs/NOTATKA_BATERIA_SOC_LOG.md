@@ -80,6 +80,29 @@ Accu **jasny→RF** · raport użytkownika **~16:40** · Fox sync do **~18:17**.
 
 **Kalendarz:** typy `pranie` / `suszarka` / `chleb` / `obiad` / `kolacja` + pakiet „dzień prania” → §10.1 [`PROJEKT_APLIKACJA_MOBILNA.md`](PROJEKT_APLIKACJA_MOBILNA.md).
 
+### 2026-10-17 — DZIEŃ rano (śniadanie · zmywarka · wiertarka; w toku @12:17)
+
+Fox próbki co ~5 min. PV w oknie **~3,4–4,3 kW**. Sieć przy śniadaniu i zmywarce **~0**. SoC **46% @10:02 → 67% @10:42 → 100% @11:50**, potem eksport **~4,1 kW**.
+
+| Moment | Load (Fox) | Co |
+|--------|------------|----|
+| do **10:38** | **~0,2 kW** | tło domu; Mac mini w czuwaniu już tu siedzi |
+| **10:42** | **5,1 kW** | śniadanie: jajka na twardo, kawa na indukcji i czajnik naraz · SoC **67%** · bateria chwilowo **−1,6 kW** |
+| **10:47–10:52** | **~0,9 kW** | został jeden palnik |
+| od **10:56** | **~0,2 kW** | koniec śniadania |
+| **11:32–11:46** | **~2,1 kW** | zmywarka, grzanie (start między **11:28** a **11:32**) |
+| **11:50–12:03** | **~0,2 kW** | grzałka zgasła · SoC **100%** |
+| **12:08** | **2,18 kW** | zmywarka grzeje znowu |
+| **12:12** | **3,50 kW** | nad ~2,2 kW zmywarki: wiertarka (**~1,3 kW**) |
+| **12:17** | **4,33 kW** | wiertarka dalej (**~2,1 kW** ponad grzanie) |
+| **13:02–13:06** · **13:20–13:29** · **13:51–13:56** | **0,60–0,64 kW** | tylko odkurzacz ręczny, nie Dreamy · ponad tło **~0,4 kW** · razem rząd **~0,18 kWh** · koniec przed **14:00** |
+
+**Śniadanie:** z próbek co ~5 min rząd **~0,5 kWh**. Pik **5,1 kW** mógł trwać krócej niż jeden slot, więc to górka, nie licznik. Lżejsze niż plan ikony **1,4 kWh**.
+
+**Zmywarka:** cykl **otwarty** o 12:17 — bez sumy kWh. Mac mini obudzony kilka minut koło południa **nie schodzi** z tła. Lampa LED **bez** doliczonego obciążenia.
+
+**Kalendarz:** `sniadanie` · `zmywarka` · `wiertarka` · `odkurzacz_reczny` (notatki, bez kWh ikony) · `podlogowka` raz, cykle w notatce. `household_events` na **17.10**.
+
 ### 2026-10-14 → 15.10 — NOC + rano (FC 100% · śniadanie na styk · zmywarka ~9:00)
 
 Accu **15** Lumen **7 / 52%** → paper **RF** · ENS @05 **~15,5** · Tnoc (Accu/MB) **~3°C**.  
