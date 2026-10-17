@@ -78,7 +78,8 @@ def test_charge_tonight_towel_in_morning_buffer_body():
     )
     assert rule.triggered is True
     assert 'BUFOR RANO' in rule.recommendation
-    assert 'grzejnik łazienka ~0.8 kWh' in rule.body or 'grzejnik łazienka ~0.7 kWh' in rule.body
+    assert 'śniadanie, bojler, bufor, grzejnik' in rule.body
+    assert '3,0 kWh' in rule.body
 
 
 def test_charge_tonight_travel_skips_morning_buffer():
