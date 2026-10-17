@@ -109,15 +109,10 @@
           </div>
         </div>
 
-        <button
-          type="button"
-          class="se-rhythm-bridge"
-          *ngIf="focusWindow as opening"
-          (click)="openForecast()"
-        >
+        <p class="se-rhythm-bridge" *ngIf="focusWindow as opening">
           Najlepsze okno na {{ opening.names }}: {{ opening.span }}
-          <span class="se-rhythm-bridge__link">(zobacz w Prognozie)</span>
-        </button>
+          (<button type="button" class="se-rhythm-bridge__go" (click)="openForecast()">zobacz w Prognozie</button>).
+        </p>
 
         <button type="button" class="se-rhythm-hero__cta" (click)="openAdd(hero.dayIso)">
           {{ hero.events.length ? 'Dodaj kolejny plan' : 'Zaplanuj ten dzień' }}
