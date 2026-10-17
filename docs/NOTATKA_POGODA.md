@@ -9,6 +9,7 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-10-17 ~20:38** | **Accu+oneshot** **17–19** · Accu **8/29% · 5/55% · 1/99%** → **RF / RF / CS4** · MB ~10:00 **23/52/97%** (zgoda) · ENS @05 **21,9 / 17,0 / 8,7** · ½ **18,4 / 17,1 / 6,5** · Fox **16** **27,5** (ENS **−20%**) · **17** **28,5** (ENS **−23%**, U **−32%**) — [`NOTATKA_2026-10-17.md`](NOTATKA_2026-10-17.md) |
 | **2026-10-16 ~16:56** | **Accu+morning+oneshot** **16–18** · Accu **9/13% · 9/18% · 7/52%** → **RF/RF/RF** · MB **19/41/71%** (16 zgoda, 17–18 lekki watch) · ENS @05 **22,0 / 19,1 / 17,2** · ½ **21,6 / 22,3 / 17,1** · Fox **15** **12,0** (peak ENS **−1%**) · **16** wst. **25,7** (ENS **−14%**, U **−12%**) — [`NOTATKA_2026-10-16.md`](NOTATKA_2026-10-16.md) |
 | **2026-10-16 ~10:00** | **MB** Free API · **16** cloud **18,6%** / 0 / **13°** · **17** **41%** / 0 / **14°** · **18** **71%** / 0 / **14°** — [`NOTATKA_2026-10-16.md`](NOTATKA_2026-10-16.md) |
 | **2026-10-15 ~10:07** | **Morning** Accu×MB×modele · MB świeże **15/16/17** cloud **77/47/67%** → watch vs Accu **50/11/19%** · paper **15–17 RF** · ENS **13,8 / 22,0 / 21,8** — [`NOTATKA_2026-10-15.md`](NOTATKA_2026-10-15.md) |
@@ -156,7 +157,33 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 ---
 
-## AccuWeather — 16.10 ~16:50 (obecny run)
+## AccuWeather — 17.10 ~20:30 (obecny run)
+
+| Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
+|-------|------:|------:|------:|------:|--------------|
+| **17.10** sob. | **16°C** | **8** | **29%** | **0,0 mm** | **jasny→RF** — zamglenia · krawędź cloud **30%** · P **0%**, porywy **19** |
+| **18.10** nd. | **14°C** | **5** | **55%** | **0,0 mm** | **mix→RF** — chmury i słońce · P **0%**, porywy **17** |
+| **19.10** pon. | **9°C** | **1** | **99%** | **0,0 mm** | **pochmurny→CS4** — duże zachmurzenie · P **9%**, porywy **26** |
+
+Drift vs 16.10 ~16:50: **17** Lumen **9→8**, cloud **18→29%** · **18** **7→5**, **52→55%** · **19** nowy CS4. @05 ENS **21,87 / 16,97 / 8,73**. Fox **16** **27,5** · **17** **28,5**. Matryca: [`NOTATKA_2026-10-17.md`](NOTATKA_2026-10-17.md).
+
+---
+
+## Meteoblue — 17.10 ~10:00 (obecny run)
+
+Update **2026-10-17 ~10:00** · okolice Krakowa (GPS tylko w `.env`). Free API JSON (`basic-1h_clouds-3h`).
+
+| | **17.10** | **18.10** | **19.10** |
+|--|-----------|-----------|-----------|
+| **Cloud 6–20 / opad / Tmax** | **23,0%** · **0 mm** · **13,5°** | **52,2%** · **0** · **14,4°** | **97,0%** · **0** · **10,7°** |
+| **vs Accu ~20:30** | Accu **29%** → **zgoda** | Accu **55%** → **zgoda** | Accu **99%** → **zgoda** |
+| **vs oneshot ~20:38** | UKMO **18%** / ICON **44%** | UKMO **53%** / ICON **58%** | UKMO **99%** / ICON **94%** |
+
+Pick paper **17–18 RF** · **19 CS4**. Dzień: [`NOTATKA_2026-10-17.md`](NOTATKA_2026-10-17.md).
+
+---
+
+## AccuWeather — 16.10 ~16:50 (archiwum)
 
 | Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
 |-------|------:|------:|------:|------:|--------------|
@@ -168,7 +195,7 @@ Drift vs 15.10 ~10:00: **16** cloud **11→13%** · **17** **19→18%** · **18*
 
 ---
 
-## Meteoblue — 16.10 ~10:00 (obecny run)
+## Meteoblue — 16.10 ~10:00 (archiwum)
 
 Update **2026-10-16 ~10:00** · okolice Krakowa (GPS tylko w `.env`). Free API JSON (`basic-1h_clouds-3h`).
 
