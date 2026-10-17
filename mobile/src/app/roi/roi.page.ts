@@ -10,7 +10,7 @@ import {
   informationCircleOutline,
 } from 'ionicons/icons';
 import { ApiService, RoiAssumptions, RoiCalculateResponse } from '../services/api.service';
-import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
+import { todayIsoLocal } from '../utils/date-utils';
 
 function toDateOnly(value: string | string[] | null | undefined): string {
   const v = Array.isArray(value) ? value[0] : value;
@@ -52,8 +52,11 @@ export class RoiPage implements OnInit {
   readonly mojPradStorageCap = 16000;
   readonly taxReliefRate = 0.32;
   horizon = 15;
-  periodStart = shiftIsoDate(todayIsoLocal(), -364);
-  periodEnd = todayIsoLocal();
+  /** Pierwszy dzień wiarygodnych danych Fox — ten sam początek co długi okres w Symulatorze. */
+  readonly periodMin = '2025-06-01';
+  readonly today = todayIsoLocal();
+  periodStart = this.periodMin;
+  periodEnd = this.today;
 
   loading = true;
   calculating = false;
@@ -152,13 +155,22 @@ export class RoiPage implements OnInit {
     this.horizon = Math.min(25, Math.max(5, Math.round(value)));
   }
 
+  /** Modal kalendarza. `present` jest na ion-modal; w teście element bywa zwykłym HTML. */
+  openDate(modal: { present?: () => void } | undefined): void {
+    modal?.present?.();
+  }
+
   onPeriodStart(value: string | string[] | null): void {
-    this.periodStart = toDateOnly(value);
+    const next = toDateOnly(value);
+    if (!next || next < this.periodMin || next > this.periodEnd) return;
+    this.periodStart = next;
     this.result = null;
   }
 
   onPeriodEnd(value: string | string[] | null): void {
-    this.periodEnd = toDateOnly(value);
+    const next = toDateOnly(value);
+    if (!next || next < this.periodStart || next > this.today) return;
+    this.periodEnd = next;
     this.result = null;
   }
 

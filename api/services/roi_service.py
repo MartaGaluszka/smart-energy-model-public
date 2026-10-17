@@ -60,27 +60,38 @@ def calculate_roi(period_start: str, period_end: str, assumptions: dict, db, use
     opex_year = float(assumptions.get('opex_pln_year', 0.0) or 0.0)
     settings = get_settings()
 
-    bill_savings_total = 0.0
+    slices = _month_slices(d0, d1)
+    period_days = max(1, (d1 - d0).days + 1)
     deposit_total = 0.0
-    opex_total = 0.0
     cumulative = 0.0
     series: list[dict] = []
     payback_date: date | None = None
     month_index = 0
+    allocated_bill = 0.0
+    allocated_opex = 0.0
 
     try:
-        for seg_start, seg_end, month in _month_slices(d0, d1):
+        # Jedno liczenie za cały okres — ta sama „Oszczędność” brutto co w Symulatorze.
+        whole = simulate_bill(period_start, period_end, db=db, user_id=user_id)
+        bill_savings_total = float(whole['savings_gross_pln'])
+        # Przegląd w wyniku = kwota z Parametrów (zł/rok), bez rozciągania na długość okresu.
+        opex_total = round(opex_year, 2)
+        for index, (seg_start, seg_end, month) in enumerate(slices):
             month_index += 1
-            bill = simulate_bill(seg_start, seg_end, db=db, user_id=user_id)
-            bill_sav = float(bill['savings_gross_pln'])
-            deposit = _deposit_for_slice(settings.DATABASE_PATH, month, seg_start, seg_end)
             seg_days = (date.fromisoformat(seg_end) - date.fromisoformat(seg_start)).days + 1
-            opex = opex_year * (seg_days / 365.0)
+            last = index == len(slices) - 1
+            if last:
+                bill_sav = round(bill_savings_total - allocated_bill, 2)
+                opex = round(opex_total - allocated_opex, 2)
+            else:
+                bill_sav = round(bill_savings_total * seg_days / period_days, 2)
+                opex = round(opex_total * seg_days / period_days, 2)
+                allocated_bill += bill_sav
+                allocated_opex += opex
+            deposit = _deposit_for_slice(settings.DATABASE_PATH, month, seg_start, seg_end)
             net = bill_sav + deposit - opex
 
-            bill_savings_total += bill_sav
             deposit_total += deposit
-            opex_total += opex
             prev = cumulative
             cumulative += net
 
@@ -103,9 +114,8 @@ def calculate_roi(period_start: str, period_end: str, assumptions: dict, db, use
     except Exception as exc:  # noqa: BLE001
         raise ApiError(422, 'ROI_CALCULATE_FAILED', f'Nie można policzyć ROI: {exc}') from exc
 
-    period_days = max(1, (d1 - d0).days + 1)
-    cash_gain_period = bill_savings_total + deposit_total - opex_total
-    recovered = min(max(0.0, cumulative), capex) if capex > 0 else max(0.0, cumulative)
+    cash_gain_period = round(bill_savings_total + deposit_total - opex_total, 2)
+    recovered = min(max(0.0, cash_gain_period), capex) if capex > 0 else max(0.0, cash_gain_period)
     remaining = max(0.0, capex - recovered) if capex > 0 else 0.0
 
     # Średni zysk „na rok” tylko jako informacja (tempo z wybranego okresu)

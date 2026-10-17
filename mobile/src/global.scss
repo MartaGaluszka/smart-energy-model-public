@@ -336,3 +336,24 @@ ion-alert.se-alert .alert-button.alert-button-role-cancel {
 ion-alert.se-alert .alert-button.alert-button-role-destructive {
   color: var(--cost);
 }
+
+/*
+ * Domyślny modal na iPhonie jest na cały ekran, więc nazwa miesiąca
+ * wpada pod Dynamic Island. Reguła bez .modal-card, bo ten tryb włącza
+ * się tylko przy presentingElement — nasze kalendarze go nie mają.
+ * !important przebija --height: 100% z wnętrza ion-modal.
+ */
+ion-modal.se-date-modal {
+  --width: min(360px, 92vw) !important;
+  --height: auto !important;
+  --max-height: 460px !important;
+  --border-radius: 16px !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+}
+
+ion-modal.se-date-modal::part(content) {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}

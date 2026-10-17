@@ -237,7 +237,7 @@
        zawsze POLSKI (locale="pl-PL") kalendarz na wszystkich platformach (Safari/WebKit na iOS
        nie rysuje żadnej ikonki na natywnym polu, a język/format zależy od ustawień systemu,
        nie apki). -->
-  <ion-modal [keepContentsMounted]="true">
+  <ion-modal class="se-date-modal" [keepContentsMounted]="true">
     <ng-template>
       <ion-datetime
         id="dtValidFrom"
@@ -253,7 +253,7 @@
     </ng-template>
   </ion-modal>
 
-  <ion-modal [keepContentsMounted]="true">
+  <ion-modal class="se-date-modal" [keepContentsMounted]="true">
     <ng-template>
       <ion-datetime
         id="dtPeriodStart"
@@ -269,7 +269,7 @@
     </ng-template>
   </ion-modal>
 
-  <ion-modal [keepContentsMounted]="true">
+  <ion-modal class="se-date-modal" [keepContentsMounted]="true">
     <ng-template>
       <ion-datetime
         id="dtPeriodEnd"

@@ -464,9 +464,6 @@
   --border-radius: 16px;
   --backdrop-opacity: 0.4;
   --box-shadow: 0 12px 40px rgba(26, 29, 33, 0.2);
-  align-items: center;
-  justify-content: center;
-
   &::part(backdrop) {
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
@@ -474,9 +471,6 @@
   }
 
   &::part(content) {
-    margin-top: calc(env(safe-area-inset-top, 0px) + 56px);
-    margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
-    overflow: hidden;
     border: 1.5px solid var(--moss);
     outline: none;
   }

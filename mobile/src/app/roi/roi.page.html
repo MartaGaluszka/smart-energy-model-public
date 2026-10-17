@@ -145,8 +145,8 @@
               <button
                 type="button"
                 class="se-date-trigger"
-                id="roi-start-trigger"
                 data-testid="roi-period-start"
+                (click)="openDate(startModal)"
               >
                 {{ periodStart }}
               </button>
@@ -156,8 +156,8 @@
               <button
                 type="button"
                 class="se-date-trigger"
-                id="roi-end-trigger"
                 data-testid="roi-period-end"
+                (click)="openDate(endModal)"
               >
                 {{ periodEnd }}
               </button>
@@ -228,8 +228,9 @@
     </ng-container>
   </div>
 
-  <!-- trigger= zamiast ion-datetime-button: zawsze widać ISO datę w przycisku. -->
-  <ion-modal trigger="roi-start-trigger" [keepContentsMounted]="true">
+  <!-- Klik otwiera modal wprost: trigger= szuka przycisku przy starcie strony,
+       a Od/Do są jeszcze schowane, póki ładują się parametry. -->
+  <ion-modal #startModal class="se-date-modal" [keepContentsMounted]="true">
     <ng-template>
       <ion-datetime
         id="dtRoiStart"
@@ -239,13 +240,15 @@
         [showDefaultButtons]="true"
         doneText="Gotowe"
         cancelText="Anuluj"
+        [min]="periodMin"
+        [max]="periodEnd"
         [value]="periodStart"
         (ionChange)="onPeriodStart($any($event.target).value)"
       ></ion-datetime>
     </ng-template>
   </ion-modal>
 
-  <ion-modal trigger="roi-end-trigger" [keepContentsMounted]="true">
+  <ion-modal #endModal class="se-date-modal" [keepContentsMounted]="true">
     <ng-template>
       <ion-datetime
         id="dtRoiEnd"
@@ -255,6 +258,8 @@
         [showDefaultButtons]="true"
         doneText="Gotowe"
         cancelText="Anuluj"
+        [min]="periodStart"
+        [max]="today"
         [value]="periodEnd"
         (ionChange)="onPeriodEnd($any($event.target).value)"
       ></ion-datetime>
