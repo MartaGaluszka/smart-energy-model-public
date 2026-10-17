@@ -6,7 +6,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService, HouseholdEventDto } from '../services/api.service';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { HouseholdPage } from './household.page';
-import { applyMeasuredFloorHeat, bestApplianceWindow, buildDayEnergyBudget, customTypeDef, dayAdvisorLine, morningHeatLine, tintForEstimatedKwh } from './household.types';
+import { applyMeasuredFloorHeat, bestApplianceWindow, buildDayEnergyBudget, customTypeDef, dayAdvisorLine, flexibleDayLine, morningHeatLine, tintForEstimatedKwh } from './household.types';
 
 describe('HouseholdPage (Rytm domu)', () => {
   let fixture: ComponentFixture<HouseholdPage>;
@@ -161,7 +161,7 @@ describe('HouseholdPage (Rytm domu)', () => {
     fixture.detectChanges();
     tick();
     component.openAdd(todayIsoLocal());
-    component.formTypes = ['pranie'];
+    component.formTypes = ['pranie', 'suszarka'];
     component.save();
     tick();
     fixture.detectChanges();
@@ -176,7 +176,7 @@ describe('HouseholdPage (Rytm domu)', () => {
   it('toggles multi-select and saves several types at once', fakeAsync(() => {
     fixture.detectChanges();
     tick();
-    component.openAdd(todayIsoLocal());
+    component.openAdd(shiftIsoDate(todayIsoLocal(), 1));
     component.formTypes = [];
     component.toggleType('pranie');
     component.toggleType('suszarka');
@@ -201,6 +201,15 @@ describe('HouseholdPage (Rytm domu)', () => {
     component.removeOneType('wyjazd');
     expect(component.countOfType('wyjazd')).toBe(1);
   });
+
+  it('opens Plan dnia with that day’s tiles, or none when the day is empty', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    component.openAdd(todayIsoLocal());
+    expect(component.formTypes).toEqual(['pranie']);
+    component.openAdd(shiftIsoDate(todayIsoLocal(), 1));
+    expect(component.formTypes).toEqual([]);
+  }));
 
   it('laundry scenario preselects pranie + suszarka', () => {
     const laundry = component.scenarios.find((s) => s.id === 'laundry')!;
@@ -246,7 +255,7 @@ describe('HouseholdPage (Rytm domu)', () => {
     fixture.detectChanges();
     tick();
     component.openAdd(todayIsoLocal());
-    component.formTypes = ['pranie'];
+    component.formTypes = ['suszarka'];
     component.save();
     tick();
     fixture.detectChanges();
@@ -329,6 +338,33 @@ describe('HouseholdPage (Rytm domu)', () => {
     expect(window?.names).toBe('pranie i suszarkę');
     expect(window?.span).toBe('10:00 – 14:00');
     expect(bestApplianceWindow(['sniadanie'], [{ hour: 12, predictedKwh: 4 }])).toBeNull();
+  });
+
+  it('keeps the meal and offers to move laundry on a weak roof', () => {
+    expect(flexibleDayLine(['obiad', 'pranie'], 5)).toBe(
+      'Słaby dzień dla dachu. Obiad zostaje na dziś, pranie możesz przełożyć na jutro.',
+    );
+    expect(flexibleDayLine(['kolacja', 'sniadanie', 'podlogowka', 'zmywarka'], 4)).toBe(
+      'Słaby dzień dla dachu. Śniadanie, kolacja i podłogówka zostają na dziś, zmywarkę możesz przełożyć na jutro.',
+    );
+    expect(flexibleDayLine(['obiad', 'pranie'], 18)).toBeNull();
+    expect(flexibleDayLine(['sniadanie', 'obiad', 'kolacja', 'podlogowka'], 4)).toBeNull();
+    expect(flexibleDayLine(['pranie', 'suszarka'], 3)).toContain('przełożyć na jutro');
+    expect(bestApplianceWindow(['obiad', 'sniadanie', 'kolacja'], [{ hour: 12, predictedKwh: 4 }])).toBeNull();
+  });
+
+  it('Jak wczoraj copies the previous day tiles into the sheet', () => {
+    const today = todayIsoLocal();
+    const yesterday = shiftIsoDate(today, -1);
+    component.formDate = today;
+    component.events = [
+      { id: 1, event_date: yesterday, event_type: 'obiad', impact: 'up', note: null },
+      { id: 2, event_date: yesterday, event_type: 'zmywarka', impact: 'up', note: null },
+    ];
+    expect(component.previousDayLabel).toBe('Jak wczoraj');
+    component.pickPreviousDay();
+    expect(component.formTypes).toEqual(['obiad', 'zmywarka']);
+    expect(component.isPreviousDayActive()).toBe(true);
   });
 
   it('dayAdvisorLine distinguishes laundry vs empty', () => {

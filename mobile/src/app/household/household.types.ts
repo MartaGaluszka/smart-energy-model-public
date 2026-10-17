@@ -557,12 +557,11 @@ export function morningHeatLine(input: {
   return `Do rana potrzeba ok. ${fmtKwh(need)} kWh: grzanie jak ostatnia noc ${fmtKwh(night)} kWh i dom w tle ${fmtKwh(background)} kWh. Powyżej 10% jest ok. ${fmtKwh(have)} kWh. Brakuje ok. ${fmtKwh(-left)} kWh — potem grzanie idzie z sieci.`;
 }
 
-/** Urządzenia, które warto włączyć w godzinach produkcji z dachu. */
+/** Sprzęty, które mogą poczekać na lepsze słońce. Posiłki i podłogówka tu nie wchodzą. */
 const PV_PLAN: Record<string, { phrase: string; hours: number }> = {
   pranie: { phrase: 'pranie', hours: 2 },
   suszarka: { phrase: 'suszarkę', hours: 1.5 },
   zmywarka: { phrase: 'zmywarkę', hours: 2 },
-  obiad: { phrase: 'obiad', hours: 1 },
   piekarnik: { phrase: 'piekarnik', hours: 1.5 },
   odkurzacz: { phrase: 'Dreamy', hours: 1 },
   chleb: { phrase: 'pieczenie chleba', hours: 2 },
@@ -585,6 +584,52 @@ function joinPhrases(phrases: string[]): string {
   if (shown.length <= 1) return shown[0] ?? '';
   if (shown.length === 2) return `${shown[0]} i ${shown[1]}`;
   return `${shown.slice(0, -1).join(', ')} i ${shown[shown.length - 1]}`;
+}
+
+/** Podstawowe potrzeby dnia: zostają, niezależnie od słońca. */
+const STAYS_TODAY: Record<string, string> = {
+  sniadanie: 'śniadanie',
+  obiad: 'obiad',
+  kolacja: 'kolacja',
+  podlogowka: 'podłogówka',
+};
+/** Poniżej tej sumy dnia elastyczne AGD nie jest warte trzymania na siłę. */
+const WEAK_ROOF_KWH = 8;
+
+function joinAll(phrases: string[]): string {
+  if (phrases.length <= 1) return phrases[0] ?? '';
+  if (phrases.length === 2) return `${phrases[0]} i ${phrases[1]}`;
+  return `${phrases.slice(0, -1).join(', ')} i ${phrases[phrases.length - 1]}`;
+}
+
+function capFirst(text: string): string {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
+/**
+ * Przy słabym dachu: śniadanie, obiad, kolacja i podłogówka zostają.
+ * Przesunąć można tylko sprzęt, który poczeka na lepsze słońce.
+ * Zwraca null, gdy dach jest mocny albo w planie nie ma czego przesunąć.
+ */
+export function flexibleDayLine(
+  eventTypes: readonly string[],
+  pvKwh: number | null,
+): string | null {
+  if (pvKwh == null || !Number.isFinite(pvKwh) || pvKwh >= WEAK_ROOF_KWH) return null;
+  const present = new Set(eventTypes.map((type) => eventTypeDef(type)?.value ?? type));
+  const stays = Object.keys(STAYS_TODAY)
+    .filter((key) => present.has(key))
+    .map((key) => STAYS_TODAY[key]);
+  const movable = Object.keys(PV_PLAN)
+    .filter((key) => present.has(key))
+    .map((key) => PV_PLAN[key].phrase);
+  if (!movable.length) return null;
+  const moveTxt = joinPhrases(movable);
+  if (!stays.length) {
+    return `${capFirst(moveTxt)} możesz przełożyć na jutro — dach da dziś mało.`;
+  }
+  const stayVerb = stays.length > 1 ? 'zostają' : 'zostaje';
+  return `Słaby dzień dla dachu. ${capFirst(joinAll(stays))} ${stayVerb} na dziś, ${moveTxt} możesz przełożyć na jutro.`;
 }
 
 /**

@@ -113,9 +113,10 @@
           Najlepsze okno na {{ opening.names }}: {{ opening.span }}
           (<button type="button" class="se-rhythm-bridge__go" (click)="openForecast()">zobacz w Prognozie</button>).
         </p>
+        <p class="se-rhythm-flex" *ngIf="flexLine">{{ flexLine }}</p>
 
         <button type="button" class="se-rhythm-hero__cta" (click)="openAdd(hero.dayIso)">
-          {{ hero.events.length ? 'Dodaj kolejny plan' : 'Zaplanuj ten dzień' }}
+          {{ hero.events.length ? 'Zmień plan' : 'Zaplanuj ten dzień' }}
         </button>
       </section>
 
@@ -170,6 +171,16 @@
               <ion-icon [name]="s.icon"></ion-icon>
             </ng-template>
             <span>{{ s.label }}</span>
+          </button>
+          <button
+            type="button"
+            class="se-rhythm-scenario"
+            *ngIf="previousDayTypes.length"
+            [class.se-rhythm-scenario--active]="isPreviousDayActive()"
+            (click)="pickPreviousDay()"
+          >
+            <ion-icon name="copy-outline"></ion-icon>
+            <span>{{ previousDayLabel }}</span>
           </button>
         </div>
 
@@ -272,7 +283,7 @@
         <ion-button
           expand="block"
           class="se-btn-primary"
-          [disabled]="saving || !formDate || !formTypes.length"
+          [disabled]="saving || !formDate || !planChanged"
           (click)="save()"
         >
           <ion-spinner *ngIf="saving" name="crescent" slot="start"></ion-spinner>

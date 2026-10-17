@@ -10,6 +10,7 @@ import {
   calendarOutline,
   carOutline,
   chevronDownOutline,
+  copyOutline,
   constructOutline,
   flashOutline,
   homeOutline,
@@ -21,7 +22,7 @@ import {
   waterOutline,
 } from 'ionicons/icons';
 import { Observable, Subscription, forkJoin, of, timeout } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import {
   ApiService,
   BatterySettingsResponse,
@@ -45,6 +46,7 @@ import {
   ApplianceWindow,
   bestApplianceWindow,
   buildDayEnergyBudget,
+  flexibleDayLine,
   customTypeDef,
   dayAdvisorLine,
   estimateInsightPln,
@@ -98,7 +100,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   saving = false;
   formDate = todayIsoLocal();
   /** Multi-select typów na jeden dzień. */
-  formTypes: string[] = ['pranie'];
+  formTypes: string[] = [];
   formError: string | null = null;
   /** Własne pozycje z API — ta sama siatka co katalog. */
   customDefs: HouseholdEventTypeDef[] = [];
@@ -115,6 +117,8 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   focusBudget: DayEnergyBudget | null = null;
   /** Okno godzinowe pod urządzenia z planu, policzone z prognozy. */
   focusWindow: ApplianceWindow | null = null;
+  /** Przy słabym dachu: posiłek zostaje, pranie można przełożyć. */
+  flexLine: string | null = null;
   budgetLoading = false;
   /** Zmierzone kWh bufora na dzień (Fox), zamiast katalogowego 1,2. */
   private floorHeatByDay: Record<string, number> = {};
@@ -139,6 +143,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
       sunnyOutline,
       chevronDownOutline,
       carOutline,
+      copyOutline,
       flashOutline,
       constructOutline,
       homeOutline,
@@ -215,11 +220,13 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     const day = this.focusDay;
     if (!day) {
       this.focusBudget = null;
+      this.flexLine = null;
       return;
     }
     const types = day.events.map((e) => e.event_type);
     this.budgetLoading = true;
     this.focusWindow = null;
+    this.flexLine = null;
     this.budgetSub?.unsubscribe();
     const limited = <T>(source: Observable<T>) =>
       source.pipe(timeout({ first: 8000 }), catchError(() => of(null as T | null)));
@@ -255,6 +262,8 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
         types,
         (forecast?.hours ?? []).map((row) => ({ hour: row.hour, predictedKwh: row.predicted_kwh })),
       );
+      const roofKwh = useActual ? actualPv : forecastPv;
+      this.flexLine = flexibleDayLine(types, roofKwh);
       this.budgetLoading = false;
     });
   }
@@ -273,7 +282,7 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
 
   openAdd(dayIso?: string): void {
     this.formDate = dayIso ?? this.focusDayIso ?? todayIsoLocal();
-    this.formTypes = ['pranie'];
+    this.formTypes = this.typesOn(this.formDate);
     this.formError = null;
     this.showCustomForm = false;
     this.showAdd = true;
@@ -393,11 +402,37 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   }
 
   onFormDate(value: string | string[] | null): void {
-    this.formDate = toDateOnly(value) || this.formDate;
+    const next = toDateOnly(value) || this.formDate;
+    if (next === this.formDate) return;
+    this.formDate = next;
+    this.formTypes = this.typesOn(next);
   }
 
   pickScenario(s: HouseholdScenario): void {
     this.formTypes = [...s.eventTypes];
+  }
+
+  /** Kafelki z dnia poprzedzającego datę w arkuszu. */
+  get previousDayTypes(): string[] {
+    if (!this.formDate) return [];
+    const prev = shiftIsoDate(this.formDate, -1);
+    return this.events.filter((event) => event.event_date === prev).map((event) => event.event_type);
+  }
+
+  get previousDayLabel(): string {
+    return this.formDate === todayIsoLocal() ? 'Jak wczoraj' : 'Jak dzień wcześniej';
+  }
+
+  pickPreviousDay(): void {
+    const types = this.previousDayTypes;
+    if (!types.length) return;
+    this.formTypes = [...types];
+  }
+
+  isPreviousDayActive(): boolean {
+    const types = this.previousDayTypes;
+    if (!types.length || types.length !== this.formTypes.length) return false;
+    return types.every((type) => this.formTypes.includes(type));
   }
 
   isTypeSelected(type: string): boolean {
@@ -447,6 +482,24 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     const n = this.formTypes.length;
     if (n <= 1) return 'Zapisz';
     return `Zapisz (${n})`;
+  }
+
+  /** Arkusz różni się od kafelków już zapisanych na ten dzień. */
+  get planChanged(): boolean {
+    const current = this.typesOn(this.formDate);
+    if (current.length !== this.formTypes.length) return true;
+    const left = [...current];
+    for (const type of this.formTypes) {
+      const idx = left.indexOf(type);
+      if (idx < 0) return true;
+      left.splice(idx, 1);
+    }
+    return false;
+  }
+
+  private typesOn(dayIso: string): string[] {
+    if (!dayIso) return [];
+    return this.events.filter((event) => event.event_date === dayIso).map((event) => event.event_type);
   }
 
   get selectedLabelsSummary(): string {
@@ -502,48 +555,78 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   }
 
   save(): void {
-    const defs = this.selectedDefs;
-    if (!defs.length || !this.formDate || this.saving) return;
+    if (!this.formDate || this.saving || !this.planChanged) return;
+    const pool = this.events
+      .filter((event) => event.event_date === this.formDate)
+      .map((event) => ({ id: event.id, type: event.event_type, used: false }));
+    const toCreate: HouseholdEventTypeDef[] = [];
+    for (const type of this.formTypes) {
+      const slot = pool.find((row) => !row.used && row.type === type);
+      if (slot) {
+        slot.used = true;
+        continue;
+      }
+      const def = this.defFor(type);
+      if (def) toCreate.push(def);
+    }
+    const toDelete = pool.filter((row) => !row.used).map((row) => row.id);
+    if (!toCreate.length && !toDelete.length) return;
     this.saving = true;
     this.formError = null;
     this.error = null;
     let lastErr = 'Nie udało się zapisać — sprawdź, czy API działa na Macu.';
-    const calls = defs.map((def) =>
-      this.api
-        .createHouseholdEvent({
-          event_date: this.formDate,
-          event_type: def.value,
-          impact: def.defaultImpact,
-        })
-        .pipe(
+    const calls: Observable<HouseholdEventDto | null>[] = [
+      ...toCreate.map((def) =>
+        this.api
+          .createHouseholdEvent({
+            event_date: this.formDate,
+            event_type: def.value,
+            impact: def.defaultImpact,
+          })
+          .pipe(
+            timeout(15000),
+            catchError((err: unknown) => {
+              lastErr = this.describeSaveError(err);
+              return of(null);
+            }),
+          ),
+      ),
+      ...toDelete.map((id) =>
+        this.api.deleteHouseholdEvent(id).pipe(
           timeout(15000),
+          map(() => ({ id } as HouseholdEventDto)),
           catchError((err: unknown) => {
             lastErr = this.describeSaveError(err);
             return of(null);
           }),
         ),
-    );
+      ),
+    ];
     forkJoin(calls).subscribe({
       next: (rows) => {
         this.saving = false;
-        const ok = (rows as Array<HouseholdEventDto | null>).filter(
-          (r): r is HouseholdEventDto => r != null,
+        const createdOk = (rows.slice(0, toCreate.length) as Array<HouseholdEventDto | null>).filter(
+          (row): row is HouseholdEventDto => row != null,
         );
-        if (!ok.length) {
+        const failed = rows.some((row) => row == null);
+        if (!createdOk.length && toCreate.length && failed) {
+          this.formError = lastErr;
+          return;
+        }
+        if (failed && !createdOk.length && !toDelete.length) {
           this.formError = lastErr;
           return;
         }
         this.showAdd = false;
         this.focusDayIso = this.formDate;
-        this.insightBanner = this.buildInsightMulti(defs.slice(0, ok.length));
-        if (ok.length < defs.length) {
-          this.error = `Zapisano ${ok.length} z ${defs.length} — część nie przeszła (API).`;
+        this.insightBanner = createdOk.length
+          ? this.buildInsightMulti(toCreate.slice(0, createdOk.length))
+          : null;
+        if (failed) {
+          this.error = 'Część planu nie przeszła — sprawdź API.';
         }
-        void this.presentToast(
-          ok.length === defs.length
-            ? `Zapisano ${ok.length} plan${ok.length === 1 ? '' : 'y'}`
-            : `Zapisano ${ok.length} z ${defs.length}`,
-        );
+        const saved = createdOk.length + toDelete.filter((_, index) => rows[toCreate.length + index] != null).length;
+        void this.presentToast(saved === 1 ? 'Zapisano plan' : `Zapisano plan (${saved})`);
         this.reload();
       },
       error: (err: unknown) => {
