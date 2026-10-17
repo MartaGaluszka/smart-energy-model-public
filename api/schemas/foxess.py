@@ -15,6 +15,8 @@ class FoxSyncResponse(BaseModel):
     end: str | None = None
     days: int
     message: str
+    floor_heat_kwh: float | None = None
+    floor_heat_cycles: int | None = None
 
 
 class FoxOverviewResponse(BaseModel):

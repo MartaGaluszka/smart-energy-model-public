@@ -130,6 +130,10 @@
   font-size: 14px;
   line-height: 1.45;
   color: var(--text);
+
+  &--under {
+    margin: 4px 0 12px;
+  }
 }
 
 .se-rhythm-budget {

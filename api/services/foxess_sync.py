@@ -62,13 +62,14 @@ def sync_range(start: str, end: str) -> dict:
 
     days = (datetime.fromisoformat(end).date() - datetime.fromisoformat(start).date()).days + 1
     rows = stats.get('foxess_data_rows', '?') if isinstance(stats, dict) else '?'
-    return {
+    result = {
         'status': 'ok',
         'start': start,
         'end': end,
         'days': days,
         'message': f'Sync zakończony ({rows} wierszy foxess_data)',
     }
+    return _with_floor_heat(result, start, end)
 
 
 def sync_incremental() -> dict:
@@ -100,16 +101,42 @@ def sync_incremental() -> dict:
         except ValueError:
             age_minutes = None
         if age_minutes is not None and age_minutes < SYNC_COOLDOWN_MINUTES:
-            return {
-                'status': 'skipped',
-                'start': last_date,
-                'end': today,
-                'days': 0,
-                'message': f'Dane aktualne — ostatni sync {int(age_minutes)} min temu.',
-            }
+            return _with_floor_heat(
+                {
+                    'status': 'skipped',
+                    'start': last_date,
+                    'end': today,
+                    'days': 0,
+                    'message': f'Dane aktualne — ostatni sync {int(age_minutes)} min temu.',
+                },
+                last_date or today,
+                today,
+            )
 
     start = last_date or (date.today() - timedelta(days=DEFAULT_LOOKBACK_DAYS)).isoformat()
     return sync_range(start, today)
+
+
+def _with_floor_heat(result: dict, start: str | None, end: str | None) -> dict:
+    """Po pobraniu Foxa (albo przy cooldownie) przelicza kWh podłogi z próbek już w bazie."""
+    result.setdefault('floor_heat_kwh', None)
+    result.setdefault('floor_heat_cycles', None)
+    if not start or not end:
+        return result
+    try:
+        from src.features.floor_heat import floor_heat_message, refresh_floor_heat
+
+        summary = refresh_floor_heat(get_settings().DATABASE_PATH, start, end)
+    except Exception:
+        return result
+    if not summary.get('cycles'):
+        return result
+    result['floor_heat_kwh'] = summary['kwh']
+    result['floor_heat_cycles'] = summary['cycles']
+    note = floor_heat_message(summary)
+    if note:
+        result['message'] = f"{result['message']} {note}"
+    return result
 
 
 def _connect(db_path: str) -> sqlite3.Connection:

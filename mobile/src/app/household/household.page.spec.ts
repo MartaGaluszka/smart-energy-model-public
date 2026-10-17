@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ApiService, HouseholdEventDto } from '../services/api.service';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { HouseholdPage } from './household.page';
-import { buildDayEnergyBudget, customTypeDef, dayAdvisorLine, tintForEstimatedKwh } from './household.types';
+import { applyMeasuredFloorHeat, buildDayEnergyBudget, customTypeDef, dayAdvisorLine, morningHeatLine, tintForEstimatedKwh } from './household.types';
 
 describe('HouseholdPage (Rytm domu)', () => {
   let fixture: ComponentFixture<HouseholdPage>;
@@ -26,6 +26,7 @@ describe('HouseholdPage (Rytm domu)', () => {
     api = jasmine.createSpyObj('ApiService', [
       'getHouseholdEvents',
       'getHouseholdCustomTypes',
+      'getFloorHeat',
       'createHouseholdEvent',
       'createHouseholdCustomType',
       'deleteHouseholdCustomType',
@@ -37,6 +38,7 @@ describe('HouseholdPage (Rytm domu)', () => {
     ]);
     api.getHouseholdEvents.and.returnValue(of(sample));
     api.getHouseholdCustomTypes.and.returnValue(of([]));
+    api.getFloorHeat.and.returnValue(of([]));
     api.createHouseholdEvent.and.returnValue(
       of({
         id: 2,
@@ -278,6 +280,35 @@ describe('HouseholdPage (Rytm domu)', () => {
     });
     expect(budget.planKwh).toBe(12);
     expect(dayAdvisorLine(['c3'], [def])).toContain('Ładowanie auta');
+  });
+
+  it('replaces the floor-heat catalog kWh with the measured Fox total', () => {
+    expect(applyMeasuredFloorHeat(2.6, ['sniadanie', 'podlogowka'], [], 3.6)).toBe(5);
+    expect(applyMeasuredFloorHeat(2.6, ['sniadanie', 'podlogowka'], [], null)).toBe(2.6);
+    const budget = buildDayEnergyBudget({
+      eventTypes: ['sniadanie', 'podlogowka', 'podlogowka'],
+      floorHeatKwh: 3.6,
+    });
+    expect(budget.planKwh).toBe(5);
+  });
+
+  it('says whether the battery covers a night of floor heat until morning', () => {
+    const evening = new Date(2026, 9, 17, 17, 0, 0);
+    const enough = morningHeatLine({
+      socPercent: 90,
+      capacityKwh: 10.36,
+      nightHeatKwh: 3.1,
+      now: evening,
+    });
+    expect(enough).toContain('Bilans nocny na plus');
+    const short = morningHeatLine({
+      socPercent: 40,
+      capacityKwh: 10.36,
+      nightHeatKwh: 3.1,
+      now: evening,
+    });
+    expect(short).toContain('Brakuje');
+    expect(morningHeatLine({ socPercent: 90, capacityKwh: 10.36, nightHeatKwh: 0, now: evening })).toBeNull();
   });
 
   it('dayAdvisorLine distinguishes laundry vs empty', () => {

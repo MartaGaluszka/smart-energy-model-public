@@ -26,6 +26,7 @@ import {
   BatterySettingsResponse,
   BatterySuggestionResponse,
   FoxOverviewResponse,
+  FloorHeatDayDto,
   HouseholdCustomTypeDto,
   HouseholdEventDto,
 } from '../services/api.service';
@@ -109,6 +110,10 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   /** Porównanie ikon z prognozą dnia i SoC. Nie blokuje widoku tygodnia. */
   focusBudget: DayEnergyBudget | null = null;
   budgetLoading = false;
+  /** Zmierzone kWh bufora na dzień (Fox), zamiast katalogowego 1,2. */
+  private floorHeatByDay: Record<string, number> = {};
+  /** kWh cykli od północy do 10:00 — ile grzanie zjadło takiej nocy. */
+  private nightHeatByDay: Record<string, number> = {};
   private budgetSub?: Subscription;
 
   constructor(
@@ -168,12 +173,19 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
     forkJoin({
       events: this.api.getHouseholdEvents(from, to),
       customs: this.api.getHouseholdCustomTypes().pipe(catchError(() => of([] as HouseholdCustomTypeDto[]))),
+      floorHeat: this.api.getFloorHeat(from, to).pipe(catchError(() => of([] as FloorHeatDayDto[]))),
     }).subscribe({
-      next: ({ events, customs }) => {
+      next: ({ events, customs, floorHeat }) => {
         const rows = customs ?? [];
         this.customDefs = rows.filter((row) => !row.archived).map((row) => customTypeDef(row));
         this.archivedDefs = rows.filter((row) => row.archived).map((row) => customTypeDef(row));
         this.events = events ?? [];
+        this.floorHeatByDay = {};
+        this.nightHeatByDay = {};
+        for (const row of floorHeat ?? []) {
+          if (row.kwh > 0) this.floorHeatByDay[row.day] = row.kwh;
+          if ((row.night_kwh ?? 0) > 0) this.nightHeatByDay[row.day] = row.night_kwh ?? 0;
+        }
         this.days = this.buildDays(from, this.horizonDays, this.events);
         if (!this.days.some((d) => d.dayIso === this.focusDayIso)) {
           this.focusDayIso = from;
@@ -227,6 +239,8 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
         capacityKwh: settingsRow?.battery_capacity_kwh ?? null,
         reservePercent: settingsRow?.soc_reserve_percent ?? suggestionRow?.soc_reserve_percent ?? 20,
         extraTypes: this.allCustomDefs(),
+        floorHeatKwh: this.floorHeatByDay[day.dayIso] ?? null,
+        nightHeatKwh: day.isToday ? this.nightHeatByDay[day.dayIso] ?? null : null,
       });
       this.budgetLoading = false;
     });

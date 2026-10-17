@@ -57,7 +57,7 @@
           <span class="se-rhythm-hero__kicker" *ngIf="!hero.isToday">{{ hero.weekday }}</span>
           <h2 class="font-serif se-rhythm-hero__date">{{ hero.label }}</h2>
         </div>
-        <p class="se-rhythm-hero__advice">{{ hero.advisorLine }}</p>
+        <p class="se-rhythm-hero__advice" *ngIf="focusBudget?.morningLine">{{ focusBudget?.morningLine }}</p>
 
         <div
           class="se-rhythm-budget"
@@ -75,7 +75,8 @@
               <span>{{ budget.pvSource === 'actual' ? 'Produkcja' : 'Prognoza' }}</span>
             </div>
             <div class="se-rhythm-kpi se-rhythm-kpi--moss">
-              <strong>{{ budget.socPercent != null ? (budget.socPercent | number:'1.0-0') + '%' : '—' }}</strong>
+              <strong *ngIf="hero.isToday">{{ budget.socPercent != null ? (budget.socPercent | number:'1.0-0') + '%' : '—' }}</strong>
+              <strong *ngIf="!hero.isToday">-</strong>
               <span>Bateria</span>
             </div>
           </div>

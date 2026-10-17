@@ -7,10 +7,12 @@ import re
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from api.config import get_settings
 from api.deps import get_current_user, get_db
 from api.errors import ApiError
 from api.models import AppUser, HouseholdCustomType, HouseholdEvent
 from api.schemas.household import (
+    FloorHeatDayResponse,
     HouseholdCustomTypeCreate,
     HouseholdCustomTypeResponse,
     HouseholdEventCreate,
@@ -111,6 +113,25 @@ def archive_custom_type(
         raise ApiError(404, 'CUSTOM_TYPE_NOT_FOUND', 'Nie ma takiej własnej pozycji.')
     row.archived = True
     db.commit()
+
+
+@router.get('/floor-heat', response_model=list[FloorHeatDayResponse], summary='Zmierzone kWh podłogi z próbek Fox')
+def floor_heat(
+    date_from: str = Query(alias='from'),
+    date_to: str = Query(alias='to'),
+    _current_user: AppUser = Depends(get_current_user),
+) -> list[FloorHeatDayResponse]:
+    """Przelicza cykle bufora z `foxess_data` i oddaje sumę kWh na dzień.
+
+    Katalogowa ikona zostaje jedna. Ta liczba zastępuje jej 1,2 kWh w budżecie Rytmu.
+    """
+    from src.features.floor_heat import refresh_floor_heat
+
+    try:
+        summary = refresh_floor_heat(get_settings().DATABASE_PATH, date_from, date_to)
+    except Exception:
+        return []
+    return [FloorHeatDayResponse(**row) for row in summary.get('days') or []]
 
 
 @router.get('/events', response_model=list[HouseholdEventResponse], summary='Lista wydarzeń (opcjonalny zakres dat)')

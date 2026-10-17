@@ -14,6 +14,13 @@ def _as_iso_date(value: object) -> str:
     return str(value)
 
 
+class FloorHeatDayResponse(BaseModel):
+    day: str
+    kwh: float
+    cycles: int
+    night_kwh: float = 0
+
+
 class HouseholdCustomTypeCreate(BaseModel):
     label: str
     icon: str

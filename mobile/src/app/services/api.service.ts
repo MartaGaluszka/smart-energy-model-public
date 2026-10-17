@@ -175,6 +175,13 @@ export interface HouseholdCustomTypeDto {
   archived?: boolean;
 }
 
+export interface FloorHeatDayDto {
+  day: string;
+  kwh: number;
+  cycles: number;
+  night_kwh?: number;
+}
+
 export interface HouseholdEventDto {
   id: number;
   event_date: string;
@@ -455,6 +462,15 @@ export class ApiService {
   }): Observable<HouseholdCustomTypeDto> {
     return this.authed((token) =>
       this.http.post<HouseholdCustomTypeDto>(`${this.baseUrl}/api/v1/household/custom-types`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  getFloorHeat(from: string, to: string): Observable<FloorHeatDayDto[]> {
+    const q = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+    return this.authed((token) =>
+      this.http.get<FloorHeatDayDto[]>(`${this.baseUrl}/api/v1/household/floor-heat?${q}`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
     );

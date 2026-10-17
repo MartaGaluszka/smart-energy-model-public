@@ -268,7 +268,7 @@ export function dayAdvisorLine(
     return 'Pranie jest w planie. Przy dobrej produkcji z dachu wieczorne ładowanie z sieci nie będzie potrzebne.';
   }
   if (keys.includes('kolacja')) {
-    return 'Kolacja zużywa tyle samo energii co śniadanie. Wieczorem instalacja już nie produkuje, więc przed 22 warto sprawdzić stan baterii.';
+    return 'Kolacja zużywa tyle samo energii co śniadanie.';
   }
   if (keys.includes('klimatyzacja')) {
     return 'W planie jest klimatyzacja. Na stronie głównej pojawi się podpowiedź, kiedy ją wyłączyć.';
@@ -332,6 +332,8 @@ export interface DayEnergyBudget {
   coverKwh: number | null;
   verdict: DayBudgetVerdict;
   summaryLine: string;
+  /** Czy bateria powyżej 10% pokryje nocne grzanie i tło domu do 8:00. */
+  morningLine: string | null;
 }
 
 export function fmtKwh(n: number): string {
@@ -393,6 +395,26 @@ export function sumPlannedEventKwh(
   return Math.round(sum * 100) / 100;
 }
 
+/** Zmierzone kWh bufora wchodzą raz, zamiast katalogu podłogi (także przy kilku wpisach). */
+export function applyMeasuredFloorHeat(
+  planKwh: number,
+  eventTypes: string[],
+  extraTypes: ReadonlyArray<HouseholdEventTypeDef>,
+  floorHeatKwh: number | null | undefined,
+): number {
+  if (floorHeatKwh == null || !Number.isFinite(floorHeatKwh) || floorHeatKwh <= 0) {
+    return planKwh;
+  }
+  let catalog = 0;
+  for (const type of eventTypes) {
+    const def = defForEvent(type, extraTypes);
+    if (def?.value === 'podlogowka') {
+      catalog += def.estimatedKwh;
+    }
+  }
+  return Math.round((planKwh - catalog + floorHeatKwh) * 100) / 100;
+}
+
 export function usableBatteryKwh(
   socPercent: number | null | undefined,
   capacityKwh: number | null | undefined,
@@ -414,8 +436,27 @@ export function buildDayEnergyBudget(input: {
   capacityKwh?: number | null;
   reservePercent?: number | null;
   extraTypes?: ReadonlyArray<HouseholdEventTypeDef>;
+  /** Zmierzone kWh bufora z Foxa. Zastępuje katalogowe 1,2 kWh ikony podłogi. */
+  floorHeatKwh?: number | null;
+  /** Cykle bufora od północy do 10:00 — wzorzec „takiej nocy” do rana. */
+  nightHeatKwh?: number | null;
+  now?: Date;
 }): DayEnergyBudget {
-  const planKwh = sumPlannedEventKwh(input.eventTypes, input.extraTypes ?? []);
+  const morningLine = morningHeatLine({
+    socPercent: input.socPercent ?? null,
+    capacityKwh:
+      input.capacityKwh != null && input.capacityKwh > 0
+        ? input.capacityKwh
+        : HOUSEHOLD_DEFAULT_CAPACITY_KWH,
+    nightHeatKwh: input.nightHeatKwh,
+    now: input.now,
+  });
+  const planKwh = applyMeasuredFloorHeat(
+    sumPlannedEventKwh(input.eventTypes, input.extraTypes ?? []),
+    input.eventTypes,
+    input.extraTypes ?? [],
+    input.floorHeatKwh,
+  );
   const socPercent = input.socPercent ?? null;
   const reservePercent = input.reservePercent ?? 20;
   const capacityKwh =
@@ -447,6 +488,7 @@ export function buildDayEnergyBudget(input: {
       coverKwh,
       verdict,
       summaryLine,
+      morningLine,
     };
   }
 
@@ -459,8 +501,8 @@ export function buildDayEnergyBudget(input: {
       verdict = 'ok';
       summaryLine =
         pvSource === 'actual'
-          ? `Dzisiejsza produkcja (ok. ${fmtKwh(pvKwh)} kWh) pokrywa plan.`
-          : `Prognoza (ok. ${fmtKwh(pvKwh)} kWh) pokrywa plan. Urządzenia najlepiej włączyć w godzinach największej produkcji.`;
+          ? `Świetny dzień! Produkcja z dachu (${fmtKwh(pvKwh)} kWh) w pełni pokrywa dzisiejsze plany.`
+          : `Świetny dzień! Prognozowana produkcja z dachu (${fmtKwh(pvKwh)} kWh) w pełni pokrywa dzisiejsze plany.`;
     } else if (planKwh <= coverKwh) {
       verdict = 'tight';
       summaryLine = `Sama ${roofWord} nie wystarczy. Razem z baterią (ok. ${fmtKwh(coverKwh)} kWh) plan powinien się zmieścić.`;
@@ -479,5 +521,38 @@ export function buildDayEnergyBudget(input: {
     coverKwh,
     verdict,
     summaryLine,
+    morningLine,
   };
+}
+
+const FOX_FLOOR_PERCENT = 10;
+const HOUSE_BASELINE_KW = 0.2;
+const MORNING_HOUR = 8;
+
+/** Czy energia powyżej 10% SoC wystarczy na nocne grzanie i tło domu do 8:00. */
+export function morningHeatLine(input: {
+  socPercent: number | null;
+  capacityKwh: number;
+  nightHeatKwh?: number | null;
+  now?: Date;
+}): string | null {
+  const night = input.nightHeatKwh;
+  if (input.socPercent == null || night == null || !Number.isFinite(night) || night <= 0) {
+    return null;
+  }
+  const now = input.now ?? new Date();
+  const hour = now.getHours() + now.getMinutes() / 60;
+  let hoursUntil = MORNING_HOUR - hour;
+  if (hoursUntil <= 0) hoursUntil += 24;
+  if (hoursUntil < 6) return null;
+  const background = Math.round(HOUSE_BASELINE_KW * hoursUntil * 10) / 10;
+  const need = Math.round((night + background) * 10) / 10;
+  const have = Math.round(
+    Math.max(0, ((input.socPercent - FOX_FLOOR_PERCENT) / 100) * input.capacityKwh) * 10,
+  ) / 10;
+  const left = Math.round((have - need) * 10) / 10;
+  if (left >= 0) {
+    return 'Bilans nocny na plus: energia w baterii wystarczy na pokrycie ogrzewania i pracy domu do rana.';
+  }
+  return `Do rana potrzeba ok. ${fmtKwh(need)} kWh: grzanie jak ostatnia noc ${fmtKwh(night)} kWh i dom w tle ${fmtKwh(background)} kWh. Powyżej 10% jest ok. ${fmtKwh(have)} kWh. Brakuje ok. ${fmtKwh(-left)} kWh — potem grzanie idzie z sieci.`;
 }
