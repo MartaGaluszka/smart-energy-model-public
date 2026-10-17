@@ -6,6 +6,7 @@ w `app.state.pv_predictor` (T0.10b) — ten moduł go używa, a nie ładuje pono
 
 from __future__ import annotations
 
+import time
 from datetime import date
 
 import pandas as pd
@@ -49,8 +50,19 @@ def _scale_day_predictions_to_total(frame: pd.DataFrame, target_total: float) ->
     return out
 
 
+# Wykres Prognozy liczy model od zera. Trzy minuty wystarczą, żeby ponowne
+# wejście na zakładkę nie stało w kolejce za tą samą inferencją.
+_HOURLY_TTL_S = 180.0
+_hourly_cache: dict[tuple, tuple[float, dict]] = {}
+
+
 def get_hourly_forecast(predictor, day: str | None = None) -> dict:
     target_day = day or date.today().isoformat()
+    cache_key = (target_day, id(predictor))
+    cached = _hourly_cache.get(cache_key)
+    now = time.monotonic()
+    if cached is not None and now - cached[0] < _HOURLY_TTL_S:
+        return cached[1]
 
     try:
         from datetime import date as date_cls
@@ -146,7 +158,7 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
         for key, meta in APPLIANCE_PROFILES.items()
     ]
 
-    return {
+    payload = {
         'day': target_day,
         'hours': hours,
         'total_kwh': total_kwh,
@@ -154,9 +166,34 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
         'appliance_tips': appliance_tips,
         'appliance_thresholds': appliance_thresholds,
     }
+    _hourly_cache[cache_key] = (now, payload)
+    if len(_hourly_cache) > 8:
+        cutoff = now - _HOURLY_TTL_S
+        for stale_key, (ts, _) in list(_hourly_cache.items()):
+            if ts < cutoff:
+                _hourly_cache.pop(stale_key, None)
+    return payload
+
+
+_validation_cache: dict[str, tuple[float, dict]] = {}
 
 
 def get_forecast_validation(day: str) -> dict:
+    now = time.monotonic()
+    cached = _validation_cache.get(day)
+    if cached is not None and now - cached[0] < _HOURLY_TTL_S:
+        return cached[1]
+    payload = _build_forecast_validation(day)
+    _validation_cache[day] = (now, payload)
+    if len(_validation_cache) > 12:
+        cutoff = now - _HOURLY_TTL_S
+        for stale_key, (ts, _) in list(_validation_cache.items()):
+            if ts < cutoff:
+                _validation_cache.pop(stale_key, None)
+    return payload
+
+
+def _build_forecast_validation(day: str) -> dict:
     from src.models.forecast_validation import (
         build_daily_forecast_summary,
         build_hourly_peak_validation,

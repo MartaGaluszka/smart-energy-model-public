@@ -67,6 +67,15 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
   private planSub?: Subscription;
   private calendarSub?: Subscription;
   private readonly suggestionsSubject = new BehaviorSubject<Suggestion[]>([]);
+  /** Ponowne wejście na zakładkę w tym oknie nie odpala tych samych zapytań. */
+  private readonly freshMs = 3 * 60 * 1000;
+  private readonly fetchedAt = {
+    shadow: 0,
+    suggestions: 0,
+    ac: 0,
+    plan: 0,
+    calendar: 0,
+  };
 
   constructor(
     readonly homeData: HomeDataService,
@@ -186,6 +195,8 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
   }
 
   private reloadShadowMonth(): void {
+    if (this.skipIfFresh('shadow')) return;
+    this.fetchedAt.shadow = Date.now();
     const to = todayIsoLocal();
     const [y, m] = to.split('-');
     const from = `${y}-${m}-01`;
@@ -197,6 +208,7 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
         this.shadowLoading = false;
       },
       error: () => {
+        this.fetchedAt.shadow = 0;
         this.shadowMonthPln = null;
         this.shadowLoading = false;
       },
@@ -204,6 +216,8 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
   }
 
   private reloadAc(): void {
+    if (this.skipIfFresh('ac')) return;
+    this.fetchedAt.ac = Date.now();
     this.batteryState.loadSettings();
     this.acSub?.unsubscribe();
     this.acSub = this.api.getAcRuntime().subscribe({
@@ -216,6 +230,7 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
         }
       },
       error: () => {
+        this.fetchedAt.ac = 0;
         this.acRuntime = null;
       },
     });
@@ -236,14 +251,21 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
   }
 
   private reloadSuggestions(): void {
+    if (this.skipIfFresh('suggestions')) return;
+    this.fetchedAt.suggestions = Date.now();
     this.suggestionsSub?.unsubscribe();
     this.suggestionsSub = this.homeData.getSuggestions().subscribe({
       next: (rows) => this.suggestionsSubject.next(rows),
-      error: () => this.suggestionsSubject.next([]),
+      error: () => {
+        this.fetchedAt.suggestions = 0;
+        this.suggestionsSubject.next([]);
+      },
     });
   }
 
   private reloadHouseholdCalendar(): void {
+    if (this.skipIfFresh('calendar')) return;
+    this.fetchedAt.calendar = Date.now();
     const from = todayIsoLocal();
     const to = shiftIsoDate(from, 6);
     this.calendarLoading = true;
@@ -256,6 +278,7 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
         this.calendarLoading = false;
       },
       error: () => {
+        this.fetchedAt.calendar = 0;
         const empty = this.buildCalendarDays(from, 7, []);
         this.calendarWeek = empty;
         this.calendarTeaser = empty.slice(0, 3);
@@ -295,6 +318,8 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
   }
 
   private reloadPlanChart(): void {
+    if (this.skipIfFresh('plan')) return;
+    this.fetchedAt.plan = Date.now();
     const day = todayIsoLocal();
     this.planSub?.unsubscribe();
     this.planSub = forkJoin({
@@ -311,10 +336,16 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
         this.scheduleRenderChart();
       },
       error: () => {
+        this.fetchedAt.plan = 0;
         this.planHours = [];
         this.pvByHour = [];
       },
     });
+  }
+
+  private skipIfFresh(key: keyof Tab1Page['fetchedAt']): boolean {
+    const at = this.fetchedAt[key];
+    return at > 0 && Date.now() - at < this.freshMs;
   }
 
   private scheduleRenderChart(attempt = 0): void {

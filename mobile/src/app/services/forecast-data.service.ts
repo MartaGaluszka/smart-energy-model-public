@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, forkJoin, of } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, concat, of, timer } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import {
   ApiService,
@@ -32,7 +32,10 @@ export interface ApplianceThreshold {
 
 export interface ForecastState {
   day: string;
+  /** Wykres godzinowy — czeka na model. */
   loading: boolean;
+  /** Sekcja „Prognoza vs rzeczywistość” — nie czeka na model. */
+  compareLoading: boolean;
   hours: ForecastHourPoint[];
   totalKwh: number | null;
   daily: ForecastValidationDailyRow[];
@@ -62,6 +65,8 @@ export const MAX_FUTURE_DAYS = 2;
 
 const todayIso = todayIsoLocal;
 const shiftDay = shiftIsoDate;
+/** Ponowne wejście na Prognozę w tym oknie nie gasi sekcji i nie liczy modelu od nowa. */
+const FORECAST_FRESH_MS = 3 * 60 * 1000;
 
 function maxFutureDayIso(): string {
   return shiftDay(todayIso(), MAX_FUTURE_DAYS);
@@ -80,10 +85,17 @@ function maxFutureDayIso(): string {
  */
 @Injectable({ providedIn: 'root' })
 export class ForecastDataService {
-  private readonly requestedDay$ = new BehaviorSubject<string>(todayIso());
+  private requested = todayIso();
+  private readonly loads$ = new Subject<string>();
+  private readonly fetchedAt = new Map<string, number>();
+  private readonly memory = new Map<string, ForecastState>();
+  /** Dzień, dla którego request już leci — drugie wejście na zakładkę go nie anuluje. */
+  private inflight: string | null = null;
+
   private readonly state$ = new BehaviorSubject<ForecastState>({
     day: todayIso(),
     loading: true,
+    compareLoading: true,
     hours: [],
     totalKwh: null,
     daily: [],
@@ -99,21 +111,15 @@ export class ForecastDataService {
   });
 
   constructor(private readonly api: ApiService) {
-    this.requestedDay$
-      .pipe(
-        tap((day) =>
-          this.state$.next({
-            ...this.state$.value,
-            day,
-            loading: true,
-            error: null,
-            canGoPrev: day > FIRST_DAY_WITH_DATA,
-            canGoNext: day < maxFutureDayIso(),
-          }),
-        ),
-        switchMap((day) => this.fetchDay(day)),
-      )
-      .subscribe((state) => this.state$.next(state));
+    // Nie pobieraj przy starcie aplikacji. Inaczej model rusza w tle i blokuje
+    // tabele, zanim ktoś w ogóle wejdzie w Prognozę.
+    this.loads$
+      .pipe(switchMap((day) => this.fetchDay(day)))
+      .subscribe((state) => {
+        this.state$.next(state);
+        if (!state.compareLoading) this.memory.set(state.day, state);
+        if (!state.loading && this.inflight === state.day) this.inflight = null;
+      });
   }
 
   getState(): Observable<ForecastState> {
@@ -122,18 +128,18 @@ export class ForecastDataService {
 
   /** Ostatnio ZAŻĄDANY dzień (nie: ostatnio załadowany) — baza dla nawigacji ◀/▶. */
   get currentDay(): string {
-    return this.requestedDay$.value;
+    return this.requested;
   }
 
   shift(deltaDays: number): void {
     const target = shiftDay(this.currentDay, deltaDays);
     if (target < FIRST_DAY_WITH_DATA) return;
     if (target > maxFutureDayIso()) return;
-    this.requestedDay$.next(target);
+    this.request(target);
   }
 
   goToday(): void {
-    this.requestedDay$.next(todayIso());
+    this.request(todayIso());
   }
 
   /** Dolna zakładka Prognoza — ten sam efekt co goToday (wywoływane z TabsPage). */
@@ -142,91 +148,170 @@ export class ForecastDataService {
   }
 
   loadDay(day: string): void {
-    this.requestedDay$.next(day);
+    this.request(day);
+  }
+
+  /** Pociągnięcie w dół — świeże dane, ale bez gaszenia tabel, jeśli już są. */
+  reload(): void {
+    this.fetchedAt.delete(this.requested);
+    this.inflight = null;
+    this.request(this.requested, true);
+  }
+
+  private request(day: string, force = false): void {
+    this.requested = day;
+    if (!force && this.inflight === day) return;
+    if (!force && this.hasFresh(day)) {
+      const remembered = this.memory.get(day);
+      if (remembered) {
+        this.state$.next({
+          ...remembered,
+          canGoPrev: day > FIRST_DAY_WITH_DATA,
+          canGoNext: day < maxFutureDayIso(),
+        });
+      }
+      return;
+    }
+    this.inflight = day;
+    this.publishPending(day);
+    this.loads$.next(day);
+  }
+
+  private hasFresh(day: string): boolean {
+    const at = this.fetchedAt.get(day) ?? 0;
+    return this.memory.has(day) && at > 0 && Date.now() - at < FORECAST_FRESH_MS;
+  }
+
+  /** Znane tabele zostają na ekranie. Spinner sekcji tylko przy pierwszym dniu. */
+  private publishPending(day: string): void {
+    const flags = {
+      canGoPrev: day > FIRST_DAY_WITH_DATA,
+      canGoNext: day < maxFutureDayIso(),
+    };
+    const remembered = this.memory.get(day);
+    if (remembered) {
+      this.state$.next({
+        ...remembered,
+        ...flags,
+        day,
+        loading: true,
+        compareLoading: false,
+        error: null,
+      });
+      return;
+    }
+    this.state$.next({
+      day,
+      ...flags,
+      loading: true,
+      compareLoading: true,
+      hours: [],
+      totalKwh: null,
+      daily: [],
+      hourlyValidation: [],
+      note: null,
+      error: null,
+      isComplete: true,
+      actualSoFarKwh: null,
+      applianceTips: [],
+      applianceThresholds: [],
+    });
   }
 
   /**
-   * Wymusza ponowne pobranie danych dla aktualnie wyświetlanego dnia, bez zmiany dnia.
-   * `BehaviorSubject.next()` emituje zawsze (bez `distinctUntilChanged`), więc wywołanie
-   * z tą samą wartością i tak przechodzi przez `switchMap` i odpytuje API na nowo —
-   * potrzebne np. przy powrocie na zakładkę Prognoza (dane z rana/południa/popołudnia
-   * uzupełniają się w ciągu dnia po kolejnych synchronizacjach) albo przy pull-to-refresh.
+   * Najpierw walidacja (zapisane runy + jeden odczyt licznika). Sekcja porównania
+   * pokazuje się, zanim model skończy wykres godzinowy.
    */
-  reload(): void {
-    this.requestedDay$.next(this.requestedDay$.value);
-  }
-
   private fetchDay(day: string): Observable<ForecastState> {
-    return forkJoin({
-      hourly: this.api.getForecastHourly(day).pipe(
-        catchError((err: HttpErrorResponse) =>
-          of({
-            day,
-            hours: [] as {
-              hour: number;
-              predicted_kwh: number;
-              prediction_source: string;
-              actual_kwh: number | null;
-              error_pct: number | null;
-            }[],
-            total_kwh: null as unknown as number,
-            model_path: '',
-            appliance_tips: [],
-            appliance_thresholds: [],
-            __error: err?.error?.detail ?? 'Brak prognozy dla tego dnia (brak danych pogodowych).',
-          }),
-        ),
-      ),
-      validation: this.api.getForecastValidation(day).pipe(
-        catchError(() =>
-          of({
-            day,
+    const previous = this.state$.value;
+    const sameDay = previous.day === day;
+    const seed: ForecastState = {
+      ...previous,
+      day,
+      loading: true,
+      compareLoading: true,
+      error: null,
+      canGoPrev: day > FIRST_DAY_WITH_DATA,
+      canGoNext: day < maxFutureDayIso(),
+      ...(sameDay
+        ? {}
+        : {
+            hours: [],
+            totalKwh: null,
             daily: [],
-            hourly: [],
-            peaks: [],
-            note: 'Walidacja niedostępna dla tego dnia.',
-            is_complete: true,
-            actual_so_far_kwh: null,
+            hourlyValidation: [],
+            note: null,
+            actualSoFarKwh: null,
+            applianceTips: [],
+            applianceThresholds: [],
           }),
-        ),
-      ),
-    }).pipe(
-      map(({ hourly, validation }) => {
-        const hourlyError = (hourly as { __error?: string }).__error ?? null;
-        return {
+    };
+
+    return this.api.getForecastValidation(day).pipe(
+      catchError(() =>
+        of({
           day,
-          loading: false,
-          hours: hourly.hours.map((h) => ({
-            hour: h.hour,
-            predictedKwh: h.predicted_kwh,
-            actualKwh: h.actual_kwh,
-            errorPct: h.error_pct,
-          })),
-          totalKwh: hourlyError ? null : hourly.total_kwh,
+          daily: [],
+          hourly: [],
+          peaks: [],
+          note: 'Walidacja niedostępna dla tego dnia.',
+          is_complete: true,
+          actual_so_far_kwh: null,
+        }),
+      ),
+      tap(() => this.fetchedAt.set(day, Date.now())),
+      switchMap((validation) => {
+        const compared: ForecastState = {
+          ...seed,
+          compareLoading: false,
           daily: validation.daily,
           hourlyValidation: validation.hourly,
           note: validation.note,
-          error: hourlyError,
-          canGoPrev: day > FIRST_DAY_WITH_DATA,
-          canGoNext: day < maxFutureDayIso(),
           isComplete: validation.is_complete,
           actualSoFarKwh:
             validation.actual_so_far_kwh
             ?? validation.daily.find((d) => d.actual_total_kwh !== null)?.actual_total_kwh
             ?? null,
-          applianceTips: (hourly.appliance_tips ?? []).map((t) => ({
-            hour: t.hour,
-            predictedKwh: t.predicted_kwh,
-            rank: t.rank,
-            appliances: t.appliances,
-            loadKw: t.load_kw ?? 0,
-          })),
-          applianceThresholds: (hourly.appliance_thresholds ?? []).map((t) => ({
-            key: t.key,
-            label: t.label,
-            minKw: t.min_kw,
-          })),
         };
+        const hourly$ = this.api.getForecastHourly(day).pipe(
+          map((hourly) => ({
+            ...compared,
+            loading: false,
+            hours: hourly.hours.map((h) => ({
+              hour: h.hour,
+              predictedKwh: h.predicted_kwh,
+              actualKwh: h.actual_kwh,
+              errorPct: h.error_pct,
+            })),
+            totalKwh: hourly.total_kwh,
+            applianceTips: (hourly.appliance_tips ?? []).map((t) => ({
+              hour: t.hour,
+              predictedKwh: t.predicted_kwh,
+              rank: t.rank,
+              appliances: t.appliances,
+              loadKw: t.load_kw ?? 0,
+            })),
+            applianceThresholds: (hourly.appliance_thresholds ?? []).map((t) => ({
+              key: t.key,
+              label: t.label,
+              minKw: t.min_kw,
+            })),
+          })),
+          catchError((err: HttpErrorResponse) =>
+            of({
+              ...compared,
+              loading: false,
+              hours: [],
+              totalKwh: null,
+              error: err?.error?.detail ?? 'Brak prognozy dla tego dnia (brak danych pogodowych).',
+              applianceTips: [],
+              applianceThresholds: [],
+            }),
+          ),
+        );
+        // Model wykresu startuje chwilę później. Szybka zmiana dnia nie kolejkuje
+        // inferencji, która zasłaniałaby tabele.
+        return concat(of(compared), timer(350).pipe(switchMap(() => hourly$)));
       }),
     );
   }

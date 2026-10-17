@@ -79,6 +79,8 @@ function foxRateLimitMessage(err: unknown): string | null {
 const SYNC_TIMEOUT_MS = 15_000;
 const OVERVIEW_TIMEOUT_MS = 10_000;
 const LOOKBACK_DAYS = 5;
+/** Ponowne wejście na Home w tym oknie czyta już pobrane KPI i kartę baterii. */
+const HOME_FRESH_MS = 3 * 60 * 1000;
 
 /**
  * Most między UI (Home / tab1) i `api/` (FastAPI, Faza 0 — patrz §12 dok. projektowego).
@@ -99,6 +101,9 @@ export class HomeDataService {
     apiError: null,
   });
 
+  private overviewFetchedAt = 0;
+  private batteryFetchedAt = 0;
+
   constructor(
     private readonly api: ApiService,
     private readonly auth: AuthService,
@@ -110,9 +115,13 @@ export class HomeDataService {
   refreshAll(clearSession = false): void {
     if (clearSession) {
       this.auth.logout();
+      this.overviewFetchedAt = 0;
+      this.batteryFetchedAt = 0;
+      this.kpi$.next(null);
+      this.battery$.next(null);
     }
-    this.refreshOverview();
-    this.refreshBatterySuggestion();
+    this.refreshOverview(null, null, false, clearSession);
+    this.refreshBatterySuggestion(clearSession);
   }
 
   getKpi(): Observable<HomeKpi | null> {
@@ -134,15 +143,16 @@ export class HomeDataService {
     return this.battery$.asObservable();
   }
 
-  refreshBatterySuggestion(): void {
-    // Wyczyść stary snapshot (np. TRYB ZIMOWY), żeby UI nie trzymał cache przy błędzie auth
-    this.battery$.next(null);
+  refreshBatterySuggestion(force = false): void {
+    if (!force && this.isFresh(this.batteryFetchedAt)) return;
+    this.batteryFetchedAt = Date.now();
     this.api.getBatterySuggestion().pipe(timeout(OVERVIEW_TIMEOUT_MS)).subscribe({
       next: (row) => {
         this.battery$.next(row);
       },
       error: (err) => {
         console.warn('[HomeDataService] GET /battery/suggestion failed', err);
+        this.batteryFetchedAt = 0;
         this.battery$.next(null);
       },
     });
@@ -170,6 +180,7 @@ export class HomeDataService {
           skipped ? res.message : null,
           skipped ? 'info' : null,
           limited,
+          true,
         );
       }),
       catchError((err) => {
@@ -196,11 +207,15 @@ export class HomeDataService {
     message: string | null = null,
     messageKind: 'error' | 'info' | null = null,
     rateLimited = false,
+    force = false,
   ): void {
+    if (!force && this.isFresh(this.overviewFetchedAt)) return;
+    this.overviewFetchedAt = Date.now();
     this.sync$.next({ ...this.sync$.value, syncing: true, apiError: null });
     this.fetchLatestAvailableOverview(0).subscribe({
       next: (overview) => {
         if (!overview || !overview.has_data) {
+          this.overviewFetchedAt = 0;
           this.kpi$.next(null);
           this.sync$.next({
             ...this.sync$.value,
@@ -226,10 +241,11 @@ export class HomeDataService {
           rateLimited,
           apiError: null,
         });
-        this.refreshBatterySuggestion();
+        this.refreshBatterySuggestion(force);
       },
       error: (err) => {
         console.warn('[HomeDataService] api/foxess/overview niedostępne', err);
+        this.overviewFetchedAt = 0;
         this.kpi$.next(null);
         this.markApiError(err, 'GET /api/v1/foxess/overview — nieznany błąd');
         this.sync$.next({ ...this.sync$.value, syncing: false, offline: true });
@@ -252,6 +268,10 @@ export class HomeDataService {
         return this.fetchLatestAvailableOverview(daysBack + 1);
       }),
     );
+  }
+
+  private isFresh(fetchedAt: number): boolean {
+    return fetchedAt > 0 && Date.now() - fetchedAt < HOME_FRESH_MS;
   }
 
   private toSuggestion(row: NotificationDto): Suggestion {

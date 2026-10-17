@@ -10,6 +10,7 @@ Konteksty (zgodne z harmonogramem launchd):
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Literal
@@ -243,6 +244,55 @@ def _sum_hours(df: pd.DataFrame, h_start: int, h_end: int) -> float:
     return float(df.loc[mask, 'predicted_kwh'].sum())
 
 
+# Jedno załadowanie .joblib na proces i krótka pamięć ramki dnia.
+# Cron sugestii woła tę samą prognozę kilka razy pod rząd.
+_PREDICT_TTL_S = 180.0
+_shared_predictor = None
+_predict_cache: dict[tuple, tuple[float, pd.DataFrame]] = {}
+
+
+def _loaded_pv_predictor():
+    global _shared_predictor
+    if _shared_predictor is not None and _shared_predictor.pipeline is not None:
+        return _shared_predictor
+    from src.models.pv_hourly_predictor import PVHourlyPredictor
+
+    predictor = PVHourlyPredictor()
+    predictor.load()
+    _shared_predictor = predictor
+    return predictor
+
+
+def _predict_one_day(
+    target_day: str,
+    as_of: datetime,
+    db_path: str,
+    *,
+    hybrid_today: bool,
+    use_actual_pv: bool,
+) -> pd.DataFrame:
+    bucket = as_of.replace(second=0, microsecond=0).isoformat(timespec='minutes')
+    key = (target_day, bucket, bool(hybrid_today), bool(use_actual_pv), db_path)
+    now = time.monotonic()
+    hit = _predict_cache.get(key)
+    if hit is not None and now - hit[0] < _PREDICT_TTL_S:
+        return hit[1]
+    pred = _loaded_pv_predictor().predict_days(
+        days_ahead=1,
+        db_path=db_path,
+        from_date=date.fromisoformat(target_day),
+        hybrid_today=hybrid_today,
+        use_actual_pv=use_actual_pv,
+        as_of=as_of,
+    )
+    _predict_cache[key] = (now, pred)
+    if len(_predict_cache) > 24:
+        stale = [k for k, (ts, _) in _predict_cache.items() if now - ts >= _PREDICT_TTL_S]
+        for k in stale:
+            _predict_cache.pop(k, None)
+    return pred
+
+
 def get_pv_outlook(
     target_day: str,
     as_of: datetime | None = None,
@@ -251,18 +301,12 @@ def get_pv_outlook(
     as_of = as_of or datetime.now()
     db_path = db_path or _db_path()
 
-    from src.models.pv_hourly_predictor import PVHourlyPredictor
-
-    predictor = PVHourlyPredictor()
-    predictor.load()
-
-    pred = predictor.predict_days(
-        days_ahead=1,
-        db_path=db_path,
-        from_date=date.fromisoformat(target_day),
+    pred = _predict_one_day(
+        target_day,
+        as_of,
+        db_path,
         hybrid_today=True,
         use_actual_pv=True,
-        as_of=as_of,
     )
     day_df = pred[pred['day'] == target_day].copy() if not pred.empty else pred
 
@@ -961,17 +1005,12 @@ def get_day_pv_forecast_sum(
     as_of = as_of or datetime.now()
     db_path = db_path or _db_path()
     try:
-        from src.models.pv_hourly_predictor import PVHourlyPredictor
-
-        predictor = PVHourlyPredictor()
-        predictor.load()
-        pred = predictor.predict_days(
-            days_ahead=1,
-            db_path=db_path,
-            from_date=date.fromisoformat(target_day),
+        pred = _predict_one_day(
+            target_day,
+            as_of,
+            db_path,
             hybrid_today=False,
             use_actual_pv=False,
-            as_of=as_of,
         )
         day_df = pred[pred['day'] == target_day] if not pred.empty else pred
         if day_df.empty:

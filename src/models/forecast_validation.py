@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import time
 from datetime import date, datetime
 
 import pandas as pd
@@ -31,6 +32,12 @@ DEFAULT_RUN_LABELS = ('daily', 'midday', 'peak')
 FALLBACK_RUN_LABEL = 'manual'
 
 
+# Jedno skanowanie licznika na dzień w procesie API. Prognoza woła tę samą
+# godzinówkę kilka razy (wykres, walidacja, suma), a tabela ma miliony wierszy.
+_ACTUAL_HOURLY_TTL_S = 180.0
+_actual_hourly_cache: dict[tuple, tuple[float, pd.DataFrame]] = {}
+
+
 def get_actual_pv_ml(
     target_day: str | None = None,
     db_path: str | None = None,
@@ -40,12 +47,10 @@ def get_actual_pv_ml(
     db_path = db_path or os.getenv('DATABASE_PATH', 'data/energy_model.db')
 
     # 0–23: suma godzin = resolve_actual_pv_total / app (nie ucinaj 5–21)
-    pv = load_hourly_pv_dynamic(
-        db_path, target_day, target_day, min_hour=0, max_hour=23,
-    )
-    if pv.empty:
+    hourly = get_actual_hourly_ml(target_day, db_path)
+    if hourly.empty:
         return 0.0
-    return float(pv['pv_kwh_hour'].sum())
+    return float(hourly['actual_pv_ml_kwh'].sum())
 
 
 def get_actual_daily_kwh(
@@ -75,14 +80,28 @@ def get_actual_hourly_ml(
 ) -> pd.DataFrame:
     """Godzinowa produkcja FoxESS = Δ PVEnergyTotal (timeseries), godziny 0–23."""
     db_path = db_path or os.getenv('DATABASE_PATH', 'data/energy_model.db')
+    key = (str(target_day), db_path)
+    now = time.monotonic()
+    hit = _actual_hourly_cache.get(key)
+    if hit is not None and now - hit[0] < _ACTUAL_HOURLY_TTL_S:
+        return hit[1].copy()
+
     pv = load_hourly_pv_dynamic(
         db_path, target_day, target_day, min_hour=0, max_hour=23,
     )
     if pv.empty:
-        return pd.DataFrame(columns=['hour', 'actual_pv_ml_kwh'])
-    out = pv[['hour', 'pv_kwh_hour']].rename(columns={'pv_kwh_hour': 'actual_pv_ml_kwh'})
-    out['hour'] = out['hour'].astype(int)
-    return out
+        out = pd.DataFrame(columns=['hour', 'actual_pv_ml_kwh'])
+    else:
+        out = pv[['hour', 'pv_kwh_hour']].rename(columns={'pv_kwh_hour': 'actual_pv_ml_kwh'})
+        out['hour'] = out['hour'].astype(int)
+    stored = out.copy()
+    _actual_hourly_cache[key] = (now, stored)
+    if len(_actual_hourly_cache) > 8:
+        cutoff = now - _ACTUAL_HOURLY_TTL_S
+        for stale_key, (ts, _) in list(_actual_hourly_cache.items()):
+            if ts < cutoff:
+                _actual_hourly_cache.pop(stale_key, None)
+    return stored.copy()
 
 
 def get_actual_hourly_report(
@@ -102,6 +121,16 @@ def get_actual_hourly_report(
     db_path = db_path or os.getenv('DATABASE_PATH', 'data/energy_model.db')
     if not os.path.exists(db_path):
         return pd.DataFrame(columns=['hour', 'actual_report_kwh'])
+
+    # Domyślny target godzinowy to ten sam licznik. Drugie skanowanie nic nie wnosi.
+    from src.features.pv_features_hourly_extended import _hourly_target_mode
+
+    if variable == 'PVEnergyTotal' and _hourly_target_mode() == 'pve':
+        ml = get_actual_hourly_ml(target_day, db_path)
+        if not ml.empty:
+            out = ml.rename(columns={'actual_pv_ml_kwh': 'actual_report_kwh'})
+            out['actual_report_kwh'] = pd.to_numeric(out['actual_report_kwh'], errors='coerce')
+            return out
 
     # Preferuj Δ licznika (ta sama skala co resolve_actual_pv_total / app)
     try:

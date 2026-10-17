@@ -85,6 +85,7 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
   state: ForecastState = {
     day: '',
     loading: true,
+    compareLoading: true,
     hours: [],
     totalKwh: null,
     daily: [],

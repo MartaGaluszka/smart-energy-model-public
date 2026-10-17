@@ -512,7 +512,7 @@ def generate_suggestions_for_user(
     user_id: int,
     context: SuggestionContext | None = None,
 ) -> dict:
-    """T4.20: jeden przebieg generatora dla użytkownika (cron lub GET)."""
+    """T4.20: jeden przebieg generatora. Woła go cron (rano, południe, szczyt), nie odczyt listy."""
     ctx = context or suggestion_context_for_hour()
     return {
         'context': ctx,
@@ -547,7 +547,7 @@ def generate_suggestions_for_all_users(
 
 
 def list_notifications(db: Session, user_id: int) -> list[Notification]:
-    generate_suggestions_for_user(db, user_id)
+    """Zapisane sugestie. Nowe liczy cron, więc otwarcie Home nie buduje prognozy."""
     return (
         db.query(Notification)
         .filter(Notification.user_id == user_id)

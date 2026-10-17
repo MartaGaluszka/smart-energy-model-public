@@ -11,8 +11,10 @@ from sqlalchemy.orm import sessionmaker
 from api.db import Base
 from api.models import AdviceEvent, AppUser, Notification
 from api.services.notifications_service import (
+    _pretty_g12w_window,
     generate_suggestions_for_all_users,
     generate_suggestions_for_user,
+    list_notifications,
     maybe_upsert_cheap_window,
     suggestion_context_for_hour,
 )
@@ -34,6 +36,12 @@ def test_suggestion_context_for_hour():
     assert suggestion_context_for_hour(5) == 'morning'
     assert suggestion_context_for_hour(12) == 'pre_cheap'
     assert suggestion_context_for_hour(16) == 'peak'
+
+
+def test_pretty_g12w_window():
+    assert _pretty_g12w_window('13–15') == '13:00–15:00'
+    assert _pretty_g12w_window('22-6') == '22:00–6:00'
+    assert _pretty_g12w_window('13:00–15:00') == '13:00–15:00'
 
 
 @patch('api.services.notifications_service.maybe_upsert_soc16_reserve', return_value=None)
@@ -104,6 +112,42 @@ def test_generate_for_all_users_counts_active(_cloudy, _soc16):
     db.close()
 
 
+def test_cheap_window_marks_older_unread_as_read():
+    db, user_id = _session()
+    old = Notification(
+        user_id=user_id,
+        notif_type='cheap_window',
+        title='Sugestia: zbliża się okno 13:00–15:00',
+        body='stara karta',
+        payload_json='{"day":"2026-08-01","rule":"cheap_window"}',
+        created_at=datetime.utcnow(),
+        read_at=None,
+    )
+    db.add(old)
+    db.commit()
+
+    snap = MagicMock(soc_percent=55.0)
+    wait = MagicMock(triggered=False, title='', body='')
+    with (
+        patch('src.optimization.battery_advisor.get_battery_snapshot', return_value=snap),
+        patch('src.optimization.battery_advisor.seasonal_soc_reserve', return_value=20.0),
+        patch('src.optimization.battery_advisor.evaluate_below_reserve_wait_cheap', return_value=wait),
+        patch('src.optimization.battery_advisor.get_day_pv_forecast_sum', return_value=18.0),
+        patch('src.optimization.battery_advisor.get_today_pv_observed_kwh', return_value=None),
+        patch('src.optimization.battery_advisor.next_cheap_window_label', return_value='13–15'),
+        patch('src.optimization.g12w_tariff.is_cheap_zone', return_value=False),
+    ):
+        fresh = maybe_upsert_cheap_window(db, user_id, 'pre_cheap')
+
+    db.refresh(old)
+    assert fresh is not None
+    assert fresh.id != old.id
+    assert old.read_at is not None
+    assert '13:00' in fresh.title
+    assert db.query(Notification).filter(Notification.user_id == user_id, Notification.read_at.is_(None)).count() == 1
+    db.close()
+
+
 def test_generate_suggestions_for_user_keys():
     db, user_id = _session()
     with (
@@ -124,4 +168,23 @@ def test_generate_suggestions_for_user_keys():
     cheap.assert_called_once_with(db, user_id, 'pre_cheap')
     assert out['context'] == 'pre_cheap'
     assert out['cheap_window'] is not None
+    db.close()
+
+
+def test_list_notifications_reads_stored_rows():
+    db, user_id = _session()
+    db.add(
+        Notification(
+            user_id=user_id,
+            notif_type='cheap_window',
+            title='Zapisana',
+            body='bez ponownego liczenia',
+            created_at=datetime.utcnow(),
+        )
+    )
+    db.commit()
+    with patch('api.services.notifications_service.generate_suggestions_for_user') as generate:
+        rows = list_notifications(db, user_id)
+    generate.assert_not_called()
+    assert [row.title for row in rows] == ['Zapisana']
     db.close()

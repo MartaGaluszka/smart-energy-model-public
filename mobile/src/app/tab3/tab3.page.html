@@ -103,14 +103,14 @@
       </button>
     </div>
 
-    <ion-card class="se-card se-daily-row" *ngIf="state.loading">
+    <ion-card class="se-card se-daily-row" *ngIf="state.compareLoading">
       <ion-card-content class="se-run-loading">
         <ion-spinner name="crescent"></ion-spinner>
         <span>Ładowanie okna {{ runLabelName(selectedRunLabel) }}…</span>
       </ion-card-content>
     </ion-card>
 
-    <ng-container *ngIf="!state.loading">
+    <ng-container *ngIf="!state.compareLoading">
       <ng-container *ngIf="selectedDaily as d; else missingRun">
         <ion-card class="se-card se-daily-row">
           <ion-card-content>
