@@ -105,6 +105,30 @@ Fox próbki co ~5 min. PV w oknie **~3,4–4,3 kW**. Sieć przy śniadaniu i zmy
 
 **~20:07:** wiatrak sufitowy był w użyciu i właśnie stanął (zgłoszenie). Ostatnia próbka Fox **18:17**, load **0,24 kW** — wiatrak nie ma osobnego kWh.
 
+**~21:00:** piekarnik — podgrzanie jedzenia (zgłoszenie). Fox bez syncu wieczorem → **bez kWh**. **Sobota G12w:** strefa tania cały dzień — podgrzanie z sieci nie w drogim oknie tygodniowym.
+
+**Kalendarz (update):** typ **`piekarnik`** (podgrzanie, nie pełna pieczeń) — dopisać w Rytmie jeśli jeszcze nie ma.
+
+### 2026-10-18 — DZIEŃ rano (śniadanie · kaloryfer łazienkowy)
+
+Outlook pogody z wpisu **17.10:** Accu **mix→RF** (**5 / 55%**) · MB **52%**.  
+Fox w bazie: sync do **~10:43** (@~10:48 w aplikacji).
+
+| Moment | SoC | Uwaga |
+|--------|----:|-------|
+| **~04:48–05:01** | **47→38%** | **Cykl 1 podłogówka** · **~0,66 kWh** · peak **~3,3 kW** |
+| **~06:49–06:58** | **35→29%** | **Cykl 2** · **~0,41 kWh** · peak **~3,2 kW** |
+| **~08:00** | **~27%** | minimum rano po nocnych cyklach + PV jeszcze niska |
+| **~09:52** | **~50%** | **Śniadanie** w toku · load Fox **~09:36–09:45** do **~2,4 kW** · **`sniadanie`** **~1,3–1,4 kWh** (ikona) |
+| **~09:51** | — | **Kaloryfer łazienkowy** ~1 min · **`grzejnik_lazienka`** — na tle kuchni **bez kWh** |
+| **~10:22** | **~63%** | **`piekarnik`** (kurczak **200°C**) + **`obiad`** (indukcja/ryż) — **dwie stałe ikony** w Rytmie · okap z indukcją |
+| **~10:25–10:34** | **64%** | **Cykl 3 podłogówka** · **~0,32 kWh** · peak **~2,8 kW** — **w tym samym oknie** co piekarnik; detektor = plateau CO, nie osobny kWh pieca |
+| **~10:43** | **~66%** | ostatnia próbka sync |
+
+**Podłoga dziś:** **3 cykle · 1,4 kWh** (`floor_heat_cycles`) — zgodne z kafelkiem **„Podłoga 18.10”** w Rytmie.
+
+**Kalendarz (18.10):** katalog **`sniadanie`** · **`grzejnik_lazienka`** · **`piekarnik`** + **`obiad`** (osobno, §10.1) · **`podlogowka`**. Case piec + indukcja = **nie** jeden wpis custom — **~2 + ~2,2 kWh** w budżecie dnia.
+
 ### 2026-10-14 → 15.10 — NOC + rano (FC 100% · śniadanie na styk · zmywarka ~9:00)
 
 Accu **15** Lumen **7 / 52%** → paper **RF** · ENS @05 **~15,5** · Tnoc (Accu/MB) **~3°C**.  
