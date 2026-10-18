@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-10-17 (Accu+MB+oneshot 17–19) · Fox **16** **27,5** · **17** **28,5** · weekly **11.10**  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 11.10**) · `forecast_validation.csv` (closeouty do **11.10**) · [`NOTATKA_2026-10-17.md`](NOTATKA_2026-10-17.md) · [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · weekly [`NOTATKA_WEEKLY_2026-10-11.md`](NOTATKA_WEEKLY_2026-10-11.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)  
+**Stan na:** 2026-10-18 (Accu **19–20** ~20:03; weekly **04:32** RF **0,670** ACCEPT) · Fox **17** **28,5** · closeout **18** otwarty · L30 INFO  
+**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 18.10**) · `forecast_validation.csv` · [`NOTATKA_2026-10-18.md`](NOTATKA_2026-10-18.md) · [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · weekly [`NOTATKA_WEEKLY_2026-10-18.md`](NOTATKA_WEEKLY_2026-10-18.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)  
 **Paper-trade Accu:** tylko repo prywatne (nie linkować w public)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
@@ -36,18 +36,18 @@ Gate vs weekly **04.10** (0.671): Δ **+0.003** → **ACCEPT**. XGB+TS shadow: �
 | Okres | n | MAPE raw 5:00 | MAPE raw 12:00 |
 |-------|--:|-------------:|---------------:|
 | Era dual ICON **27.07–01.09** | 37 | **15,6%** | **15,8%** |
-| Era ENS primary **02.09–11.10** | 40 | **16,5%** | **21,0%** |
-| Całość **14.07–11.10** | 90 | 17,4% | 18,9% |
+| Era ENS primary **02.09–18.10** | 47 | **21,8%** | **23,1%** |
+| Całość **14.07–18.10** | 97 | **19,8%** | **20,0%** |
 
-*(Wykresy odświeżone **11.10** do closeoutu **11.10**. Rekord |APE| serii nadal **11.09** (**174,8%** raw 12:00 — Fox **3,1** vs midday **8,52**). Tydzień po tygodniu (WAPE/bias, progi OK/WATCH/ALARM): [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md) · kryteria: [`NOTATKA_GATE_L30_CLOSEOUT.md`](NOTATKA_GATE_L30_CLOSEOUT.md). Ostatni tydzień 05.10–11.10: WAPE 12,1% · bias −10,0% → **WATCH**; poprzedni 28.09–04.10 był ALARM w bias → **dwa tygodnie z rzędu poza OK w bias = przegląd** (nie auto-rollback; trop: dni jasne / 10.10 −28%).)*
+*(Wykresy odświeżone **18.10** (n=97; **18.10** w CSV = snapshot **~18:22** — po closeout @22 powtórzyć `plot_july_validation.py`). Rekord |APE| serii nadal **11.09** (**174,8%** raw 12:00). Tydzień **12–18.10**: WAPE **35,9%** · bias **+6,4%** → **ALARM** (outliery **12–14** overshoot, **14.10** **135%**); shuffle weekly **ACCEPT×3** — brak auto-rollback. Tabela tygodni: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md) · [`NOTATKA_WEEKLY_2026-10-18.md`](NOTATKA_WEEKLY_2026-10-18.md).)*
 
 CS4: na pochmurnych / mix często bliżej faktu (np. **29.08** pick **21,5** vs **21,1**); na jasnych RF bywa lepszy, ale **30.08** ens wyprzedził RF.
 
 Ostatnie closeouty: **28.08** **34,2** · **29.08** **21,1** (CS4 ✓) · **30.08** **33,2** · **31.08** **24,6** (Accu→CS4; CS4 −17%, ens +7%) · **1.09** **32,4** (Accu→RF; ens **−3%**, ICON/CS4 −10%) · **2.09** **31,0** (Accu→RF; ENS **−11%**, ICON −12% — I≈U) · **3.09** **27,4** (Accu→RF; ENS **−11%**, ICON/CS4 −23/−24%, peak **−4%**) · **4.09** **18,9** (Accu CS4; ENS **−6,5%**, CS4 −20%) · **5.09** **20,2** (Accu CS4; ENS **+1,3%**, CS4 −8%; **kajaki / pusty dom**) · **6.09** **23,3** (Accu→RF; ENS **+21%**; oneshot ICON **+2%**) · **7.09** **26,3** (okno→RF; ENS **+5,8%**) · **8.09** **33,3** (Accu RF; ENS **−8,7%**) · **9.09** **32,2** (Accu RF; ENS **−8,2%**, peak **−4,2%**).  
-**10.09** Fox **18,8** · peak ENS **18,31 (−2,6%)** (brak daily @05). **11.09** Fox **3,1** · midday **8,52 (+175%)** ([`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md)). **12.09** Fox **13,1** · midday **13,47 (−2,8%)** · peak **11,94** — brak daily @05; Accu CS4 reżim OK ([`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md)). Dalsze closeouty **13.09–12.10** → tabela tydzień po tygodniu w `images/ml/july_validation_summary.md`; ostatnie: **4.10** **29,6** (−5%) · **5.10** **28,1** (−5%) · **6.10** **27,2** (−17%) · **7.10** **24,4** (−4%) · **8.10** **18,8** (−0%) · **9.10** **18,1** (+9%) · **10.10** **22,0** (**−28%**) · **11.10** **16,0** (**−25%**, weekly 11.10) · **12.10** wstępnie **13,6** (ENS @05 **+49%**, peak **+3%**).
+**10.09** Fox **18,8** · peak ENS **18,31 (−2,6%)** (brak daily @05). **11.09** Fox **3,1** · midday **8,52 (+175%)** ([`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md)). **12.09** Fox **13,1** · midday **13,47 (−2,8%)** · peak **11,94** — brak daily @05; Accu CS4 reżim OK ([`NOTATKA_2026-09-12.md`](NOTATKA_2026-09-12.md)). Dalsze closeouty → tabela tygodni w `images/ml/july_validation_summary.md`; ostatnie: **10.10** **22,0** (**−28%**) · **11.10** **16,0** (**−25%**) · **12.10** **13,6** (**+49%** @05) · **13.10** **10,2** (**+85%**) · **14.10** **6,6** (**+135%**) · **15.10** **12,0** (+15%) · **16.10** **27,5** (**−20%**) · **17.10** **28,5** (**−23%**) · **18.10** **24,4** partial @05 **18,45** (weekly **18.10**).
 **Gate routing 01.09:** **REJECT** ICON≥30%→CS4 · **ACCEPT** **ensemble ICON+UKMO** jako primary daily ([`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)) — wdrożone `ENSEMBLE_PRIMARY=1` + `mlops/_ensemble_primary.sh`.
 
-Wykresy (do **11.10**, odświeżone **11.10**; na production pomarańczowe linie = niedzielne retreningi, w tym 04.10 ACCEPT i 11.10 RF ACCEPT / XGB REVIEW): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png) (góra kWh, dół |błąd| %), [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) (góra tylko 5:00, dół 5:00+12:00) · opis błędów: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
+Wykresy (do **18.10**, odświeżone **18.10**; linie pomarańczowe = weekly — m.in. **11.10** XGB REVIEW, **18.10** ACCEPT×3): [`images/ml/july_validation_plot.png`](images/ml/july_validation_plot.png) · [`images/ml/production_validation_plot.png`](images/ml/production_validation_plot.png) · opis: [`images/ml/july_validation_summary.md`](images/ml/july_validation_summary.md).
 
 **Review sobotni (przed retreningiem):** [`images/ml/weekly_model_weather_review.md`](images/ml/weekly_model_weather_review.md) — MAPE × typ dnia × **ENS / ICON / CS4 / XGB** · `./mlops/weekly_model_review.sh` · launchd **sob 10:00** (`install_launchd.sh`).
 
@@ -78,9 +78,10 @@ Korekta operacyjna ADJUST: **OFF** (ocena modelu na **raw**).
 | Decyzje (PVE, ICON, 16 cech) | [`03_ZALOZENIA_I_DECYZJE.md`](03_ZALOZENIA_I_DECYZJE.md) |
 | Historia gate’ów | [`CHANGELOG_ML.md`](CHANGELOG_ML.md) |
 | Prezentacja | [`notebooks/03_prezentacja_dyplomowa.ipynb`](../notebooks/03_prezentacja_dyplomowa.ipynb) |
-| Notatki pogodowe od 16.08 | [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · dzień [`NOTATKA_2026-10-17.md`](NOTATKA_2026-10-17.md) (Accu **17–18 RF** / **19 CS4**; MB **23/52/97%** zgoda; Fox **16** **27,5** / **17** **28,5**; ENS **−20% / −23%** jasny undershoot) · [`NOTATKA_2026-10-16.md`](NOTATKA_2026-10-16.md) · [`NOTATKA_2026-10-15.md`](NOTATKA_2026-10-15.md) · poprzednio [`NOTATKA_2026-10-14.md`](NOTATKA_2026-10-14.md) |
+| Notatki pogodowe od 16.08 | [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · dzień [`NOTATKA_2026-10-18.md`](NOTATKA_2026-10-18.md) (Accu **19–20 CS4**; **18** outlook stary **RF** + MB **21%** watch) · [`NOTATKA_2026-10-17.md`](NOTATKA_2026-10-17.md) · paper-trade — tylko repo prywatne |
 | Oś retreningów / wdrożeń | [`NOTATKA_RETRENINGI_I_WDROZENIA.md`](NOTATKA_RETRENINGI_I_WDROZENIA.md) |
 | Weekly **20.09** | [`NOTATKA_WEEKLY_2026-09-20.md`](NOTATKA_WEEKLY_2026-09-20.md) |
+| Weekly **18.10** | [`NOTATKA_WEEKLY_2026-10-18.md`](NOTATKA_WEEKLY_2026-10-18.md) (RF **0,670** ACCEPT Δ **−0,004** · XGB **ACCEPT** Δ **−0,026** · L30 INFO) |
 | Weekly **11.10** | [`NOTATKA_WEEKLY_2026-10-11.md`](NOTATKA_WEEKLY_2026-10-11.md) (RF **ACCEPT** Δ +0,003 · XGB **REVIEW** Δ +0,027 · L30 INFO · live WATCH bias) |
 | Weekly **04.10** | [`NOTATKA_WEEKLY_2026-10-04.md`](NOTATKA_WEEKLY_2026-10-04.md) |
 | Weekly **27.09** | [`NOTATKA_WEEKLY_2026-09-27.md`](NOTATKA_WEEKLY_2026-09-27.md) |

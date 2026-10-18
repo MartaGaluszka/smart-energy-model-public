@@ -62,6 +62,7 @@ MILESTONES = [
     {'date': '2026-09-27', 'label': 'Retrain (REVIEW)', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-10-04', 'label': 'Retrain + L30', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-10-11', 'label': 'Retrain (XGB REVIEW)', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-10-18', 'label': 'Retrain (ACCEPT×3)', 'color': '#F39C12', 'type': 'retrain'},
 ]
 
 ENS_PRIMARY_START = '2026-09-02'

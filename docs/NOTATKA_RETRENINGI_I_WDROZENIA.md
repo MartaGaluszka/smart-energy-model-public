@@ -1,10 +1,10 @@
 # Notatka — retreningi i wdrożenia
 
-Krótka oś czasu (od **2026-07**): **kiedy** był retrening `.joblib`, **co** weszło do produkcji. Cotygodniowe odświeżenia wag → [`NOTATKA_WEEKLY_*.md`](NOTATKA_WEEKLY_2026-10-11.md).  
+Krótka oś czasu (od **2026-07**): **kiedy** był retrening `.joblib`, **co** weszło do produkcji. Cotygodniowe odświeżenia wag → [`NOTATKA_WEEKLY_2026-10-18.md`](NOTATKA_WEEKLY_2026-10-18.md).  
 Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 
 **Model produkcyjny teraz:** dual — `pv_hourly_model.joblib` (**16**) + `pv_hourly_model_cs4.joblib` (**CS4**)  
-**Stan na 2026-10-11:** GPS dach · **ENS** primary (od 02.09) · target **ΔPVEnergyTotal** · Test MAE **0.674** (16) / **0.673** (CS4) · **nieprzeuczone** · gate weekly RF **ACCEPT** (Δ +0.003 vs 04.10) · XGB **REVIEW** (Δ +0.027) · L30 INFO · [`NOTATKA_WEEKLY_2026-10-11.md`](NOTATKA_WEEKLY_2026-10-11.md)
+**Stan na 2026-10-18:** GPS dach · **ENS** primary (od 02.09) · target **ΔPVEnergyTotal** · Test MAE **0.670** (16) / **0.668** (CS4) · **nieprzeuczone** · gate weekly **ACCEPT ×3** (RF Δ **−0.004**, XGB Δ **−0.026** — koniec REVIEW) · L30 INFO · [`NOTATKA_WEEKLY_2026-10-18.md`](NOTATKA_WEEKLY_2026-10-18.md)
 
 ---
 
@@ -30,6 +30,7 @@ Szczegóły gate’ów: [CHANGELOG_ML.md](CHANGELOG_ML.md).
 | **2026-09-27** | 04:30 | Weekly (okno → 26.09); gate **REVIEW** Δ +0.025 | tak (16 + CS4 + XGB+TS) | **0.677** / **0.673** / **0.645** | (nadpisanie `.joblib`) |
 | **2026-10-04** | 04:30 | Weekly (okno → 03.10); gate **ACCEPT** Δ −0.006, L30 INFO | tak (16 + CS4 + XGB+TS) | **0.671** / **0.673** / **0.646** | (nadpisanie `.joblib`) |
 | **2026-10-11** | 04:30 | Weekly (okno → 10.10); RF **ACCEPT** Δ +0.003, XGB **REVIEW** Δ +0.027, L30 INFO | tak (16 + CS4 + XGB+TS) | **0.674** / **0.673** / **0.672** | (nadpisanie `.joblib`) |
+| **2026-10-18** | 04:32 | Weekly (okno → 17.10); **ACCEPT ×3** (RF Δ −0.004, XGB Δ −0.026), L30 INFO | tak (16 + CS4 + XGB+TS) | **0.670** / **0.668** / **0.646** | (nadpisanie `.joblib`) |
 
 \*Test MAE z summary w momencie treningu — **nie porównuj 0.666 z 0.582 wprost** (inna skala targetu: ∫pvPower vs PVE).
 
