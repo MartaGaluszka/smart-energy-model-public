@@ -178,11 +178,14 @@
       </div>
       <ion-card class="se-card se-agd">
         <ion-card-content>
-          <p class="se-agd__plan" *ngIf="planFromRhythm">
-            {{ selectedIsToday ? 'Zgodnie z dzisiejszym planem domowym (' : 'Zgodnie z planem domowym (' }}<a
-              class="se-agd__plan-link"
-              routerLink="/tabs/household"
-            >Rytm domu</a>).
+          <p class="se-agd__plan" *ngIf="rhythmHasEvents">
+            <ng-container *ngIf="planFromRhythm; else rhythmMealsOnly">
+              {{ selectedIsToday ? 'Zgodnie z dzisiejszym planem domowym (' : 'Zgodnie z planem domowym (' }}
+            </ng-container>
+            <ng-template #rhythmMealsOnly>
+              {{ selectedIsToday ? 'Plan domowy na dziś (' : 'Plan domowy (' }}
+            </ng-template>
+            <a class="se-agd__plan-link" routerLink="/tabs/household">Rytm domu</a>).
           </p>
           <p class="se-agd__intro">
             Sugestia doradcza — jedna kombinacja AGD mieszcząca się w prognozowanej mocy

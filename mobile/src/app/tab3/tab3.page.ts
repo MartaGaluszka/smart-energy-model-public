@@ -113,7 +113,9 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
 
   /** Domyślnie wg godziny zegara; użytkownik może przełączyć ręcznie. */
   selectedRunLabel: string = defaultRunLabelForHour();
-  /** Dzień ma w Rytmie urządzenia, które warto włączyć przy produkcji z dachu. */
+  /** Dzień ma w Rytmie co najmniej jeden wpis (posiłek, AGD, …). */
+  rhythmHasEvents = false;
+  /** W planie są też urządzenia, które warto wiązać z prognozą PV (zmywarka, pranie, …). */
   planFromRhythm = false;
 
   private planNoteDay = '';
@@ -159,13 +161,16 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
     const iso = (day || '').slice(0, 10);
     if (!iso || iso === this.planNoteDay) return;
     this.planNoteDay = iso;
+    this.rhythmHasEvents = false;
     this.planFromRhythm = false;
     this.api
       .getHouseholdEvents(iso, iso)
       .pipe(catchError(() => of([] as HouseholdEventDto[])))
       .subscribe((rows) => {
         if (this.planNoteDay !== iso) return;
-        this.planFromRhythm = dayHasPvPlan(rows.map((row) => row.event_type));
+        const types = rows.map((row) => row.event_type);
+        this.rhythmHasEvents = types.length > 0;
+        this.planFromRhythm = dayHasPvPlan(types);
       });
   }
 
