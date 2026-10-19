@@ -130,6 +130,35 @@ Fox w bazie: sync do **~19:53**.
 
 **Kalendarz (18.10):** **`sniadanie`** · **`grzejnik_lazienka`** · **`piekarnik`** + **`obiad`** · **`podlogowka`** · **`kolacja`** · **`zmywarka`**. Nd. **G12w** — wieczór w taniej strefie.
 
+**Wieczór (korekta):** **`zmywarka`** = **1 program ~2 h** (start **~20:00**) — w Fox **dwie fazy ~2,2 kW** (**~20:06–20:29** i **~21:09–21:23**), nie drugi cykl AGD. **Kolacja ~19:30** osobno. **~22:39** **~71%** · **ForceCharge brak** · dom śpi.
+
+### 2026-10-18 → 19.10 — NOC + pn. rano (71% start · ~02 podłoga/bojler? · ciemny 19 · śniadanie standard+)
+
+Accu **19** **pochmurny→CS4** · ENS @05 **~7 kWh** · **pon. G12w** (po **6:00** import drogi). Fox sync do **~12:09**.
+
+| Moment | SoC | Load / PV | Uwaga |
+|--------|----:|-----------|-------|
+| nd. **~22:39** | **~71%** | — | po kolacji + **1× zmywarka ~2 h** |
+| pn. **00:00–01:57** | **~70%** | **~0,15 kW** · PV **0** | dom śpi |
+| pn. **~02:02–02:15** | **70→65%** | **~2,3 kW** | automat nocny (podłoga / bojler?) |
+| pn. **~06:00** | **65→51%** | **~3,0–3,3 kW** · PV **0** | **`podlogowka`** cykl 1 (Fox **05:42–06:05**) · komputer **~6:00** = znacznik **grzania**, nie Mac (**~0,2 kW**) |
+| pn. **~06:59–07:12** | **48→43%** | **~2,0–2,4 kW** · PV **≈0** | **`sniadanie` ~07:00** — 3 omlety + kawa indukcja + czajnik |
+| pn. **~07:12–08:51** | **~41–43%** | tło **~0,15–0,22 kW** · PV **0,05–0,26** | **bez rezerwy** — słabe PV, bateria na styk |
+| pn. **~09:00** | **40→37%** | **~2,3 kW** · PV **~0,24** | **`podlogowka`** cykl 2 (Fox **08:56–09:05**) · komputer **~9:00** = znacznik grzania |
+| pn. **~11:02–11:52** | **39→30%** | **~2,5 / ~2,4 kW** szczyty · PV **~0,4–0,9** | **`obiad`** + **kawa** indukcja (raport **~12:10**) — [`NOTATKA_2026-10-19.md`](NOTATKA_2026-10-19.md) |
+| pn. **~12:09** | **30%** | tło **~0,23 kW** · PV **~0,57** | po obiedzie · **SoC na styk** |
+| pn. **~11:58–~15:58** | **~30%** (wst.) | **~0,2–0,4 kW** · PV rośnie w południe | **`chleb`** program **4 h** — bez pika piekarnika; kalibracja kWh po closeout |
+
+**Śniadanie ~07:00:** typ **`sniadanie`** · **~48%** przed · **~42%** po (Fox **06:59–07:12**) — **~1,6–1,9 kWh** z baterii, **tuż po** cyklu podłogi (**51%@06:05**). **Kolejność rankingu:** (1) start **65%** po jasnym nd. bez FC · (2) **3× grzanie** (noc **~02**, **~05:45**, **~09:00**) · (3) śniadanie **przed** PV · (4) Accu **~7 kWh** — PV **&lt;0,3 kW** do **~09:00**.
+
+**Kalendarz (19.10):** **`podlogowka`** **~06:00** + **`podlogowka`** **~09:00** · **`sniadanie`** **~07:00** · **`obiad`** **~11:00–12:00** · **`chleb`** **~11:58** (**4 h** → **~15:58**) · [`NOTATKA_2026-10-19.md`](NOTATKA_2026-10-19.md).
+
+**Podłoga dziś (wstęp):** **2 cykle** dzienne (**~06:00**, **~09:00**) + impuls nocny **~02** → `floor_heat_cycles` po closeout.
+
+**FC 13–15 (decyzja ~31%):** **ForceCharge do ~100%** w taniej strefie **pn. G12w** — bufor na **podłogę ~16:00** (auto), **kolację**, noc **~02/ ~06**. Bilans: **100% @13:30** → **~35–50% @07** przed PV (przy **~7 kWh** dziś) — **starczy do rana** na tło + typowe cykle podłogi; śniadanie **~07** przy **~40%** OK, przy **~30%** styk. **@22:** jeśli po FC południowym **≳65–70%**, **pomiń** pełne FC; jeśli **&lt;55%** — doładuj tanio **22–6**. Reguła: [`NOTATKA_REGULA_BATERIA_POCHMURNO_22.md`](NOTATKA_REGULA_BATERIA_POCHMURNO_22.md).
+
+**Werdykt:** rano **31%** bez FC południowego byłoby ryzyko **16:00 + kolacja** na drogiej strefie; **100% tanio 13–15** = właściwy ruch.
+
 ### 2026-10-14 → 15.10 — NOC + rano (FC 100% · śniadanie na styk · zmywarka ~9:00)
 
 Accu **15** Lumen **7 / 52%** → paper **RF** · ENS @05 **~15,5** · Tnoc (Accu/MB) **~3°C**.  

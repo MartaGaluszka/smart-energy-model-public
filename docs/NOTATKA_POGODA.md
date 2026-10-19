@@ -9,6 +9,7 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-10-19 ~12:53** | **Accu** **19–21.10** · **1/95% · 3/79% · 7/51%** → **CS4 / CS4 / mix→RF** · drift **20:** cloud **93→79%**, P **25→9%** · **21** nowy **RF** · MB ~10:00 **93 / 72 / 50%** · @05 **19** ENS **7,14** · **20** **11,76** — [`NOTATKA_2026-10-19.md`](NOTATKA_2026-10-19.md) |
 | **2026-10-18 ~20:03** | **Accu** **19–20** tylko (**18** bez wpisu — noc) · **1/100% · 2/93%** → **CS4 / CS4** · MB ~10:00 **96,6 / 64,2%** (**20** watch) · **18** outlook stary **5/55% RF** + MB **21%** · ENS @05 **18,5 / 7,1 / 11,8** — [`NOTATKA_2026-10-18.md`](NOTATKA_2026-10-18.md) |
 | **2026-10-17 ~20:38** | **Accu+oneshot** **17–19** · Accu **8/29% · 5/55% · 1/99%** → **RF / RF / CS4** · MB ~10:00 **23/52/97%** (zgoda) · ENS @05 **21,9 / 17,0 / 8,7** · ½ **18,4 / 17,1 / 6,5** · Fox **16** **27,5** (ENS **−20%**) · **17** **28,5** (ENS **−23%**, U **−32%**) — [`NOTATKA_2026-10-17.md`](NOTATKA_2026-10-17.md) |
 | **2026-10-16 ~16:56** | **Accu+morning+oneshot** **16–18** · Accu **9/13% · 9/18% · 7/52%** → **RF/RF/RF** · MB **19/41/71%** (16 zgoda, 17–18 lekki watch) · ENS @05 **22,0 / 19,1 / 17,2** · ½ **21,6 / 22,3 / 17,1** · Fox **15** **12,0** (peak ENS **−1%**) · **16** wst. **25,7** (ENS **−14%**, U **−12%**) — [`NOTATKA_2026-10-16.md`](NOTATKA_2026-10-16.md) |
@@ -155,11 +156,42 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 | **2026-08-22 ~18:04** | AccuWeather dziś-na-dziś (22) / jutro (23) / +2 (24) |
 | **2026-08-22 ~18:05** | **MB MultiModel + meteogram + ensemble** (sob.–pon.) |
 | **2026-09-25** | **Matryca porównawcza** (Accu · MB · ICON · UKMO · ENS · CS4 · oneshot) — sekcja §Matryca poniżej · closeout **12–17.09** — paper-trade tylko repo prywatne |
+| **2026-10-19 ~12:53** | AccuWeather **19–21.10** · MB **19.10 ~10:00** · dzień: [`NOTATKA_2026-10-19.md`](NOTATKA_2026-10-19.md) |
 | **2026-10-18 ~20:03** | AccuWeather **19–20.10** (bez **18.10** — noc) · MB **18.10 ~10:00** · dzień: [`NOTATKA_2026-10-18.md`](NOTATKA_2026-10-18.md) |
 
 ---
 
-## AccuWeather — 18.10 ~20:03 (obecny run · 19–20.10)
+## AccuWeather — 19.10 ~12:53 (obecny run · 19–21.10)
+
+| Dzień | T max | RealFeel | Lumen | Cloud | Opad | P deszcz | Wiatr / porywy | Reżim → pick |
+|-------|------:|---------:|------:|------:|-----:|---------:|---------------:|--------------|
+| **19.10** pon. | **10°** | **10° / 10°** | **1** | **95%** | **0,0 mm** | **25%** | **7** / **24** | **pochmurny→CS4** |
+| **20.10** wt. | **14°** | **13° / 13°** | **3** | **79%** | **0,0 mm** | **9%** | **15** / **30** | **pochmurny→CS4** |
+| **21.10** śr. | **22°** | **22° / 20°** | **7** | **51%** | **0,0 mm** | **2%** | **11** / **26** | **mix→RF** |
+
+Źródło: Accu `#211` `#212` `#213` (**19.10 ~12:53–12:57**). MB rano `#208` `#209` `#210` (**~10:00**).
+
+### Drift vs Accu 18.10 ~20:03
+
+| Dzień | Zmiana | Uwaga |
+|-------|--------|-------|
+| **19.10** | cloud **100→95%** · T/RF **10°** · P **25%** | reżim **CS4** bez zmian |
+| **20.10** | cloud **93→79%** · P **25→9%** · Lumen **2→3** | **CS4** · **watch** przejaśnienie (MB **72%**) |
+| **21.10** | **nowy** w oknie | **mix→RF** · MB **50%** ≈ Accu **51%** |
+
+### Modele @05 (run **19.10** — bez odświeżenia po Accu południowym)
+
+| Dzień | ENS @05 | CS4 @05 | ICON @05 | Accu (ten run) | Paper pick |
+|-------|--------:|--------:|---------:|----------------|------------|
+| **19.10** | **7,14** | **6,75** | **7,74** | **#211** **CS4** | **CS4** |
+| **20.10** | **11,76** | **11,88** | **11,84** | **#212** **CS4** | **CS4** |
+| **21.10** | *(jutro @05)* | — | — | **#213** **RF** | **RF** |
+
+**Werdykt:** **19–20 CS4** · **21 RF** · dziś operacyjnie potwierdza się słabe PV (**Fox** min **~30%** rano). **21.10** — pierwszy jaśniejszy Accu w oknie; jutro sprawdzić drift i Fox.
+
+---
+
+## AccuWeather — 18.10 ~20:03 (archiwum · 19–20.10)
 
 | Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
 |-------|------:|------:|------:|------:|--------------|
