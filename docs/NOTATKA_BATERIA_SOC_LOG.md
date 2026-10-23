@@ -43,6 +43,83 @@ Nie mylić z płytą (też ~2 kW, ale przy obecności / posiłku) — 5.09 bez g
 
 ## Log
 
+### 2026-10-23 — rano (RF · min SoC **10%** · śniadanie ~8:00 · zmywarka ~8:45)
+
+Accu **23.10** **mix→RF** · ENS @05 **~22,66 kWh** · Fox sync **~09:44** · PV rośnie (**~3 kW** @**09:44**).
+
+| Moment | SoC | Load / PV | Uwaga |
+|--------|----:|-----------|-------|
+| **~00:03** | **52%** | tło | po **22.10** @22 **~64%** — spadek w nocy |
+| **~06:44–06:57** | **15→10%** | **~3,3 kW** · PV **0** | **`podlogowka`** rano |
+| **~08:05–08:18** | **10%** | **~4,5 kW** · PV **~1,2** | **`sniadanie`** racuszki + kawa + czajnik |
+| **~08:59–09:12** | **17→15%** | **~4,7 kW** · PV **~2,4** | **`zmywarka`** @raport **~8:45** (program w toku) |
+
+**Werdykt:** **RF** startuje — śniadanie przy **10%** SoC (ryzyko importu) · zmywarka już z **PV**.
+
+Szczegóły: [`NOTATKA_2026-10-23.md`](NOTATKA_2026-10-23.md).
+
+### 2026-10-22 — DZIEŃ + wieczór (CS4 · kolacja ~16:30 · FC @22 krótko)
+
+Accu **22.10** **pochmurny→CS4** · ENS @05 **~4,7 kWh** · Fox sync do **~22:42** · closeout PV **~1,3 kWh**.
+
+| Moment | SoC | Load / PV | Uwaga |
+|--------|----:|-----------|-------|
+| **~06:56** | **~84–85%** | tło | start po **21.10** wieczór AGD |
+| **~07:01–07:10** | **82→80%** | **~2,4 kW** · PV **0** | **`sniadanie` ~7:00** — kawa + parówki + czajnik |
+| **~07:55** | **~78%** | tło | przed PV |
+| **~08:36–08:40** | **75→73%** | **~2,2 kW** | **`podlogowka`** po śniadaniu (raport **23.10**) |
+| **~11:00–11:49** | **~68%** | tło **~0,15 kW** · PV **~0,18** | przed obiadem |
+| **~11:54–11:58** | **68→65%** | **~2,7–2,9 kW** · PV **~0,22** | **`obiad`** 3 gary indukcja (raport **~11:50**) |
+| **~12:03–12:25** | **63→42%** | **~2,4–5,2 kW** | **`zmywarka`** + koniec **obiadu** |
+| **~12:57** | **34%** | **~3 kW** | faza zmywarki |
+| **~13:01–13:19** | **34→60%** | grid **~10 kW** · **batCharge ~9 kW** | **FC / timer ~13:00** (tanio **13–15**) — zgodne z ustawieniem użytkownika |
+| **~13:15–13:33** | **~60%** | **~2,6 kW** load | faza 2 **zmywarki** (nakładka z FC) |
+| **~13:46** | **~60%** | **~1,1 kW** | **ogon zmywarki** |
+| **~14:40** | **60%** | tło | sync Fox (południe) |
+| **~16:19–16:33** | **58→53%** | **~2,2 kW** · PV **0** | **`kolacja` ~16:30** — czajnik + jajka na twardo |
+| **~19:06–19:15** | **44→40%** | **~1,5–2,6 kW** | powrót — **ogrzewanie** *lub* **parówki**; **bez** herbaty (większa porcja wody z **~16:30**) |
+| **~19:51–20:09** | **36→23%** | **~3,7 kW** | **`podlogowka`** ✓ (raport **23.10**) — **≠** **~19:06** |
+| **~21:12** | **18→17%** | **~2,15 kW** | **herbata ~21:05** — czajnik, gorąca porcja wieczorem |
+| **~21:57** | **~16%** | tło | przed strefą tanio **22:00** |
+| **~22:01–22:28** | **17→64%** | grid **~10 kW** · **batCharge ~9 kW** | krótkie **FC** tanio — **nie** 100% |
+
+**Werdykt:** **CS4** ✓ — Fox **~1,3 kWh** vs ENS **~4,7** · obiad+zmywarka **~68→34%** · **FC 13–15→60%** · **`kolacja`** lekka popoł. **~−5 pp** · wieczorem czajnik przy **~17%** · **@22** bufor **~64%** (OK pod **23.10 RF**).
+
+Szczegóły: [`NOTATKA_2026-10-22.md`](NOTATKA_2026-10-22.md).
+
+### 2026-10-21 — DZIEŃ (RF w praktyce · raport ~16:28 · śniadanie 2 fazy · obiad · chleb · zmywarka)
+
+Outlook (stary Accu **19.10**): **21.10 mix→RF** · ENS @05 z tamtego runu — **dzień jaśniejszy** (Fox PV **~3–5 kW** po **10:00**). Start po **100%** z nieplanowanego FC **20.10 @22** ([`NOTATKA_2026-10-20.md`](NOTATKA_2026-10-20.md)).
+
+| Moment | SoC | Load / PV | Uwaga |
+|--------|----:|-----------|-------|
+| **~00:02** | **100%** | — | koniec FC z **20.10** |
+| **~05:03** | **~83%** | tło | noc |
+| **~07:18–07:54** | **77→65%** | **~2,7 kW** · PV ↑ | **`sniadanie`** faza 1 (Fox) — raport **~9:00** |
+| **~08:48–09:11** | **68→69%** | **~2,7 kW** · PV **~2** | **`sniadanie`** faza 2 (kawa / czajnik) |
+| **~09:29–10:45** | **73→100%** | tło · PV **~2,7–3,9** | dach ładuje magazyn |
+| **~11:26–11:35** | **100%** | **~3 kW** · PV **~5,1** | **`obiad`** makaron/kurczak/pesto **2 gary** |
+| **~15:34–15:56** | **99→98%** | **~1,3–1,7 kW** · PV **~1,1** | **`chleb`** + **jedzenie psa** (indukcja) — raport **~16:28** |
+| **~16:28** | — | — | **`zmywarka`** start (po sync Fox) |
+
+**Kalendarz (21.10):** **`sniadanie`** · **`obiad`** · **`chleb`** · **`zmywarka`** (+ notatka **jedzenie psa**).
+
+**@22:** **≳70%** → **pomiń pełne FC** (lekcja z **20.10**).
+
+### 2026-10-19 → 20.10 — NOC (FC @22 nieplanowane · choroba · 100% przed RF)
+
+Brak obserwacji operatora **20.10**. Fox:
+
+| Moment | SoC | Uwaga |
+|--------|----:|-------|
+| **20.10 ~08:30** | **66→64%** | kuchnia rano · PV słabe |
+| **20.10 ~12:33** | **54→49%** | load **~3,6 kW** |
+| **20.10 ~21:51** | **34→27%** | wieczór AGD |
+| **20.10 ~22:05–22:41** | **34→95%** | **ForceCharge** **~22:00** (tanio) — **nie** świadomie wyłączone |
+| **21.10 ~00:02** | **100%** | FC domknięte |
+
+**Werdykt:** jak **16.10** — przy **RF/jaśniej** jutro FC **zbędne**; **21.10** PV i tak wypełniło magazyn. Szczegóły: [`NOTATKA_2026-10-20.md`](NOTATKA_2026-10-20.md).
+
 ### 2026-10-15 → 16.10 — NOC (FC do 100% — zapomniane wyłączenie) + rano ~30% przed PV
 
 Accu **16** jasny→**RF** (Lumen **9 / 11%**) · ENS @05 **~22** · dzień pod pranie / mocne PV.  
@@ -148,10 +225,13 @@ Accu **19** **pochmurny→CS4** · ENS @05 **~7 kWh** · **pon. G12w** (po **6:0
 | pn. **~11:02–11:52** | **39→30%** | **~2,5 / ~2,4 kW** szczyty · PV **~0,4–0,9** | **`obiad`** + **kawa** indukcja (raport **~12:10**) — [`NOTATKA_2026-10-19.md`](NOTATKA_2026-10-19.md) |
 | pn. **~12:09** | **30%** | tło **~0,23 kW** · PV **~0,57** | po obiedzie · **SoC na styk** |
 | pn. **~11:58–~15:58** | **~30%** (wst.) | **~0,2–0,4 kW** · PV rośnie w południe | **`chleb`** program **4 h** — bez pika piekarnika; kalibracja kWh po closeout |
+| pn. **FC 13–15** | **→~100%** (plan) | tanio **G12w** | bufor na **podłogę ~16:00** + **kolację** — werdykt w notatce dnia |
+| pn. **~16:00** | **−~6 pp** (wst.) | **~3 kW** auto | **`podlogowka`** cykl 3 (typowy slot popołudniowy) |
+| pn. **~16:36** | **−~10–14 pp** (wst.) | kuchnia **~2–3,5 kW** | **`kolacja`** (raport) — wcześniejsza niż **~19:30**; Fox **bez syncu** @16:36 |
 
 **Śniadanie ~07:00:** typ **`sniadanie`** · **~48%** przed · **~42%** po (Fox **06:59–07:12**) — **~1,6–1,9 kWh** z baterii, **tuż po** cyklu podłogi (**51%@06:05**). **Kolejność rankingu:** (1) start **65%** po jasnym nd. bez FC · (2) **3× grzanie** (noc **~02**, **~05:45**, **~09:00**) · (3) śniadanie **przed** PV · (4) Accu **~7 kWh** — PV **&lt;0,3 kW** do **~09:00**.
 
-**Kalendarz (19.10):** **`podlogowka`** **~06:00** + **`podlogowka`** **~09:00** · **`sniadanie`** **~07:00** · **`obiad`** **~11:00–12:00** · **`chleb`** **~11:58** (**4 h** → **~15:58**) · [`NOTATKA_2026-10-19.md`](NOTATKA_2026-10-19.md).
+**Kalendarz (19.10):** **`podlogowka`** **~06:00** + **`podlogowka`** **~09:00** · **`sniadanie`** **~07:00** · **`obiad`** **~11:00–12:00** · **`chleb`** **~11:58** (**4 h** → **~15:58**) · **`kolacja`** **~16:36** · [`NOTATKA_2026-10-19.md`](NOTATKA_2026-10-19.md).
 
 **Podłoga dziś (wstęp):** **2 cykle** dzienne (**~06:00**, **~09:00**) + impuls nocny **~02** → `floor_heat_cycles` po closeout.
 

@@ -26,6 +26,8 @@ FC (sieć → bateria) zwykle **nie** wchodzi w `loads`. Dlatego X–XI 2026 vs 
 | **~2.12.2025** | czujniki w pokojach |
 | **7.01.2026** | świadome FC / G12w |
 | X–XI 2026 | pierwszy jesienny test **czujniki + bateria** vs X–XI 2025 |
+| **22.10 ~22:00** | **Strych ~30 m²:** setpoint **21 → 22°C** |
+| **od 23→24.10** | **Sypialnia córki ~10 m²:** plan **21 → 22°C** |
 
 X–XI 2024 **nie porównywać** (brak FoxESS / suszenie posadzek).
 
@@ -45,7 +47,7 @@ Z1 w X–XI 2026 **może spaść** przez baterię nawet przy load/HDD bez zmian.
 
 **Kontekst:** formalny werdykt czujników = **load/HDD** w **X–XI 2026 vs X–XI 2025** (§D). Poniżej — **jakość + wczesny sygnał Fox**, żeby nie mylić „pamięci o grzaniu” z samą pogodą zewnętrzną.
 
-Pełny miesiąc, wykresy dnia i godziny: September 2025 vs 2026 (canvas lokalny — tylko prywatne).
+Pełny miesiąc, wykresy dnia i godziny: September 2025 vs 2026 (wykres canvas — tylko repo prywatne).
 
 ### Obserwacja terenowa
 
@@ -272,6 +274,7 @@ Jesień (do końca X) bez tej automatycznej nalepki: kafelek `podlogowka` w kale
 - [ ] **Od XI (sezon zimny):** cykl Fox 2,3–3,6 kW nazywać podłogówką tylko przy Tnoc &lt; 10°C; latem i przy Tnoc ≥ 10°C ten sam kształt to bufor CWU, nie podłogówka
 - [ ] Sprawdzić **04.10** (plateau nocne) w logu sterowników, jeśli jest
 - [ ] Zapisać w `household_events` pieczenie chleba (np. **07.10 ~05:10–07:00**), żeby odfiltrować poranek przy werdykcie
-- [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD) + link September 2025 vs 2026 (canvas lokalny — tylko prywatne)
+- [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD) + link September 2025 vs 2026 (wykres canvas — tylko repo prywatne)
+- [x] **22–23.10.2026** — setpoint **+1 K:** strych **~22:00** **22.10** · córka **~10 m²** od **23→24.10** — [`NOTATKA_2026-10-22.md`](NOTATKA_2026-10-22.md) · [`NOTATKA_2026-10-23.md`](NOTATKA_2026-10-23.md)
 
-Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) · September 2025 vs 2026 (canvas lokalny — tylko prywatne)
+Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) · September 2025 vs 2026 (wykres canvas — tylko repo prywatne)
