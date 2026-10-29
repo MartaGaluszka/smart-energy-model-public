@@ -9,6 +9,11 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-10-29 ~13:57** | **Accu+MB+OM+ld+os** **29–31.10** · Accu **CS4/CS4/CS4** (drift **29:** **6/72→1/97%**) · MB **86/87/78%** · **31** MB **2,9 mm** · @05 ENS **7,8 / 14,4 / 8,2** · midday **6,4 / 8,0 / 10,6** (**30** @05 zawyżenie) · ICON **6,2/15,5/6,5** · CS4 **5,1/15,1/5,5** · os **½ 7,9/7,2/n/d*** · **31 U rad skip** · closeout **28** Fox **18,4** (peak **−0,7%**, ENS @05 **+16%**) · SoC **~11%** — [`NOTATKA_2026-10-29.md`](NOTATKA_2026-10-29.md) |
+| **2026-10-28 ~16:58** | **Accu+MB+OM+ld+os** **28–30.10** · Accu **CS4/CS4/CS4** (drift **28:** **9/24→4/53%**) · MB **40/71/87%** (jaśniej vs **27.10**) · @05 ENS **21,3 / 7,3 / 11,6** · ICON ld **20,5 / 8,0 / 10,5** · CS4 ld **20,3 / 7,7 / 9,3** · os **½ 20,1/7,6/9,6*** · **28 I/U rozjazd** (I **69%** / U **9%**) · **30 U rad skip** · app TS **~18,3** · [`NOTATKA_2026-10-28.md`](NOTATKA_2026-10-28.md) |
+| **2026-10-27 ~11:42** | **Accu+MB+OM+ld+os** **27–29.10** · Accu **RF/RF/mix** · MB **6/59/98%** · @05 ENS **21,9 / 19,0 / 6,4** · ICON **18,6 / 15,3 / 6,0** · CS4 ld **18,1 / 15,2 / 4,9** · os **½ 20,6/20,8/9,6*** · **29 U rad skip** · Fox **27** **~4 kW** PV · SoC **100%** · [`NOTATKA_2026-10-27.md`](NOTATKA_2026-10-27.md) |
+| **2026-10-25 ~04:32** | **Weekly** retrening · RF **0,673** ACCEPT ×3 · @05 **25** ENS **~16,3** — [`NOTATKA_WEEKLY_2026-10-25.md`](NOTATKA_WEEKLY_2026-10-25.md) · [`NOTATKA_2026-10-25.md`](NOTATKA_2026-10-25.md) |
+| **2026-10-24 ~11:50** | **Accu+MB+OM+ld+os** **24–26.10** · Accu **CS4/CS4/RF?** · MB **95/69/43%** · @05 ENS **8,8 / 14,3 / 16,0** · ICON **7,8/15,8/15,0** · CS4 ld **7,7/15,2/14,3** · os **½ 7,4/15,7/8,8*** · **26 U rad skip** · Fox **24** **~1,3** @poł. · [`NOTATKA_2026-10-24.md`](NOTATKA_2026-10-24.md) |
 | **2026-10-23 ~09:57** | **Accu** **23–25.10** (dashboard) · **9/33% · 5/77% · 3/82%** → **RF / CS4 / CS4** · drift **24:** cloud **89→77%**, opad **0,5→0** (jaśniej, watch kWh) · Fox **23.10** rano PV **~3 kW** ✓ **RF** · @05 **23** ENS **22,66** · MB **23** **12,2%** — [`NOTATKA_2026-10-23.md`](NOTATKA_2026-10-23.md) |
 | **2026-10-22 ~15:16** | **Accu** **22–24.10** (dashboard) · **2/95% · 9/30% · 2/89%** → **CS4 / RF / CS4** · **22** **13 mm** (P **100%**) · drift **22:** opad **10,8→13 mm**, cloud **99→95%** · Fox **~0,7 kWh** ✓ · @05 **22** ENS **4,73** · **23** **22,66** · MB **22.10 ~10:00** **95,8%** zgoda — [`NOTATKA_2026-10-22.md`](NOTATKA_2026-10-22.md) |
 | **2026-10-21 ~17:03** | **Accu** **21–23.10** (dashboard) · **9/20% · 1/99% · 9/30%** → **RF / CS4 / RF** · **22** **10,8 mm** deszcz · drift **21:** cloud **51→20%**, Lumen **7→9** · @05 **21** ENS **19,45** · **22** **4,73** · **23** **22,66** — [`NOTATKA_2026-10-21.md`](NOTATKA_2026-10-21.md) |
@@ -40,8 +45,6 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 | **2026-10-08 ~09:29** | **Accu** **08** **3/73%/0** P **25%** → **pochmurny→CS4** · **09** **7/47%/0** P **2%**, **15°** → **mix→RF** (było **5/77%/0,7** → CS4) · **10** **1/99%/0** P **25%**, **17°** → **pochmurny→CS4** · @05 ENS **08** **18,7** (wczoraj **23,5**) · **09** **22,8** · **10** **15,2** (CS4 **12,8**, rozrzut **9,4–15,2**) · closeout **07** Fox **24,4** (ENS @05 **−4%**, midday **−13%**, peak **−14%**) — [`NOTATKA_2026-10-08.md`](NOTATKA_2026-10-08.md) |
 | **2026-10-07 ~14:25** | **MB** meteogram+MM+ens **07–09** · **07** słońce **23°**, chmura chwilowa w południe, **0 mm** · **08** **24°**, rano słońce, chmura od ~12, **opad od ~19–20** · **09** **11–14°**, deszcz w nocy i rano, po południu przejaśnienia · oneshot ~14:30: RF×I/×U **07** **20,7/20,0** · **08** **20,0/23,1** · **09** **20,3/n/d** (UKMO rad skip) · CS4×I/×U **20,4/21,2 · 20,5/23,8 · 22,5/n/d** · **09.10** ICON najjaśniejszy z 3 dni vs Accu/MB — watch — [`NOTATKA_2026-10-07.md`](NOTATKA_2026-10-07.md) |
 | **2026-10-07 ~14:22** | **Accu** **07** **9/9%/0** → **jasny→RF** · **08** **4/80%/0,4 mm** P opadu **55%** → **pochmurny→CS4** · **09** **5/77%/0,7 mm** P **60%**, **15°** → **pochmurny→CS4** · ENS @05 **07** **23,4** · **08** **23,5** · **09** **17,3** (midday **22,2**, watch) · closeout **04** Fox **29,6** · **05** **28,1** · **06** **27,2** (brak midday) — [`NOTATKA_2026-10-07.md`](NOTATKA_2026-10-07.md) |
-| **2026-10-03 ~17:40** | **MB** meteogram+MM+ens **03–07** · **03** słońce **24°** · **04** słońce **22–23°**, wysoka chmura PM · **05** **20–21°**, chmura średnia, ens ~100% w południe, **0 mm** (deszcz z 01.10 zszedł do mniejszości zespołu) · **06–07** słońce **23/24°** · Accu **05** jaśniej niż MB — [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md) |
-| **2026-10-03 ~17:38** | **Accu** **03** **9/5%/0** → **jasny→RF** (zamglenia) · **04** **9/19%/0** → **RF** · **05** **9/11%/0** P9% → **RF** · peak ENS **28,0 / 26,7 / 16,4** · **05.10** model chmurniej (**~60%**) niż Accu · closeout **01** Fox **19,1 (−25%)** · **02** Fox **31,3 (−14%)** · **03** Fox **30,2** w toku — [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md) |
 | **2026-10-01 ~11:46** | **MB** meteogram+MM+ens **01–05** · **01–04** słońce w dzień **0 mm** T **21/21/22/23°** · dziś clearing po poł. · deszcz zszedł z **04** na **05** · Accu **01** **64%** ciemniej niż MB — [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md) |
 | **2026-10-01 ~11:43** | **Accu** **01** **5/64%/0** → **mix→RF** (było **1/98%→CS4**) · **02** **10/0%/0** → **jasny→RF** · **03** **10/1%/0** zamglenia → **RF** · @05 ENS **14,4 / 26,8 / 26,5** · chmura modelu dziś **~100%** · closeout **29** Fox **32,7 (−17%)** · **30** Fox **31,6 (−14%)** — [`NOTATKA_2026-10-01.md`](NOTATKA_2026-10-01.md) |
 | **2026-09-29 ~18:23** | **MB** meteogram+MM+ens **29–01.10** · **29–30** słońce **0 mm** T **~22°** · **01.10** słońce+chmura, ens **~30–40%** (nie 98%) · MM: rozbieżność · deszcz **04.10** · Accu **01.10 watch mix** — [`NOTATKA_2026-09-29.md`](NOTATKA_2026-09-29.md) |
@@ -153,12 +156,16 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 | **2026-08-20 ~16:24** | **MB MultiModel + meteogram + ensemble** (czw.–sob.) |
 | **2026-08-17** | **Alert RCB** — burze / silny wiatr / intensywne opady **17.08**; możliwe przerwy w prądzie |
 | **2026-08-20 ~16:45** | **Alert RCB** — burze / silny wiatr / intensywne opady **20–21.08**; możliwe przerwy w prądzie |
-| **2026-08-20 ~17:00** | Archiwum RCB uzupełnione: **19.07**, **01.08**, **06/07.08** — `NOTATKA_RCB_ALERTS.md` (tylko repo prywatne) |
+| **2026-08-20 ~17:00** | Archiwum RCB uzupełnione: **19.07**, **01.08**, **06/07.08** → `NOTATKA_RCB_ALERTS.md` (tylko repo prywatne) |
 | **2026-08-21 ~09:05** | AccuWeather dziś-na-dziś (21) / jutro (22) / +2 (23) |
 | **2026-08-21 ~09:12** | **MB MultiModel + meteogram + ensemble** (pt.–nd.+) |
 | **2026-08-22 ~18:04** | AccuWeather dziś-na-dziś (22) / jutro (23) / +2 (24) |
 | **2026-08-22 ~18:05** | **MB MultiModel + meteogram + ensemble** (sob.–pon.) |
-| **2026-09-25** | **Matryca porównawcza** (Accu · MB · ICON · UKMO · ENS · CS4 · oneshot) — sekcja §Matryca poniżej · closeout **12–17.09** — paper-trade tylko repo prywatne |
+| **2026-09-25** | **Matryca porównawcza** (Accu · MB · ICON · UKMO · ENS · CS4 · oneshot) — sekcja §Matryca poniżej · closeout **12–17.09** w paper-trade (tylko repo prywatne) |
+| **2026-10-29 ~13:57** | Accu **29–31** · MB **29–31** · @05 + midday + oneshot · [`NOTATKA_2026-10-29.md`](NOTATKA_2026-10-29.md) |
+| **2026-10-28 ~16:58** | Accu **28–30** · MB **28–30** · closeout Fox **18,4** · [`NOTATKA_2026-10-28.md`](NOTATKA_2026-10-28.md) |
+| **2026-10-27 ~11:42** | Accu **27–29** · MB **27–29** · @05 + oneshot · [`NOTATKA_2026-10-27.md`](NOTATKA_2026-10-27.md) |
+| **2026-10-24 ~11:50** | Accu **24–26** · MB **24–26** · @05 + oneshot · [`NOTATKA_2026-10-24.md`](NOTATKA_2026-10-24.md) |
 | **2026-10-23 ~09:57** | AccuWeather **23–25.10** · dzień: [`NOTATKA_2026-10-23.md`](NOTATKA_2026-10-23.md) |
 | **2026-10-22 ~15:16** | AccuWeather **22–24.10** · dzień: [`NOTATKA_2026-10-22.md`](NOTATKA_2026-10-22.md) |
 | **2026-10-21 ~17:03** | AccuWeather **21–23.10** · dzień: [`NOTATKA_2026-10-21.md`](NOTATKA_2026-10-21.md) |
@@ -167,7 +174,99 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 ---
 
-## AccuWeather — 23.10 ~09:57 (obecny run · 23–25.10)
+## AccuWeather — 29.10 ~13:47–13:51 (obecny run · 29–31.10)
+
+| Dzień | T max | RealFeel | Lumen | Cloud | Opad | P deszcz | UV | Reżim → pick |
+|-------|------:|---------:|------:|------:|-----:|---------:|---:|--------------|
+| **29.10** czw. | **10°** | **9° / 9°** | **1** | **97%** | **0** | **25%** | **1** | **pochmurny→CS4** |
+| **30.10** pt. | **11°** | **10° / 10°** | **5** | **72%** | **0** | **12%** | **2** | **pochmurny→CS4** (cloud ≥70) |
+| **31.10** sob. | **10°** | **7° / 7°** | **4** | **81%** | **0,9 mm** | **55%** | **1** | **pochmurny→CS4** |
+
+Źródło: dashboard → `weather_notes` **`#262` `#263` `#264`**. Drift vs 28.10: **29** Lumen **6→1**, cloud **72→97%** · **30** **3/77→5/72%**. Matryca: [`NOTATKA_2026-10-29.md`](NOTATKA_2026-10-29.md).
+
+---
+
+## Meteoblue — 29.10 ~10:00 (obecny run)
+
+Update **2026-10-29 ~10:00** · Free API auto (`weather_notes` **`#259` `#260` `#261`**).
+
+| | **29.10** | **30.10** | **31.10** |
+|--|-----------|-----------|-----------|
+| **Cloud 6–20 / opad / Pmax / Tmax** | **85,8%** · **0** · **25%** · **~10,5°** | **86,8%** · **0,13** · **25%** · **~10°** | **78,0%** · **2,91** · **57%** · **~9,3°** |
+| **vs Accu** | zgoda (oba ciemne) | MB ciemniej (**87%** vs **72%**) · **CS4** | MB mokrzejszy (**2,9** vs **0,9 mm**) · **CS4** |
+
+@05 **29.10:** ENS **7,77** · ICON **6,19** · CS4 **5,12** · (**30** ENS **14,43→ mid 7,95**) · (**31** ENS **8,16**).
+
+---
+
+## AccuWeather — 28.10 ~16:50–16:55 (archiwum · 28–30.10)
+
+| Dzień | T max | Lumen | Cloud | Opad | Reżim → pick |
+|-------|------:|------:|------:|-----:|--------------|
+| **28.10** | **10°** | **4** | **53%** | **0** | **pochmurny→CS4** |
+| **29.10** | **10°** | **6** | **72%** | **0** | **pochmurny→CS4** |
+| **30.10** | **11°** | **3** | **77%** | **0** | **pochmurny→CS4** |
+
+Closeout **28.10** Fox **18,4** · peak ENS **−0,7%**. [`NOTATKA_2026-10-28.md`](NOTATKA_2026-10-28.md).
+
+---
+
+## AccuWeather — 27.10 ~11:36–11:40 (archiwum · 27–29.10)
+
+
+| Dzień | T max | RealFeel | Lumen | Cloud | Opad | P deszcz | UV | Reżim → pick |
+|-------|------:|---------:|------:|------:|-----:|---------:|---:|--------------|
+| **27.10** wt. | **12°** | **13° / 10°** | **9** | **16%** | **0** | **1%** | **2** | **jasny→RF** (zamglenia) |
+| **28.10** śr. | **12°** | **14° / 12°** | **9** | **24%** | **0** | **5%** | **2** | **jasny→RF** (zamglenia) |
+| **29.10** czw. | **10°** | **10° / 9°** | **6** | **61%** | **0** | **16%** | **2** | **mix→RF** (chmury i słońce) |
+
+Źródło: dashboard → `weather_notes` **`#250` `#251` `#252`**. Pełna matryca kWh (ICON · UKMO · ENS · CS4 · oneshot · L30 · MB): [`NOTATKA_2026-10-27.md`](NOTATKA_2026-10-27.md).
+
+**Drift MB 27.10:** **`#245`** (**38,6%** @26.10) → **`#247` 6,2%** · **`#243`** (**59,2%** @25.10) → **`#247`** — **mocne rozjaśnienie** dziś. Accu **27–29:** pierwszy wpis w DB (brak wcześniejszego Accu na te dni).
+
+---
+
+## Meteoblue — 27.10 ~10:00 (archiwum)
+
+Update **2026-10-27 ~10:00** · Free API auto (`weather_notes` **`#247` `#248` `#249`**).
+
+| | **27.10** | **28.10** | **29.10** |
+|--|-----------|-----------|-----------|
+| **Cloud 6–20 / opad / Pmax / Tmax** | **6,2%** · **0** · **0%** · **10,7°** | **58,6%** · **0** · **0%** · **11,2°** | **98,2%** · **0** · **36%** · **10,2°** |
+| **vs Accu (ten run)** | Accu **16%** → **zgoda** · **RF** | Accu **24%** vs MB **59%** → **watch** (MB ciemniej) · **RF** | Accu **61%** vs MB **98%** → **CS4** kWh · Accu **mix** |
+
+@05 **27.10:** ENS **21,86** · ICON **18,56** · CS4 **18,09** · XGB **18,39** kWh (**28** ENS **18,97** · **29** ENS **6,43**).
+
+---
+
+## AccuWeather — 24.10 ~11:40 (archiwum · 24–26.10)
+
+| Dzień | T max | RealFeel | Lumen | Cloud | Opad | P deszcz | Wiatr / porywy | Reżim → pick |
+|-------|------:|---------:|------:|------:|-----:|---------:|---------------:|--------------|
+| **24.10** sob. | **12°** | **12° / 12°** | **3** | **83%** | **0** | **25%** | **7** / **20** | **pochmurny→CS4** |
+| **25.10** nd. | **15°** | **14° / 14°** | **2** | **86%** | **0** | **25%** | **9** / **26** | **pochmurny→CS4** |
+| **26.10** pn. | **11°** | **10° / 9°** | **8** | **34%** | **0,7 mm** | **60%** | **17** / **37** | **mix→RF** (deszcz) |
+
+Źródło: dashboard → `weather_notes` **`#238` `#239` `#240`**. Pełna matryca kWh (ICON · UKMO · ENS · CS4 · oneshot · L30 · MB): [`NOTATKA_2026-10-24.md`](NOTATKA_2026-10-24.md).
+
+**Drift vs 23.10 ~09:57 (`#230` `#231`):** **24** Lumen **5→3**, cloud **77→83%** · **25** Lumen **3→2**, cloud **82→86%** · **26** **nowy** w oknie (Accu jaśniejszy niż MB, ale **P 60%**).
+
+---
+
+## Meteoblue — 24.10 ~10:00 (archiwum)
+
+Update **2026-10-24 ~10:00** · Free API auto (`weather_notes` **`#235` `#236` `#237`**).
+
+| | **24.10** | **25.10** | **26.10** |
+|--|-----------|-----------|-----------|
+| **Cloud 6–20 / opad / Pmax / Tmax** | **94,8%** · **0** · **7%** · **11,4°** | **69,0%** · **0** · **31%** · **14,3°** | **43,4%** · **0** · **19%** · **10,4°** |
+| **vs Accu (ten run)** | Accu **83%** → MB **ciemniej** · **CS4** zgoda | Accu **86%** vs MB **69%** → **watch** (MB jaśniej) | Accu **34%** vs MB **43%** → **zbliżenie** · Accu **0,7 mm** vs MB **0** |
+
+**Drift MB 24.10:** **`#225` 69,6%** → **`#235` 94,8%** (ściemniało od **22.10**). @05 **24.10:** ENS **8,79** · ICON **7,77** · CS4 **7,66** kWh.
+
+---
+
+## AccuWeather — 23.10 ~09:57 (archiwum · 23–25.10)
 
 | Dzień | T max | RealFeel | Lumen | Cloud | Opad | P deszcz | Wiatr / porywy | Reżim → pick |
 |-------|------:|---------:|------:|------:|-----:|---------:|---------------:|--------------|
@@ -244,7 +343,7 @@ Accu `#211–213`. Szczegóły dnia **19.10:** [`NOTATKA_2026-10-19.md`](NOTATKA
 
 ---
 
-## Meteoblue — 18.10 ~10:00 (obecny run)
+## Meteoblue — 18.10 ~10:00 (archiwum)
 
 Update **2026-10-18 ~10:00** · okolice Krakowa (GPS tylko w `.env`).
 
@@ -445,34 +544,6 @@ Dzień: [`NOTATKA_2026-10-07.md`](NOTATKA_2026-10-07.md).
 
 ---
 
-## Meteoblue — 03.10 ~17:40 (archiwum)
-
-Update **2026-10-03 ~17:40** · okolice Krakowa (GPS w `.env`).
-
-| | **03.10** | **04.10** | **05.10** | **06–07.10** |
-|--|-----------|-----------|-----------|--------------|
-| **Meteogram** | **6–24°** · słońce · **0 mm** | **8–22°** · słońce, wysoka chmura PM · **0 mm** | **9–21°** · chmura średnia · **0 mm** | **06** słońce **23°** · **07** **24°** |
-| **MM** | słońce, zgodne | słońce **06–18**, bardzo zgodne | słońce, mniejsza zgoda; ICON-12/7, NEMS-12, NMM-12 chmurzej rano | — |
-| **Ensemble** | cloud poniżej **~10–15%** | południe **~35–40%**, wieczorem czysto | średnia **~100%** w południe, wieczorem **~20%**; kilku członków deszcz do **~8 mm** | — |
-| **Wiatr/RH** | **~3–5**, RH min **~40%** | **~5–10**, porywy **~20**, RH min **~30%** | **~5–8**, porywy **~14**, RH min **~45%** | — |
-| **vs Accu** | **9 / 5%** zgoda | **9 / 19%** zgoda | Accu **9 / 11%** jaśniej niż MB | — |
-
-Dzień: [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md).
-
----
-
-## AccuWeather — 03.10 ~17:38 (archiwum)
-
-| Dzień | T max | Lumen | Cloud | Opady | Reżim / opis |
-|-------|------:|------:|------:|------:|--------------|
-| **03.10** sob. | **23°C** | **9** b. jasne | **5%** | **0,0 mm** | **jasny→RF** — zamglenia · susza |
-| **04.10** nd. | **22°C** | **9** | **19%** | **0,0 mm** | **jasny→RF** — przeważnie słonecznie |
-| **05.10** pn. | **20°C** | **9** | **11%** | **0,0 mm** | **jasny→RF** — przeważnie słonecznie · P opadu **9%** (MB z 01.10 dawał deszcz) |
-
-Dzień: [`NOTATKA_2026-10-03.md`](NOTATKA_2026-10-03.md).
-
----
-
 ## Meteoblue — 01.10 ~11:46 (obecny run)
 
 Update **2026-10-01 ~11:46** · okolice Krakowa (GPS w `.env`).
@@ -635,7 +706,17 @@ Pełna tabela kWh + oneshot: [`NOTATKA_2026-09-25.md`](NOTATKA_2026-09-25.md) §
 | Dzień | **ICON** ld | **UKMO** os | **½** os | **ENS** ld | **CS4** ld | **CS4×I** os | **CS4×U** os | Accu paper | MB oper. |
 |-------|------------:|------------:|---------:|-----------:|-----------:|-------------:|-------------:|------------|----------|
 
-Przykład w repo: [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) §Porównanie modeli · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) §Porównanie ICON…
+**Pokrycie w `NOTATKA_YYYY-MM-DD.md` (październik 2026):**
+
+| Zakres | Pełna macierz (Accu+MB+ld+os+L30) | Uwaga |
+|--------|-----------------------------------|--------|
+| **07–12**, **14–17**, **24** | tak (ręcznie przy runie) | oneshot CSV w `data/processed/` |
+| **13**, **18–23** | uzupełnione **retro** (**24.10.2026**) | @05 + Accu/MB + **os (archive)** `oneshot_shadow_icon_ukmo_YYYYMMDD_archive.csv` |
+| **01–06**, **08–11** | częściowo / w treści | patrz sekcje „Porównanie” w danym dniu |
+
+Retro: `forecast_history.csv` (@05) + `weather_notes` (wpis ≤ koniec dnia notatki) + Fox closeout (peak) + oneshot **`--archive`** ([`oneshot_shadow_icon_ukmo.py`](../scripts/analysis/oneshot_shadow_icon_ukmo.py) `--start YYYY-MM-DD --days 3 --archive`).
+
+Przykład w repo: [`NOTATKA_2026-09-11.md`](NOTATKA_2026-09-11.md) §Porównanie modeli · [`NOTATKA_2026-10-24.md`](NOTATKA_2026-10-24.md) (wzorcowy run) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) §Porównanie ICON…
 
 #### Tabela nieba Open-Meteo (oneshot fetch, sumy dzienne)
 
@@ -659,7 +740,8 @@ Godziny produkcyjne **6–20** jak w feature pipeline. **UKMO rad skip** → nie
 | Co | Gdzie |
 |----|--------|
 | Oneshot RF I/U + CS4 | [`scripts/analysis/oneshot_rf_icon_vs_ukmo.py`](../scripts/analysis/oneshot_rf_icon_vs_ukmo.py) |
-| Paper Accu→RF/CS4 | tylko repo prywatne |
+| Oneshot shadow (forecast + **retro archive**) | [`scripts/analysis/oneshot_shadow_icon_ukmo.py`](../scripts/analysis/oneshot_shadow_icon_ukmo.py) · `--start YYYY-MM-DD --days 3 --archive --stamp YYYYMMDD_archive` |
+| Paper Accu→RF/CS4 | paper-trade (tylko repo prywatne) · log paper-trade (tylko repo prywatne) (prywatne) |
 | Runy launchd | `data/processed/forecasts/forecast_history.csv` · walidacja [`forecast_validation.csv`](../data/processed/forecasts/forecast_validation.csv) |
 | MAPE zbiorcze (bez Accu/MB) | [`docs/images/ml/weekly_model_weather_review.md`](images/ml/weekly_model_weather_review.md) · PNG walidacji [`july_validation_summary.md`](images/ml/july_validation_summary.md) |
 
@@ -667,7 +749,7 @@ Godziny produkcyjne **6–20** jak w feature pipeline. **UKMO rad skip** → nie
 
 ---
 
-## Alerty RCB (skrót; pełne SMS — `NOTATKA_RCB_ALERTS.md` (tylko repo prywatne))
+## Alerty RCB (skrót; pełne SMS → `NOTATKA_RCB_ALERTS.md` (tylko repo prywatne))
 
 | Data | Okno | Skrót | Kontekst lokalny |
 |------|------|-------|------------------|

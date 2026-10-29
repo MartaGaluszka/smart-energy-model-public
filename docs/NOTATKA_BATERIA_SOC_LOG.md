@@ -5,8 +5,8 @@
 **Dom:** od **29.08.2025** · świadoma optymalizacja baterii od **I 2026** (G12w / FC / reguła 22:00)  
 **Powiązane:** [`NOTATKA_REGULA_BATERIA_POCHMURNO_22.md`](NOTATKA_REGULA_BATERIA_POCHMURNO_22.md) · advisor `battery_advisor.py`
 
-**Gdzie pisać:** ten plik = **żywy log**. Każda doba = sekcja **NOC** (ForceCharge/AGD) + sekcja **DZIEŃ** (SoC vs PV / drogie godziny / closeout).  
-Pogoda → `NOTATKA_YYYY-MM-DD.md`; reguła push → notatka reguły.
+**Gdzie pisać:** ten plik = **żywy log SoC** (checkpointy + Fox po sync). **AGD / nakładki** → **`household_events`** + [`NOTATKA_WORKFLOW_AGD.md`](NOTATKA_WORKFLOW_AGD.md) — **nie** powielać tu listy pralka+suszarka+chleb.  
+Pogoda / decyzje dnia → `NOTATKA_YYYY-MM-DD.md`; reguła push → notatka reguły.
 
 ---
 
@@ -43,20 +43,51 @@ Nie mylić z płytą (też ~2 kW, ale przy obecności / posiłku) — 5.09 bez g
 
 ## Log
 
-### 2026-10-23 — rano (RF · min SoC **10%** · śniadanie ~8:00 · zmywarka ~8:45)
+### 2026-10-28 — CS4 (paper · środa)
 
-Accu **23.10** **mix→RF** · ENS @05 **~22,66 kWh** · Fox sync **~09:44** · PV rośnie (**~3 kW** @**09:44**).
+Accu **pochmurny→CS4** · Lumen **4** · ENS @05 **~21,3 kWh** · **watch kWh** (I/U rozjazd).
 
-| Moment | SoC | Load / PV | Uwaga |
-|--------|----:|-----------|-------|
-| **~00:03** | **52%** | tło | po **22.10** @22 **~64%** — spadek w nocy |
-| **~06:44–06:57** | **15→10%** | **~3,3 kW** · PV **0** | **`podlogowka`** rano |
-| **~08:05–08:18** | **10%** | **~4,5 kW** · PV **~1,2** | **`sniadanie`** racuszki + kawa + czajnik |
-| **~08:59–09:12** | **17→15%** | **~4,7 kW** · PV **~2,4** | **`zmywarka`** @raport **~8:45** (program w toku) |
+| Checkpoint | SoC | Uwaga |
+|------------|----:|-------|
+| **~16:54** (Fox, baza) | **87%** | PV **18,3 kWh** narastająco · load **15,1** · export **3,8** · max **~5,1 kW** @11:21 |
+| **@17 / @22** | — | *do wpisu po sync wieczór* |
 
-**Werdykt:** **RF** startuje — śniadanie przy **10%** SoC (ryzyko importu) · zmywarka już z **PV**.
+**Werdykt (południe):** dzień **jaśniejszy niż sam Accu reżim** (PM) — zgodne z **watch kWh** w notatce pogodowej.
 
-Szczegóły: [`NOTATKA_2026-10-23.md`](NOTATKA_2026-10-23.md).
+---
+
+### 2026-10-24 — CS4 (sobota · tanio cały dzień)
+
+Accu **pochmurny→CS4** · Lumen **5** · bufor z **23.10** (bez **`pranie`** #3).
+
+| Checkpoint | SoC | Uwaga |
+|------------|----:|-------|
+| **~06:08** (Fox) | **~43%** | noc / tło po **córka 22°C** @22 |
+| **~09:31** (Fox) | **~32→28%** | **`sniadanie`** pik **~3,4 kW** · PV **~0,4 kW** · import **~0** |
+| **~11:27** | — | **`zmywarka`** **2 h 18 min** → **~13:45** |
+
+**Werdykt rano:** starczyło na **noc + śniadanie** — **CS4**, min SoC **~26–28%** (nie **10%** jak RF **23.10**).
+
+---
+
+### 2026-10-23 — RF (checkpointy · AGD → `household_events`)
+
+Accu **mix→RF** · ENS **~22,7 kWh** · jutro **24.10 CS4** (Lumen **5**).
+
+| Checkpoint | SoC | Uwaga |
+|------------|----:|-------|
+| **@~08** (Fox) | **min ~10%** | po **`podlogowka`** + **`sniadanie`** / **`zmywarka`** — margines rano |
+| **@~11** (app) | **~50%** | szczyt AGD (**`pranie`** + **`chleb`**) · PV **≳3 kW** |
+| **@~12:50** (app) | **~97%** | po **`obiad`** · **`pranie`** #1 koniec **~12:45** |
+| **@~14** (app) | **100%** | **eksport** przy **`suszarka`** + **`pranie`** #2 |
+| **@~15:19** (app) | **100%** | AGD popoł. off |
+| **15:40–16:02** (Fox) | **99→96%** | **`kolacja`** · piki **~2,6 kW** @15:40–15:44 |
+| **@17** | — | *do wpisu* |
+| **@22** | — | *do wpisu* · bez FC na siłę |
+
+**Werdykt (po południu):** **2× pranie** · **100%** + export Tauron · **`#3` nie** — bufor pod **jutro CS4**.
+
+AGD: `household_events` **35–42** · decyzje: [`NOTATKA_2026-10-23.md`](NOTATKA_2026-10-23.md).
 
 ### 2026-10-22 — DZIEŃ + wieczór (CS4 · kolacja ~16:30 · FC @22 krótko)
 
