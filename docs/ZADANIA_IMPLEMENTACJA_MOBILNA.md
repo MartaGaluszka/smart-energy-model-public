@@ -235,7 +235,7 @@ Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 lin
 | T4.23 | P1 | UI zgód na powiadomienia push | Domyślnie pytamy przy pierwszym planie baterii |
 | T4.24 | P1 | Treści push po polsku, ton doradczy („Sugestia: …”, nigdy „Wykonano automatycznie”) | Review copy |
 | T4.25b | **P0** | `[x]` **Kontekst `evening`** w generatorze sugestii (~21:15) | `SuggestionContext` + `generate_battery_suggestions.py --context evening`; `maybe_upsert_charge_tonight_cloudy` wołane wieczorem (nie tylko przy morning/midday/peak); wpis w `notifications` przed oknem 22:00 |
-| T4.26b | **P0** | `[ ]` **Launchd wieczór** — plan B2 przed FC | Nowy `mlops/evening_battery_plan.sh` (~21:10–21:20): advisor report + sugestie + **dry-run** `foxess_control`; plist `pl.smart-energy-model.evening-battery.plist`; wpis w `install_launchd.sh` + `mlops/README.md` |
+| T4.26b | **P0** | `[x]` **Launchd wieczór** — plan B2 przed FC | Nowy `mlops/evening_battery_plan.sh` (~21:10–21:20): advisor report + sugestie + **dry-run** `foxess_control`; plist `pl.smart-energy-model.evening-battery.plist`; wpis w `install_launchd.sh` + `mlops/README.md` |
 
 ### 4.4 Kalendarz kontekstowy (po MVP advise/push)
 
@@ -268,11 +268,11 @@ Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 lin
 | T6.0a | P2 | Raport shadow vs reality (miesięczny, offline) | Skrypt + wiersz w STATUS; uzupełnia T5.5 |
 | T6.1 | **P0** | `[ ]` Zgoda **automatyka baterii** (ustawienia + DB) | Kolumna/flag `battery_automation_enabled` (user); domyślnie **OFF**; mobile toggle + API GET/PUT; spójne z `BATTERY_CONTROL_ENABLED` na hoście |
 | T6.2 | **P0** | `[x]` **`evening` w `battery_control`** — B2 → akcje Fox | `Context` rozszerzone o `evening`; `build_plan()` czyta `evaluate_charge_tonight_cloudy` (minuty, cel SoC, POMIŃ); **nie** duplikować starych stringów morning-only |
-| T6.2a | **P0** | `[ ]` **Start FC @22:00** (apply) | `mlops/evening_battery_apply.sh` + plist **22:00**: `foxess_control --context evening --apply` gdy reguła triggered + `BATTERY_CONTROL_ENABLED=1` |
-| T6.2b | **P0** | `[ ]` **Stop FC (timer)** | Drugi trigger **22:00 + N min** (N z reguły, max env): `SelfUse` / wyłączenie FC — fix case **13→14**, **15→16**; log `planned_stop_at` w `battery_control_log.csv` |
+| T6.2a | **P0** | `[x]` **Start FC @22:00** (apply) | `mlops/evening_battery_apply.sh` + plist **22:00**: `foxess_control --context evening --apply` gdy reguła triggered + `BATTERY_CONTROL_ENABLED=1` |
+| T6.2b | **P0** | `[x]` **Stop FC (timer)** | Drugi trigger **22:00 + N min** (N z reguły, max env): `SelfUse` / wyłączenie FC — fix case **13→14**, **15→16**; log `planned_stop_at` w `battery_control_log.csv` |
 | T6.2c | P1 | `[ ]` `POST /api/v1/battery/control/dry-run` + opcjonalnie `POST .../control/apply` | Audit w DB (`battery_control_audit`); rate limit; **mobile kill-switch** bez SSH |
 | T6.3 | P0 | `[x]` Dry-run domyślnie | Już: brak `--apply` / `BATTERY_CONTROL_ENABLED=0` |
-| T6.4 | **P0** | `[ ]` Kill-switch + limity | Env: `BATTERY_CONTROL_ENABLED`, `BATTERY_CONTROL_MAX_APPLIES_PER_DAY`, `BATTERY_CONTROL_EVENING_ONLY=1`; odmowa apply w strefie 1 |
+| T6.4 | **P0** | `[x]` Kill-switch + limity | Env: `BATTERY_CONTROL_ENABLED`, `BATTERY_CONTROL_MAX_APPLIES_PER_DAY`, `BATTERY_CONTROL_EVENING_ONLY=1`; odmowa apply w strefie 1 |
 | T6.5 | P1 | `[ ]` UI: przycisk sterowania **enabled** gdy T6.1 ON | Zastąp T4.14 disabled; nadal **manual** trigger + status ostatniej akcji; copy: „automatyka nocna włączona” |
 | T6.6 | P1 | `[ ]` Powiadomienie po apply | In-app (+ T4.22 FCM później): „Wykonano plan: FC 30 min / POMIŃ” — ton **fakt**, nie ukrywać |
 | T6.7 | **P0** | `[~]` Testy + checklist XI | pytest `build_plan(evening)` + strefa G12w **`[x]`** · checklist 7 nocy dry-run → 3 nocy apply **`[ ]`** |
@@ -385,7 +385,7 @@ Aktualizuj status w tej tabeli przy domknięciu fazy:
 | 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-10-16 | Refaktor drill-down T4.25–T4.30 + UX. **T4.8/T4.9** kalendarz kontekstowy `[x]` (oś 3/7 + Home teaser/pasek + wire doradcy). Brak: FCM (T4.22); siatka miesiąca (opcjonalnie); profil domu / obciążenia (backlog — moc AC). |
 | 5 ML advice (bez control) | `[~]` | 2026-10-31 | B2 `[x]`; T5.2 / T5.5 otwarte |
 | 6 Sterowanie Fox | `[~]` | 2026-10-31 | **Skrócony gate XI 2026** — sprint §Sprint XI; T6.3 `[x]` |
-| Sprint XI automatyka nocna | `[~]` | 2026-10-31 | **Porcje 1–2** `[x]` · 3–6 otwarte |
+| Sprint XI automatyka nocna | `[~]` | 2026-10-31 | **Porcje 1–3** `[x]` · 4–6 otwarte |
 
 ---
 

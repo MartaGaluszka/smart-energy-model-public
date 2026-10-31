@@ -6,9 +6,10 @@ Domyślnie tylko plan (dry-run). Realne API wymaga BATTERY_CONTROL_ENABLED=1 + -
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Literal
 
 import pandas as pd
@@ -25,6 +26,8 @@ ActionKind = Literal[
 ]
 
 LOG_FILE = 'data/processed/battery_control_log.csv'
+EVENING_SESSION_FILE = 'data/processed/battery_evening_session.json'
+ControlPhase = Literal['run', 'apply', 'stop']
 
 
 @dataclass
@@ -90,6 +93,258 @@ def should_apply(dry_run_flag: bool | None = None) -> bool:
     if dry_run_flag is not None:
         return not dry_run_flag
     return os.getenv('BATTERY_CONTROL_APPLY', '0').strip().lower() in ('1', 'true', 'yes')
+
+
+def evening_only_enforced() -> bool:
+    return os.getenv('BATTERY_CONTROL_EVENING_ONLY', '1').strip().lower() in ('1', 'true', 'yes')
+
+
+def max_applies_per_day() -> int:
+    raw = os.getenv('BATTERY_CONTROL_MAX_APPLIES_PER_DAY', '3').strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 3
+
+
+def count_real_applies_today(*, path: str | None = None, as_of: datetime | None = None) -> int:
+    """Liczba wpisów apply (dry_run=false, applied_count>0) w danym dniu kalendarzowym."""
+    path = path or LOG_FILE
+    if not os.path.isfile(path):
+        return 0
+    day = (as_of or datetime.now()).date().isoformat()
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        return 0
+    if df.empty or 'logged_at' not in df.columns:
+        return 0
+    applied = 0
+    for _, row in df.iterrows():
+        logged = str(row.get('logged_at', ''))[:10]
+        if logged != day:
+            continue
+        dry = row.get('dry_run')
+        if str(dry).lower() in ('true', '1', '1.0'):
+            continue
+        cnt = row.get('applied_count', 0)
+        try:
+            if int(cnt) > 0:
+                applied += 1
+        except (TypeError, ValueError):
+            pass
+    return applied
+
+
+def validate_apply_request(
+    context: Context,
+    advice: BatteryAdvice,
+    *,
+    phase: ControlPhase = 'apply',
+) -> str | None:
+    """None = OK; inaczej powód odmowy apply (T6.4)."""
+    try:
+        from src.data.foxess_api_guard import is_api_paused, pause_message
+
+        if is_api_paused():
+            return pause_message()
+    except Exception:
+        pass
+    if phase == 'stop':
+        return None
+    if evening_only_enforced() and context != 'evening':
+        return 'BATTERY_CONTROL_EVENING_ONLY=1 — apply tylko --context evening.'
+    if count_real_applies_today(as_of=advice.as_of) >= max_applies_per_day():
+        return (
+            f'Limit apply/dzień ({max_applies_per_day()}) — '
+            'zwiększ BATTERY_CONTROL_MAX_APPLIES_PER_DAY lub poczekaj do jutra.'
+        )
+    if phase == 'apply' and context == 'evening':
+        if not evening_apply_allowed(advice.as_of):
+            return 'Strefa G12w szczytowa — apply B2 tylko w taniej strefie (22:00–6:00 / weekend).'
+        rule = advice.charge_tonight
+        if not rule or not rule.triggered:
+            return 'Reguła B2 bez triggera — apply pominięte (POMIŃ).'
+    return None
+
+
+def planned_stop_at(advice: BatteryAdvice) -> datetime | None:
+    rule = advice.charge_tonight
+    if not rule or not rule.triggered or not rule.fc_minutes:
+        return None
+    return advice.as_of + timedelta(minutes=float(rule.fc_minutes))
+
+
+def _session_path() -> str:
+    return os.getenv('BATTERY_EVENING_SESSION_FILE', EVENING_SESSION_FILE)
+
+
+def load_evening_session() -> dict[str, Any] | None:
+    path = _session_path()
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding='utf-8') as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def save_evening_session(data: dict[str, Any]) -> None:
+    path = _session_path()
+    os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as fh:
+        json.dump(data, fh, ensure_ascii=False, indent=2)
+
+
+def record_evening_session_after_apply(advice: BatteryAdvice, plan: ControlPlan, results: list[dict[str, Any]]) -> None:
+    """Po udanym start FC zapisz stop_at dla T6.2b."""
+    if plan.dry_run or plan.context != 'evening':
+        return
+    applied = sum(1 for r in results if r.get('action') != 'noop' and not r.get('dry_run'))
+    if applied <= 0:
+        return
+    stop = planned_stop_at(advice)
+    if stop is None:
+        return
+    rule = advice.charge_tonight
+    save_evening_session(
+        {
+            'day': advice.as_of.date().isoformat(),
+            'started_at': advice.as_of.isoformat(timespec='seconds'),
+            'stop_at': stop.isoformat(timespec='seconds'),
+            'fc_minutes': rule.fc_minutes if rule else None,
+            'target_soc_percent': rule.target_soc_percent if rule else None,
+            'stop_done': False,
+        }
+    )
+
+
+def build_evening_stop_plan(as_of: datetime) -> ControlPlan:
+    return ControlPlan(
+        context='evening',
+        as_of=as_of,
+        recommendation='STOP FC (B2 timer)',
+        dry_run=True,
+        actions=[
+            ControlAction(
+                'set_work_mode',
+                'Koniec nocnego ForceCharge — tryb SelfUse (timer B2).',
+                {'mode': 'SelfUse'},
+            ),
+        ],
+        notes=['T6.2b: wyłączenie FC po zaplanowanych minutach.'],
+    )
+
+
+def stop_fox_max_attempts() -> int:
+    """Ile ticków stopu może dotknąć Fox Cloud (każdy ≈ odczyt + ewentualny SelfUse)."""
+    raw = os.getenv('BATTERY_STOP_FOX_MAX_ATTEMPTS', '4').strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 4
+
+
+def stop_fox_min_interval_sec() -> int:
+    raw = os.getenv('BATTERY_STOP_FOX_MIN_INTERVAL_SEC', '600').strip()
+    try:
+        return max(60, int(raw))
+    except ValueError:
+        return 600
+
+
+def stop_fox_quota_status(sess: dict[str, Any], as_of: datetime) -> str | None:
+    """None = wolno wołać Fox; inaczej kod bez wywołania chmury (limit ~1440/dobę)."""
+    attempts = int(sess.get('fox_stop_attempts') or 0)
+    if attempts >= stop_fox_max_attempts():
+        return 'quota_stop'
+    last = sess.get('fox_stop_last_at')
+    if last:
+        prev = datetime.fromisoformat(str(last))
+        if (as_of - prev).total_seconds() < stop_fox_min_interval_sec():
+            return 'quota_wait'
+    return None
+
+
+def work_mode_is_force_charge(mode: str | None) -> bool:
+    raw = (mode or '').replace(' ', '').replace('_', '').replace('-', '').lower()
+    return raw == 'forcecharge'
+
+
+def evening_stop_if_due(*, dry_run: bool = True, as_of: datetime | None = None) -> tuple[str, ControlPlan | None, list[dict[str, Any]]]:
+    """Po `stop_at`: jeśli Fox nadal w ForceCharge — przełącz na SelfUse.
+
+    `stop_done` dopiero gdy odczyt trybu nie jest ForceCharge (kolejny tick launchd
+    powtarza wyłączenie, gdy komenda nie zeszła na falownik).
+    """
+    as_of = as_of or datetime.now()
+    sess = load_evening_session()
+    if not sess or sess.get('stop_done'):
+        return 'skip_no_session', None, []
+    if sess.get('day') != as_of.date().isoformat():
+        return 'skip_stale_day', None, []
+    stop_raw = sess.get('stop_at')
+    if not stop_raw:
+        return 'skip_no_stop_at', None, []
+    stop_at = datetime.fromisoformat(str(stop_raw))
+    if as_of < stop_at:
+        return 'wait', None, []
+
+    blocked = stop_fox_quota_status(sess, as_of)
+    if blocked:
+        return blocked, None, []
+    sess['fox_stop_attempts'] = int(sess.get('fox_stop_attempts') or 0) + 1
+    sess['fox_stop_last_at'] = as_of.isoformat(timespec='seconds')
+    save_evening_session(sess)
+
+    try:
+        from src.data.foxess_api_guard import is_api_paused, pause_message
+
+        if not dry_run and is_api_paused():
+            return f'denied:{pause_message()}', None, []
+    except Exception:
+        pass
+
+    try:
+        controller = FoxEssControl()
+        state = controller.read_state()
+    except (ValueError, RuntimeError) as exc:
+        plan = build_evening_stop_plan(as_of)
+        plan.notes.append(f'⚠️ Brak FoxESS: {exc}')
+        return 'fox_error', plan, []
+
+    if not work_mode_is_force_charge(state.work_mode):
+        sess['stop_done'] = True
+        sess['stopped_at'] = as_of.isoformat(timespec='seconds')
+        sess['verified_mode'] = state.work_mode
+        save_evening_session(sess)
+        return 'already_off', None, []
+
+    plan = build_evening_stop_plan(as_of)
+    plan.dry_run = dry_run
+    plan.notes.append(f'Fox nadal ForceCharge ({state.work_mode}) — wysyłam SelfUse.')
+    results = execute_plan(plan, controller, dry_run=dry_run)
+
+    if dry_run:
+        return 'would_stop', plan, results
+
+    try:
+        after = controller.read_state()
+    except (ValueError, RuntimeError) as exc:
+        plan.notes.append(f'⚠️ Ponowny odczyt FoxESS nieudany: {exc}')
+        return 'still_force_charge', plan, results
+
+    if work_mode_is_force_charge(after.work_mode):
+        plan.notes.append('Po komendzie Fox nadal ForceCharge — kolejny tick powtórzy SelfUse.')
+        return 'still_force_charge', plan, results
+
+    sess['stop_done'] = True
+    sess['stopped_at'] = as_of.isoformat(timespec='seconds')
+    sess['verified_mode'] = after.work_mode
+    save_evening_session(sess)
+    return 'stopped', plan, results
 
 
 def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = None) -> ControlPlan:
@@ -292,8 +547,16 @@ def plan_and_run(
     as_of: datetime | None = None,
     dry_run: bool = True,
     read_state: bool = True,
+    phase: ControlPhase = 'run',
 ) -> tuple[BatteryAdvice, ControlPlan, list[dict[str, Any]]]:
     advice = advise(context, as_of=as_of)
+    if not dry_run:
+        deny = validate_apply_request(context, advice, phase='apply' if phase == 'apply' else phase)
+        if deny:
+            plan = build_plan(advice)
+            plan.notes.append(f'⛔ Apply zablokowane: {deny}')
+            return advice, plan, []
+
     state = None
     controller = None
     if read_state:
@@ -306,7 +569,10 @@ def plan_and_run(
             return advice, plan, []
 
     plan = build_plan(advice, state=state)
+    plan.dry_run = dry_run
     results = execute_plan(plan, controller, dry_run=dry_run)
+    if not dry_run and phase == 'apply':
+        record_evening_session_after_apply(advice, plan, results)
     return advice, plan, results
 
 
@@ -347,15 +613,21 @@ def append_control_log(
     plan: ControlPlan,
     results: list[dict[str, Any]],
     path: str | None = None,
+    *,
+    phase: ControlPhase = 'run',
+    planned_stop: datetime | None = None,
 ) -> None:
     path = path or LOG_FILE
     os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+    stop_at = planned_stop or planned_stop_at(advice)
     row = {
         'logged_at': advice.as_of.isoformat(timespec='seconds'),
         'context': plan.context,
+        'phase': phase,
         'dry_run': plan.dry_run,
         'recommendation': plan.recommendation,
         'soc_percent': advice.snapshot.soc_percent,
+        'planned_stop_at': stop_at.isoformat(timespec='seconds') if stop_at else '',
         'actions': '; '.join(a.description for a in plan.actions if a.kind != 'noop'),
         'applied_count': sum(
             1 for r in results if r.get('action') != 'noop' and not r.get('dry_run')

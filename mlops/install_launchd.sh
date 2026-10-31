@@ -21,6 +21,9 @@ LABELS=(
   "pl.smart-energy-model.daily"
   "pl.smart-energy-model.midday"
   "pl.smart-energy-model.peak"
+  "pl.smart-energy-model.evening-battery"
+  "pl.smart-energy-model.evening-battery-apply"
+  "pl.smart-energy-model.evening-battery-stop"
   "pl.smart-energy-model.evening"
   "pl.smart-energy-model.evening-dynamic"
   "pl.smart-energy-model.morning-hold"
@@ -57,6 +60,9 @@ install_launchd() {
   chmod +x "${PROJECT_ROOT}/mlops/daily_workflow.sh" \
     "${PROJECT_ROOT}/mlops/midday_forecast.sh" \
     "${PROJECT_ROOT}/mlops/peak_arrival.sh" \
+    "${PROJECT_ROOT}/mlops/evening_battery_plan.sh" \
+    "${PROJECT_ROOT}/mlops/evening_battery_apply.sh" \
+    "${PROJECT_ROOT}/mlops/evening_battery_stop.sh" \
     "${PROJECT_ROOT}/mlops/evening_closeout.sh" \
     "${PROJECT_ROOT}/mlops/evening_closeout_dynamic.sh" \
     "${PROJECT_ROOT}/mlops/catchup_missed_runs.sh" \
@@ -89,6 +95,9 @@ install_launchd() {
   echo "   10:00 codziennie  → weather_morning_run.sh (po wpisie Accu: MB fetch + Accu×MB×modele → stub)"
   echo "   12:00 codziennie  → midday_forecast.sh (16 + CS4 + XGB+TS)"
   echo "   16:00 codziennie  → peak_arrival.sh (16 + CS4 + XGB+TS)"
+  echo "   21:15 codziennie  → evening_battery_plan.sh (B2: sugestie + dry-run foxess_control)"
+  echo "   22:00 codziennie  → evening_battery_apply.sh (--apply gdy BATTERY_CONTROL_ENABLED=1)"
+  echo "   co 5 min (noc)    → evening_battery_stop.sh (Fox tylko po stop_at, max 4 próby / 10 min)"
   echo "   co 10 min         → evening_closeout_dynamic.sh (closeout + catch-up daily/midday/train po śnie/restarcie/DNS; midday w oknie 12:20–15:45)"
   echo "   22:42 codziennie  → evening_closeout.sh (siatka bezpieczeństwa, gdyby dynamiczny nie zadziałał)"
   echo "   23:05 dnia 11.    → fetch_rcem.sh (RCEm PSE za poprzedni miesiąc + korekty; po evening 22:42 — unik SQLite lock)"

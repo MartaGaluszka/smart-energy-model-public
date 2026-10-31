@@ -26,6 +26,15 @@ def test_mlops_scripts_expose_evening_context_in_help():
         )
         assert proc.returncode == 0, proc.stderr
         assert 'evening' in proc.stdout
+    stop_help = subprocess.run(
+        [sys.executable, str(ROOT / 'mlops/foxess_control.py'), '--help'],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert '--stop-fc' in stop_help.stdout
+    assert '--no-read-state' in stop_help.stdout
 
 
 def test_foxess_sync_range_skipped_when_api_paused(monkeypatch):

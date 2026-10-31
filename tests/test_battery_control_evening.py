@@ -13,7 +13,21 @@ from src.optimization.battery_advisor import (
     advise,
 )
 from src.optimization.battery_advisor import format_advice
-from src.optimization.battery_control import build_plan, evening_apply_allowed, format_plan, plan_and_run
+from src.data.foxess_control import BatteryControlState, ForceChargeWindow
+from src.optimization.battery_control import (
+    build_plan,
+    evening_apply_allowed,
+    count_real_applies_today,
+    evening_stop_if_due,
+    stop_fox_quota_status,
+    format_plan,
+    work_mode_is_force_charge,
+    load_evening_session,
+    plan_and_run,
+    record_evening_session_after_apply,
+    save_evening_session,
+    validate_apply_request,
+)
 
 
 def _pv() -> PvOutlook:
@@ -223,3 +237,253 @@ def test_plan_and_run_evening_dry_run(_eval, _t, _pv_sum, _pv_out, _snap, _fox):
     assert plan.context == 'evening'
     assert results == []
     assert any('FoxESS' in n for n in plan.notes)
+
+
+def test_validate_apply_evening_denies_peak_zone():
+    rule = ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=43.0,
+        tomorrow_pv_kwh=11.0,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='',
+        body='',
+        fc_minutes=30.0,
+    )
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 21, 15), rule=rule)
+    assert validate_apply_request('evening', advice, phase='apply') is not None
+
+
+def test_validate_apply_evening_allows_at_22_when_triggered():
+    rule = ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=43.0,
+        tomorrow_pv_kwh=11.0,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='',
+        body='',
+        fc_minutes=30.0,
+    )
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 22, 1), rule=rule)
+    assert validate_apply_request('evening', advice, phase='apply') is None
+
+
+def _b2_rule(*, triggered: bool) -> ChargeTonightCloudyRule:
+    return ChargeTonightCloudyRule(
+        triggered=triggered,
+        soc_percent=43.0,
+        tomorrow_pv_kwh=11.0,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)' if triggered else '',
+        title='',
+        body='',
+        fc_minutes=30.0 if triggered else None,
+    )
+
+
+def test_validate_apply_evening_only_blocks_morning(monkeypatch):
+    monkeypatch.delenv('FOXESS_SYNC_DISABLED', raising=False)
+    monkeypatch.setenv('BATTERY_CONTROL_EVENING_ONLY', '1')
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 22, 1), rule=_b2_rule(triggered=True))
+    reason = validate_apply_request('morning', advice, phase='apply')
+    assert reason is not None
+    assert 'EVENING_ONLY' in reason
+
+
+def test_validate_apply_denies_when_b2_not_triggered(monkeypatch):
+    monkeypatch.delenv('FOXESS_SYNC_DISABLED', raising=False)
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 22, 5), rule=_b2_rule(triggered=False))
+    reason = validate_apply_request('evening', advice, phase='apply')
+    assert reason is not None
+    assert 'POMIŃ' in reason
+
+
+def test_validate_apply_denies_when_fox_api_paused(monkeypatch):
+    monkeypatch.setenv('FOXESS_SYNC_DISABLED', '1')
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 22, 5), rule=_b2_rule(triggered=True))
+    reason = validate_apply_request('evening', advice, phase='apply')
+    assert reason is not None
+    assert 'FOXESS' in reason.upper() or 'pauza' in reason.lower() or 'wyłączony' in reason.lower()
+
+
+def test_count_real_applies_ignores_dry_run(tmp_path):
+    log = tmp_path / 'battery_control_log.csv'
+    log.write_text(
+        'logged_at,dry_run,applied_count\n'
+        '2026-11-03T22:00:00,False,1\n'
+        '2026-11-03T22:10:00,True,1\n'
+        '2026-11-02T22:00:00,False,1\n',
+        encoding='utf-8',
+    )
+    assert count_real_applies_today(path=str(log), as_of=datetime(2026, 11, 3, 22, 30)) == 1
+
+
+def test_validate_apply_denies_when_daily_cap_reached(tmp_path, monkeypatch):
+    monkeypatch.delenv('FOXESS_SYNC_DISABLED', raising=False)
+    monkeypatch.setenv('BATTERY_CONTROL_MAX_APPLIES_PER_DAY', '1')
+    log = tmp_path / 'battery_control_log.csv'
+    log.write_text(
+        'logged_at,dry_run,applied_count\n2026-11-03T22:00:00,False,1\n',
+        encoding='utf-8',
+    )
+    monkeypatch.setattr('src.optimization.battery_control.LOG_FILE', str(log))
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 22, 20), rule=_b2_rule(triggered=True))
+    reason = validate_apply_request('evening', advice, phase='apply')
+    assert reason is not None
+    assert 'Limit apply' in reason
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_evening_stop_before_stop_at_does_not_call_fox(_fox, tmp_path, monkeypatch):
+    monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(tmp_path / 'sess.json'))
+    save_evening_session(
+        {'day': '2026-11-03', 'stop_at': '2026-11-03T22:30:00', 'stop_done': False}
+    )
+    status, plan, results = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 10))
+    assert status == 'wait'
+    assert plan is None
+    assert results == []
+    _fox.assert_not_called()
+
+
+def _fox_state(mode: str) -> BatteryControlState:
+    off = ForceChargeWindow(enabled=False, start_hour=0.0, end_hour=0.0)
+    return BatteryControlState(
+        device_sn='TEST',
+        work_mode=mode,
+        force_charge_1=off,
+        force_charge_2=off,
+        min_soc=10.0,
+        min_soc_on_grid=10.0,
+        schedule_enabled=False,
+    )
+
+
+def test_stop_fox_quota_blocks_repeat_inside_interval():
+    as_of = datetime(2026, 11, 3, 22, 40)
+    sess = {'fox_stop_attempts': 1, 'fox_stop_last_at': '2026-11-03T22:35:00'}
+    assert stop_fox_quota_status(sess, as_of) == 'quota_wait'
+    assert stop_fox_quota_status({'fox_stop_attempts': 4}, as_of) == 'quota_stop'
+    assert stop_fox_quota_status({'fox_stop_attempts': 1, 'fox_stop_last_at': '2026-11-03T22:20:00'}, as_of) is None
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_evening_stop_second_tick_does_not_call_fox(_fox, tmp_path, monkeypatch):
+    monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(tmp_path / 'sess.json'))
+    save_evening_session(
+        {'day': '2026-11-03', 'stop_at': '2026-11-03T22:30:00', 'stop_done': False}
+    )
+    ctrl = _fox.return_value
+    ctrl.read_state.side_effect = [_fox_state('ForceCharge'), _fox_state('ForceCharge')]
+    ctrl.set_work_mode.return_value = {'action': 'set_work_mode', 'dry_run': False}
+    first, _, _ = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 31))
+    second, _, _ = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 34))
+    assert first == 'still_force_charge'
+    assert second == 'quota_wait'
+    assert ctrl.read_state.call_count == 2
+
+
+def test_work_mode_is_force_charge():
+    assert work_mode_is_force_charge('ForceCharge') is True
+    assert work_mode_is_force_charge('force_charge') is True
+    assert work_mode_is_force_charge('SelfUse') is False
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_evening_stop_sends_selfuse_when_still_force_charge(_fox, tmp_path, monkeypatch):
+    monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(tmp_path / 'sess.json'))
+    save_evening_session(
+        {'day': '2026-11-03', 'stop_at': '2026-11-03T22:30:00', 'stop_done': False}
+    )
+    ctrl = _fox.return_value
+    ctrl.read_state.side_effect = [_fox_state('ForceCharge'), _fox_state('SelfUse')]
+    ctrl.set_work_mode.return_value = {'action': 'set_work_mode', 'dry_run': False, 'mode': 'SelfUse'}
+    status, plan, results = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 31))
+    assert status == 'stopped'
+    ctrl.set_work_mode.assert_called_once_with('SelfUse', dry_run=False)
+    assert plan is not None
+    assert results
+    assert load_evening_session()['stop_done'] is True
+    assert load_evening_session()['verified_mode'] == 'SelfUse'
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_evening_stop_retries_when_fox_stays_force_charge(_fox, tmp_path, monkeypatch):
+    monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(tmp_path / 'sess.json'))
+    save_evening_session(
+        {'day': '2026-11-03', 'stop_at': '2026-11-03T22:30:00', 'stop_done': False}
+    )
+    ctrl = _fox.return_value
+    ctrl.read_state.return_value = _fox_state('ForceCharge')
+    ctrl.set_work_mode.return_value = {'action': 'set_work_mode', 'dry_run': False, 'mode': 'SelfUse'}
+    status, plan, _results = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 35))
+    assert status == 'still_force_charge'
+    ctrl.set_work_mode.assert_called_once()
+    assert plan is not None
+    assert load_evening_session()['stop_done'] is False
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_evening_stop_skips_command_when_already_selfuse(_fox, tmp_path, monkeypatch):
+    monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(tmp_path / 'sess.json'))
+    save_evening_session(
+        {'day': '2026-11-03', 'stop_at': '2026-11-03T22:30:00', 'stop_done': False}
+    )
+    _fox.return_value.read_state.return_value = _fox_state('SelfUse')
+    status, plan, _results = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 40))
+    assert status == 'already_off'
+    assert plan is None
+    _fox.return_value.set_work_mode.assert_not_called()
+    assert load_evening_session()['stop_done'] is True
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_evening_stop_if_due_self_use(_fox, tmp_path, monkeypatch):
+    sess_path = tmp_path / 'battery_evening_session.json'
+    monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(sess_path))
+    save_evening_session(
+        {
+            'day': '2026-11-03',
+            'stop_at': '2026-11-03T22:30:00',
+            'stop_done': False,
+        }
+    )
+    _fox.return_value.read_state.return_value = _fox_state('ForceCharge')
+    _fox.return_value.set_work_mode.return_value = {'action': 'set_work_mode', 'dry_run': True}
+    status, plan, _results = evening_stop_if_due(
+        dry_run=True,
+        as_of=datetime(2026, 11, 3, 22, 31),
+    )
+    assert status == 'would_stop'
+    assert plan is not None
+    assert load_evening_session()['stop_done'] is False
+
+
+def test_record_evening_session_after_apply(tmp_path, monkeypatch):
+    monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(tmp_path / 'sess.json'))
+    rule = ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=43.0,
+        tomorrow_pv_kwh=11.0,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='',
+        body='',
+        fc_minutes=30.0,
+    )
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 22, 0), rule=rule)
+    plan = build_plan(advice)
+    plan.dry_run = False
+    record_evening_session_after_apply(
+        advice,
+        plan,
+        [{'action': 'set_work_mode', 'dry_run': False}],
+    )
+    sess = load_evening_session()
+    assert sess is not None
+    assert sess['stop_at'] == '2026-11-03T22:30:00'

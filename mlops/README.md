@@ -15,6 +15,9 @@ Aktualne metryki modelu / live: [`docs/STATUS_ML_MLOPS.md`](../docs/STATUS_ML_ML
 | **10:00** | `./mlops/weather_morning_run.sh` | Po wpisie Accu: MB Free API + porównanie Accu × MB × ENS/ICON/CS4 → `data/processed/weather_runs/morning_latest.md` |
 | **12:00** | `./mlops/midday_forecast.sh` | sync + midday (16 + shadow) |
 | **16:00** | `./mlops/peak_arrival.sh` | sync + peak (16 + shadow) |
+| **21:15** | `./mlops/evening_battery_plan.sh` | B2 z bazy (bez sync Fox) + dry-run bez odczytu falownika |
+| **22:00** | `./mlops/evening_battery_apply.sh` | start FC gdy B2 + `BATTERY_CONTROL_ENABLED=1` (inaczej dry-run) |
+| **co 5 min (noc)** | `./mlops/evening_battery_stop.sh` | timer stop FC → SelfUse (`--stop-fc --apply`) |
 | **wieczór** | `./mlops/evening_closeout.sh` | walidacja vs app → `forecast_validation.csv` (stała 22:42 i/lub dynamicznie po zachodzie) |
 | **04:15** | `./mlops/morning_hold.sh` | `caffeinate` ~75 min (okno train + daily + retry DNS) |
 | **sobota 10:00** | `./mlops/weekly_model_review.sh` | MAPE × pogoda × model → [`weekly_model_weather_review.md`](../docs/images/ml/weekly_model_weather_review.md) (przed retreningiem) |
