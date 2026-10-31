@@ -15,7 +15,7 @@ import pandas as pd
 
 from src.data.foxess_control import BatteryControlState, ForceChargeWindow, FoxEssControl
 from src.optimization.battery_advisor import BatteryAdvice, Context, advise
-from src.optimization.g12w_tariff import is_weekend, weekday_force_charge_windows
+from src.optimization.g12w_tariff import is_cheap_zone, is_weekend, weekday_force_charge_windows
 
 ActionKind = Literal[
     'set_force_charge_windows',
@@ -76,6 +76,11 @@ def _disabled_window() -> ForceChargeWindow:
 
 def control_enabled() -> bool:
     return os.getenv('BATTERY_CONTROL_ENABLED', '0').strip().lower() in ('1', 'true', 'yes')
+
+
+def evening_apply_allowed(as_of: datetime) -> bool:
+    """Apply B2 tylko w taniej strefie G12w (strefa 2)."""
+    return is_cheap_zone(as_of)
 
 
 def should_apply(dry_run_flag: bool | None = None) -> bool:
@@ -139,6 +144,34 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
         else:
             actions.append(ControlAction('noop', f'Brak reguły sterowania dla: {rec}'))
 
+    elif advice.context == 'evening':
+        rule = advice.charge_tonight
+        if rule and rule.triggered:
+            actions.append(ControlAction(
+                'set_force_charge_windows',
+                'B2: okno nocne 22:00–6:00 (G12w tanio).',
+                {'period1': night, 'period2': midday_off},
+            ))
+            if is_cheap_zone(advice.as_of):
+                actions.append(ControlAction(
+                    'set_work_mode',
+                    'B2: ForceCharge w taniej strefie (22:00–6:00).',
+                    {'mode': 'ForceCharge'},
+                ))
+            else:
+                notes.append(
+                    'Przed 22:00 (strefa szczytowa) — start FC przy apply o 22:00 (launchd).'
+                )
+            if rule.fc_minutes is not None and rule.fc_minutes > 0:
+                notes.append(
+                    f'Zaplanowany stop FC po ~{rule.fc_minutes:.0f} min (timer T6.2b).'
+                )
+        else:
+            actions.append(ControlAction(
+                'noop',
+                'B2: POMIŃ — brak nocnego ForceCharge.',
+            ))
+
     elif advice.context == 'pre_cheap':
         if not winter or weekend:
             actions.append(ControlAction('noop', 'Weekend / lato — okno 13–15 nie jest krytyczne.'))
@@ -163,7 +196,7 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
         else:
             actions.append(ControlAction('noop', f'Brak reguły sterowania dla: {rec}'))
 
-    else:  # peak
+    elif advice.context == 'peak':
         actions.append(ControlAction(
             'set_work_mode',
             'Szczyt G12w — autokonsumpcja, rozładowuj baterię zamiast importu.',
@@ -283,6 +316,7 @@ def format_plan(advice: BatteryAdvice, plan: ControlPlan, results: list[dict[str
         'morning': 'PORANEK — sterowanie baterią',
         'pre_cheap': 'PRZED 13:00 — ForceCharge',
         'peak': 'SZCZYT — tryb SelfUse',
+        'evening': 'WIECZÓR — plan B2 (22:00–6:00)',
     }
     lines = [
         '=' * 60,

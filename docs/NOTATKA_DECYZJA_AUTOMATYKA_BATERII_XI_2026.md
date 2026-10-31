@@ -52,7 +52,7 @@ Rollback: **`BATTERY_CONTROL_ENABLED=0`**, powrót do advise-only + ręczne FC.
 | Porcja | Zakres | Stan |
 |--------|--------|------|
 | **1** | Notatka + `evening` sugestie (`charge_tonight_cloudy`) | **2026-10-31** |
-| **2** | `battery_control` context `evening` + testy | plan |
+| **2** | `battery_control` context `evening` + testy | **2026-10-31** |
 | **3** | launchd 21:15 / 22:00 / 22+N + `--apply` | plan |
 | **4** | Toggle apka + API | plan |
 

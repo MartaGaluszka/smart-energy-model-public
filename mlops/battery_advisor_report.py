@@ -29,7 +29,7 @@ def main() -> None:
     parser.add_argument(
         '--context',
         required=True,
-        choices=['morning', 'pre_cheap', 'peak'],
+        choices=['morning', 'pre_cheap', 'peak', 'evening'],
         help='morning=5:00, pre_cheap=12:00, peak=16:00',
     )
     parser.add_argument('--no-log', action='store_true', help='Nie dopisuj do battery_advisor_log.csv')

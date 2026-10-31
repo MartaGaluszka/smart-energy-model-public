@@ -37,8 +37,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Sterowanie baterią FoxESS (advisor → API)')
     parser.add_argument(
         '--context',
-        choices=['morning', 'pre_cheap', 'peak'],
-        help='Kontekst advisora (morning / pre_cheap / peak)',
+        choices=['morning', 'pre_cheap', 'peak', 'evening'],
+        help='Kontekst advisora (morning / pre_cheap / peak / evening ~21:15 B2)',
     )
     parser.add_argument(
         '--status',

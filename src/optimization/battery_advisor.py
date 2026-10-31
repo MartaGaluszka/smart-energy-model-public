@@ -20,7 +20,7 @@ import sqlite3
 
 from src.optimization.g12w_tariff import classify_zone, is_public_holiday, is_weekend
 
-Context = Literal['morning', 'pre_cheap', 'peak']
+Context = Literal['morning', 'pre_cheap', 'peak', 'evening']
 
 WINTER_MONTHS = {11, 12, 1, 2}  # XI–II; III–V = wiosna (§E); X = jesień (B1)
 SPRING_MONTHS = {3, 4, 5}
@@ -160,6 +160,7 @@ class BatteryAdvice:
     recommendation: str
     action: str
     details: list[str]
+    charge_tonight: ChargeTonightCloudyRule | None = None
 
 
 def is_winter_season(d: date | None = None) -> bool:
@@ -1827,6 +1828,7 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
     details: list[str] = []
     rec = ''
     action = ''
+    charge_tonight: ChargeTonightCloudyRule | None = None
 
     if context == 'morning':
         minutes_to_6 = max(0, (6 - as_of.hour) * 60 - as_of.minute) if as_of.hour < 6 else 0
@@ -1905,6 +1907,40 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
             rec = 'OKNO 13–15 TRWA LUB MINĘŁO'
             action = 'Sprawdź w aplikacji FoxESS czy ładowanie z sieci ruszyło.'
 
+    elif context == 'evening':
+        tomorrow = (date.fromisoformat(target_day) + timedelta(days=1)).isoformat()
+        tomorrow_pv = get_day_pv_forecast_sum(tomorrow, as_of=as_of)
+        tomorrow_t = get_day_mean_temp_c(tomorrow)
+        cloudy_rule = evaluate_charge_tonight_cloudy(
+            soc_percent=soc,
+            tomorrow_pv_kwh=tomorrow_pv,
+            as_of=as_of,
+            tomorrow_temp_c=tomorrow_t,
+        )
+        if snap.timestamp:
+            details.append(f'Ostatni odczyt: {snap.timestamp}')
+        if soc is not None:
+            details.append(f'SoC: {soc:.0f}%')
+        if tomorrow_pv is not None:
+            details.append(f'Prognoza PV jutro (suma): {tomorrow_pv:.1f} kWh')
+        if tomorrow_t is not None:
+            details.append(f'T śr. jutro: {tomorrow_t:.1f}°C')
+        details.append('Plan przed oknem nocnym 22:00–6:00 (reguła B2).')
+
+        if cloudy_rule.triggered:
+            rec = cloudy_rule.recommendation
+            action = cloudy_rule.body
+            details.append(
+                f'B2: cel {cloudy_rule.target_soc_percent:.0f}% '
+                f'~{cloudy_rule.fc_minutes:.0f} min FC (30 min ≈ +50 pp)'
+            )
+        else:
+            rec = 'POMIŃ NOCNE FC (B2)'
+            action = cloudy_rule.skip_reason or (
+                'Reguła B2 nie wymaga ładowania z sieci dziś w 22:00–6:00.'
+            )
+        charge_tonight = cloudy_rule
+
     else:  # peak
         if snap.timestamp:
             details.append(f'Ostatni odczyt: {snap.timestamp}')
@@ -1930,6 +1966,7 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
         if cloudy_rule.triggered:
             rec = cloudy_rule.recommendation
             action = cloudy_rule.body
+            charge_tonight = cloudy_rule
             details.append(
                 f'B2 T+PV: cel {cloudy_rule.target_soc_percent:.0f}% '
                 f'~{cloudy_rule.fc_minutes:.0f} min (30 min ≈ +50 pp)'
@@ -1963,6 +2000,7 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
         recommendation=rec,
         action=action,
         details=details,
+        charge_tonight=charge_tonight,
     )
     if resilience is not None:
         _apply_resilience_to_advice(advice, resilience)
@@ -1975,6 +2013,7 @@ def format_advice(advice: BatteryAdvice) -> str:
         'morning': 'PORANEK 5:00 — bateria + PV rano',
         'pre_cheap': 'PRZED TANIO 12:00 — okno 13:00–15:00',
         'peak': 'SZCZYT 16:00 — powrót do domu',
+        'evening': 'WIECZÓR ~21:15 — plan B2 przed 22:00',
     }
     lines = [
         '=' * 60,

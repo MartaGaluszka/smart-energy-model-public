@@ -267,7 +267,7 @@ Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 lin
 | T6.0 | P1 | `[x]` Gate **skrócony**: 1-stronicowa decyzja + KPI miesiąca (Z2%, min SoC 5–8, zbędne kWh tanio) | Plik decyzji; link z `GET /battery/policy`; aktualizacja T4.13 (nie „rok czekania”) |
 | T6.0a | P2 | Raport shadow vs reality (miesięczny, offline) | Skrypt + wiersz w STATUS; uzupełnia T5.5 |
 | T6.1 | **P0** | `[ ]` Zgoda **automatyka baterii** (ustawienia + DB) | Kolumna/flag `battery_automation_enabled` (user); domyślnie **OFF**; mobile toggle + API GET/PUT; spójne z `BATTERY_CONTROL_ENABLED` na hoście |
-| T6.2 | **P0** | `[ ]` **`evening` w `battery_control`** — B2 → akcje Fox | `Context` rozszerzone o `evening`; `build_plan()` czyta `evaluate_charge_tonight_cloudy` (minuty, cel SoC, POMIŃ); **nie** duplikować starych stringów morning-only |
+| T6.2 | **P0** | `[x]` **`evening` w `battery_control`** — B2 → akcje Fox | `Context` rozszerzone o `evening`; `build_plan()` czyta `evaluate_charge_tonight_cloudy` (minuty, cel SoC, POMIŃ); **nie** duplikować starych stringów morning-only |
 | T6.2a | **P0** | `[ ]` **Start FC @22:00** (apply) | `mlops/evening_battery_apply.sh` + plist **22:00**: `foxess_control --context evening --apply` gdy reguła triggered + `BATTERY_CONTROL_ENABLED=1` |
 | T6.2b | **P0** | `[ ]` **Stop FC (timer)** | Drugi trigger **22:00 + N min** (N z reguły, max env): `SelfUse` / wyłączenie FC — fix case **13→14**, **15→16**; log `planned_stop_at` w `battery_control_log.csv` |
 | T6.2c | P1 | `[ ]` `POST /api/v1/battery/control/dry-run` + opcjonalnie `POST .../control/apply` | Audit w DB (`battery_control_audit`); rate limit; **mobile kill-switch** bez SSH |
@@ -275,7 +275,7 @@ Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 lin
 | T6.4 | **P0** | `[ ]` Kill-switch + limity | Env: `BATTERY_CONTROL_ENABLED`, `BATTERY_CONTROL_MAX_APPLIES_PER_DAY`, `BATTERY_CONTROL_EVENING_ONLY=1`; odmowa apply w strefie 1 |
 | T6.5 | P1 | `[ ]` UI: przycisk sterowania **enabled** gdy T6.1 ON | Zastąp T4.14 disabled; nadal **manual** trigger + status ostatniej akcji; copy: „automatyka nocna włączona” |
 | T6.6 | P1 | `[ ]` Powiadomienie po apply | In-app (+ T4.22 FCM później): „Wykonano plan: FC 30 min / POMIŃ” — ton **fakt**, nie ukrywać |
-| T6.7 | **P0** | `[ ]` Testy + checklist XI | pytest: `build_plan(evening)` POMIŃ/ŁADUJ; test strefy G12w; checklist 7 nocy dry-run → 3 nocy apply |
+| T6.7 | **P0** | `[~]` Testy + checklist XI | pytest `build_plan(evening)` + strefa G12w **`[x]`** · checklist 7 nocy dry-run → 3 nocy apply **`[ ]`** |
 
 **Istniejące (nie duplikować):** `daily_workflow.sh` / `midday_forecast.sh` / `peak_arrival.sh` już wołają `foxess_control` dla morning/pre_cheap/peak — **brakuje tylko ścieżki wieczór B2**.
 
@@ -385,7 +385,7 @@ Aktualizuj status w tej tabeli przy domknięciu fazy:
 | 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-10-16 | Refaktor drill-down T4.25–T4.30 + UX. **T4.8/T4.9** kalendarz kontekstowy `[x]` (oś 3/7 + Home teaser/pasek + wire doradcy). Brak: FCM (T4.22); siatka miesiąca (opcjonalnie); profil domu / obciążenia (backlog — moc AC). |
 | 5 ML advice (bez control) | `[~]` | 2026-10-31 | B2 `[x]`; T5.2 / T5.5 otwarte |
 | 6 Sterowanie Fox | `[~]` | 2026-10-31 | **Skrócony gate XI 2026** — sprint §Sprint XI; T6.3 `[x]` |
-| Sprint XI automatyka nocna | `[~]` | 2026-10-31 | **Porcja 1** `[x]` · 2–6 otwarte |
+| Sprint XI automatyka nocna | `[~]` | 2026-10-31 | **Porcje 1–2** `[x]` · 3–6 otwarte |
 
 ---
 
