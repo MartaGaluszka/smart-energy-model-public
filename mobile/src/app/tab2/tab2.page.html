@@ -53,6 +53,7 @@
       <ion-card-content>
         <p class="se-error-title se-error-title--home">Błąd połączenia z API</p>
         <p class="se-error-body se-error-body--home"><strong>{{ apiErr }}</strong></p>
+        <p class="se-error-body se-error-body--home">API: <code>{{ devApiUrl() }}</code></p>
         <ion-button color="light" (click)="homeData.refreshAll(true)">Spróbuj ponownie</ion-button>
       </ion-card-content>
     </ion-card>

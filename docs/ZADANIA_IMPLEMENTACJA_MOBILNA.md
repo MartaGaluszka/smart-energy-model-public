@@ -1,7 +1,7 @@
 # Zadania implementacji — Smart Energy Mobile
 
-**Wersja:** 0.6  
-**Data:** 2026-09-03  
+**Wersja:** 0.7  
+**Data:** 2026-10-31  
 **Dokument nadrzędny:** [PROJEKT_APLIKACJA_MOBILNA.md](PROJEKT_APLIKACJA_MOBILNA.md) (§9.6 advise-only, §12 FastAPI)
 
 Legenda statusu: `[ ]` do zrobienia · `[~]` w toku · `[x]` gotowe  
@@ -234,6 +234,8 @@ Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 lin
 | T4.22 | P1 | `POST /api/v1/notifications/push-token` + wysyłka FCM (Android) dla tych samych sugestii | Opt-in zgoda systemowa |
 | T4.23 | P1 | UI zgód na powiadomienia push | Domyślnie pytamy przy pierwszym planie baterii |
 | T4.24 | P1 | Treści push po polsku, ton doradczy („Sugestia: …”, nigdy „Wykonano automatycznie”) | Review copy |
+| T4.25b | **P0** | `[x]` **Kontekst `evening`** w generatorze sugestii (~21:15) | `SuggestionContext` + `generate_battery_suggestions.py --context evening`; `maybe_upsert_charge_tonight_cloudy` wołane wieczorem (nie tylko przy morning/midday/peak); wpis w `notifications` przed oknem 22:00 |
+| T4.26b | **P0** | `[ ]` **Launchd wieczór** — plan B2 przed FC | Nowy `mlops/evening_battery_plan.sh` (~21:10–21:20): advisor report + sugestie + **dry-run** `foxess_control`; plist `pl.smart-energy-model.evening-battery.plist`; wpis w `install_launchd.sh` + `mlops/README.md` |
 
 ### 4.4 Kalendarz kontekstowy (po MVP advise/push)
 
@@ -256,16 +258,60 @@ Kitchen sink anti-pattern: monolityczny `battery.page` (~640 linii TS + ~440 lin
 
 ---
 
-## Faza 6 — Sterowanie Fox (poza MVP; po ~roku walidacji)
+## Faza 6 — Sterowanie Fox (produkcja XI 2026 — skrócony gate)
+
+**Decyzja 2026-10-31:** automatyka **od listopada** na produkcji (Mac + launchd), walidacja **na żywo** (log + min SoC rano + Tauron), nie czekamy ~12 mies. shadow-only. Guardrails obowiązkowe: tylko **G12w strefa 2**, cap minut B2, **timer stop FC**, kill-switch `.env`. Notatka: `docs/NOTATKA_DECYZJA_AUTOMATYKA_BATERII_XI_2026.md` (T-AUTO-0).
 
 | ID | Pri | Zadanie | DoD |
 |----|-----|---------|-----|
-| T6.0 | P3 | Gate produktowy: raport walidacji shadow vs reality ≥ N miesięcy (cel: ~12) | Dokument decyzji „odblokuj control” |
-| T6.1 | P3 | Osobna zgoda „Sterowanie baterią” w ustawieniach | Domyślnie OFF; feature flag |
-| T6.2 | P3 | Owinięcie `foxess_control.py` w API z audit logiem | Każda zmiana logowana |
-| T6.3 | P3 | Dry-run mode (pokazuje komendę, nie wysyła) | Bezpieczeństwo |
-| T6.4 | P3 | Limit częstotliwości komend + kill-switch | Dokumentacja ryzyka |
-| T6.5 | P3 | Odblokowanie przycisku UI dopiero po T6.0 + T6.1 | Spójne z §9.6 |
+| T6.0 | P1 | `[x]` Gate **skrócony**: 1-stronicowa decyzja + KPI miesiąca (Z2%, min SoC 5–8, zbędne kWh tanio) | Plik decyzji; link z `GET /battery/policy`; aktualizacja T4.13 (nie „rok czekania”) |
+| T6.0a | P2 | Raport shadow vs reality (miesięczny, offline) | Skrypt + wiersz w STATUS; uzupełnia T5.5 |
+| T6.1 | **P0** | `[ ]` Zgoda **automatyka baterii** (ustawienia + DB) | Kolumna/flag `battery_automation_enabled` (user); domyślnie **OFF**; mobile toggle + API GET/PUT; spójne z `BATTERY_CONTROL_ENABLED` na hoście |
+| T6.2 | **P0** | `[ ]` **`evening` w `battery_control`** — B2 → akcje Fox | `Context` rozszerzone o `evening`; `build_plan()` czyta `evaluate_charge_tonight_cloudy` (minuty, cel SoC, POMIŃ); **nie** duplikować starych stringów morning-only |
+| T6.2a | **P0** | `[ ]` **Start FC @22:00** (apply) | `mlops/evening_battery_apply.sh` + plist **22:00**: `foxess_control --context evening --apply` gdy reguła triggered + `BATTERY_CONTROL_ENABLED=1` |
+| T6.2b | **P0** | `[ ]` **Stop FC (timer)** | Drugi trigger **22:00 + N min** (N z reguły, max env): `SelfUse` / wyłączenie FC — fix case **13→14**, **15→16**; log `planned_stop_at` w `battery_control_log.csv` |
+| T6.2c | P1 | `[ ]` `POST /api/v1/battery/control/dry-run` + opcjonalnie `POST .../control/apply` | Audit w DB (`battery_control_audit`); rate limit; **mobile kill-switch** bez SSH |
+| T6.3 | P0 | `[x]` Dry-run domyślnie | Już: brak `--apply` / `BATTERY_CONTROL_ENABLED=0` |
+| T6.4 | **P0** | `[ ]` Kill-switch + limity | Env: `BATTERY_CONTROL_ENABLED`, `BATTERY_CONTROL_MAX_APPLIES_PER_DAY`, `BATTERY_CONTROL_EVENING_ONLY=1`; odmowa apply w strefie 1 |
+| T6.5 | P1 | `[ ]` UI: przycisk sterowania **enabled** gdy T6.1 ON | Zastąp T4.14 disabled; nadal **manual** trigger + status ostatniej akcji; copy: „automatyka nocna włączona” |
+| T6.6 | P1 | `[ ]` Powiadomienie po apply | In-app (+ T4.22 FCM później): „Wykonano plan: FC 30 min / POMIŃ” — ton **fakt**, nie ukrywać |
+| T6.7 | **P0** | `[ ]` Testy + checklist XI | pytest: `build_plan(evening)` POMIŃ/ŁADUJ; test strefy G12w; checklist 7 nocy dry-run → 3 nocy apply |
+
+**Istniejące (nie duplikować):** `daily_workflow.sh` / `midday_forecast.sh` / `peak_arrival.sh` już wołają `foxess_control` dla morning/pre_cheap/peak — **brakuje tylko ścieżki wieczór B2**.
+
+---
+
+## Sprint XI 2026 — automatyka nocna (kolejność + porcje pod sesje)
+
+Szacunek dev: **~12–18 osobogodzin** · kalendarz part-time **~2–4 tyg.** · FCM (T4.22) **+1 tyg.** opcjonalnie równolegle.
+
+| Porcja | Taski | Cel sesji | ~Tokeny (rząd wielkości) |
+|--------|--------|-----------|---------------------------|
+| **1** | T-AUTO-0, T6.0, T4.25b | Decyzja na papierze + wieczorne sugestie w DB/API | mała |
+| **2** | T6.2, T6.7 (unit) | Plan `evening` w Pythonie, testy bez Foxa | średnia |
+| **3** | T4.26b, T6.2a, T6.2b, T6.4 | launchd 21:15 / 22:00 / 22+N + env guardrails | średnia |
+| **4** | T6.1, T6.5, T6.2c (dry-run API) | Mobile toggle + polityka + audit | duża |
+| **5** | T4.22–T4.24, T6.6 | FCM + copy | duża (Firebase) |
+| **6** | T6.0a, T5.5, październik KPI | Shadow vs ręka w CSV | mała |
+
+### T-AUTO-0 — dokumentacja (P0, przed apply)
+
+| ID | Zadanie | DoD |
+|----|---------|-----|
+| T-AUTO-0 | `[x]` `docs/NOTATKA_DECYZJA_AUTOMATYKA_BATERII_XI_2026.md` | 1 str.: dlaczego skrócony gate; guardrails; rollback (`BATTERY_CONTROL_ENABLED=0`); KPI listopada; **private OK**, public bez `.env`/SN |
+
+### Harmonogram operacyjny (propozycja)
+
+| Tydzień | Co |
+|---------|-----|
+| **1. XI** | Porcje **1–2**: sugestie wieczór + dry-run w logu; **Ty** porównujesz z intuicją |
+| **2. XI** | Porcja **3**: `--apply` tylko `evening` + timer stop |
+| **3. XI** | Porcja **4**: toggle w apce + kill-switch |
+| **XII+** | Porcje **5–6** + kalibracja celu **95–100%** zimą (env / podłoga w kalendarzu) |
+
+### Pliki dotknięte (orientacja)
+
+`src/optimization/battery_advisor.py` (Context) · `battery_control.py` · `api/services/notifications_service.py` · `mlops/generate_battery_suggestions.py` · `mlops/foxess_control.py` · nowe `mlops/evening_battery_*.sh` · `config/launchd/pl.smart-energy-model.evening-battery*.plist` · `api/routers/battery.py` · `mobile/.../battery-settings` · testy `tests/test_battery_*`.
 
 ---
 
@@ -337,8 +383,9 @@ Aktualizuj status w tej tabeli przy domknięciu fazy:
 | 2 Symulator | `[~]` | 2026-07-29 | Backend (T2.1–T2.3) + **UI P0** (T2.4 formularz stawek, T2.5 wykres słupkowy) + **P1** (T2.6 mini tabela kWh, T2.7 netto/brutto VAT, T2.10 przebudowa UX + polski `ion-datetime`) na `/tabs/simulator`. Otwarte P2: T2.8 depozyt, T2.9 prefill z tauron_bills. |
 | 3 ROI | `[~]` | 2026-09-25 | **T3.3** ekran `/tabs/roi` (CAPEX netto, payback, ROI %). Zostaje **T3.4** wykres punktu zwrotu. |
 | 4 Bateria advise + push + shadow (MVP) | `[~]` | 2026-10-16 | Refaktor drill-down T4.25–T4.30 + UX. **T4.8/T4.9** kalendarz kontekstowy `[x]` (oś 3/7 + Home teaser/pasek + wire doradcy). Brak: FCM (T4.22); siatka miesiąca (opcjonalnie); profil domu / obciążenia (backlog — moc AC). |
-| 5 ML advice (bez control) | `[ ]` | | |
-| 6 Sterowanie Fox (po ~roku) | `[ ]` | | poza MVP |
+| 5 ML advice (bez control) | `[~]` | 2026-10-31 | B2 `[x]`; T5.2 / T5.5 otwarte |
+| 6 Sterowanie Fox | `[~]` | 2026-10-31 | **Skrócony gate XI 2026** — sprint §Sprint XI; T6.3 `[x]` |
+| Sprint XI automatyka nocna | `[~]` | 2026-10-31 | **Porcja 1** `[x]` · 2–6 otwarte |
 
 ---
 

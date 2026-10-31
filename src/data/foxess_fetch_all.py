@@ -123,28 +123,57 @@ def _bootstrap_device_from_db(db_path: str) -> bool:
             pass
     return bool(getattr(foxess, 'device_sn', None))
 
-def _retry_api(label: str, fn, *args, max_retries: int = 10, **kwargs):
+def _max_api_retries(override: Optional[int] = None) -> int:
+    """CLI i FastAPI: domyślnie 2 (fail-fast). Stary default 10 dobijał limit 40402."""
+    if override is not None:
+        return max(1, int(override))
+    load_dotenv()
+    return max(1, int(os.getenv('FOXESS_MAX_RETRIES', '2')))
+
+
+def _retry_api(label: str, fn, *args, max_retries: Optional[int] = None, **kwargs):
     """Ponawia wywołanie przy braku odpowiedzi (np. errno 40402 — limit API)."""
-    for attempt in range(max_retries):
+    retries = _max_api_retries(max_retries)
+    for attempt in range(retries):
         result = fn(*args, **kwargs)
         if result is not None and result is not False:
             return result
         wait = min(300, int(15 * (1.5 ** attempt)))
         print(
             f'\n⏳ {label}: limit API FoxESS (40402?) — czekam {wait}s '
-            f'({attempt + 1}/{max_retries})...',
+            f'({attempt + 1}/{retries})...',
             flush=True,
         )
         time.sleep(wait)
     return None
 
 
+def _foxess_timestamps_to_warsaw_naive(series: pd.Series) -> pd.Series:
+    """Czas FoxESS → naiwny czas lokalny Europe/Warsaw.
+
+    Zakres przez zmianę czasu (CEST i CET w jednej ramce) daje mieszane offsety.
+    ``pd.to_datetime`` bez ``utc=True`` zostawia wtedy dtype object i psuje zapis.
+    Offsety sprowadzamy do UTC, potem do ściany zegara w Warszawie.
+    """
+    if pd.api.types.is_datetime64_any_dtype(series):
+        if getattr(series.dt, 'tz', None) is not None:
+            return series.dt.tz_convert('Europe/Warsaw').dt.tz_localize(None)
+        return series
+    cleaned = series.astype(str).str.replace(
+        r'\s+(CEST|CET|BST|UTC)\s*', ' ', regex=True
+    )
+    # Jeden format ISO (+HH:MM, bez spacji), inaczej pandas gubi część wierszy.
+    cleaned = cleaned.str.replace(r'\s*([+-])(\d{2}):?(\d{2})$', r'\1\2:\3', regex=True)
+    has_offset = cleaned.str.contains(r'(?:Z|[+-]\d{2}:\d{2})$', regex=True, na=False)
+    if bool(has_offset.any()):
+        ts = pd.to_datetime(cleaned, errors='coerce', utc=True)
+        return ts.dt.tz_convert('Europe/Warsaw').dt.tz_localize(None)
+    return pd.to_datetime(cleaned, errors='coerce')
+
+
 def _normalize_timestamp_series(series: pd.Series) -> pd.Series:
     """Jednolity format DATETIME dla SQLite (bez stref / duplikatów tekstowych)."""
-    ts = pd.to_datetime(
-        series.astype(str).str.replace(r'\s+(CEST|CET|BST|UTC)\s*', ' ', regex=True),
-        errors='coerce',
-    )
+    ts = _foxess_timestamps_to_warsaw_naive(series)
     return ts.dt.strftime('%Y-%m-%d %H:%M:%S')
 
 
@@ -329,11 +358,9 @@ def _parse_foxess_timestamps(series: pd.Series) -> pd.Series:
     """FoxESS Cloud zwraca czasy z doklejonym skrótem strefy tuż przed offsetem,
     np. '2026-07-28 00:04:00 CEST+0200' — format zależny od strefy czasowej
     kontenera (locale FoxESS-Cloud), którego `pd.to_datetime` nie potrafi
-    rozpoznać wprost. Usuwamy skrót, zostawiając sam offset liczbowy."""
-    return pd.to_datetime(
-        series.astype(str).str.replace(r'\s+(CEST|CET|BST|UTC)\s*', ' ', regex=True),
-        errors='coerce',
-    )
+    rozpoznać wprost. Skrót odpada, offset zostaje, wynik to czas lokalny Warszawy.
+    """
+    return _foxess_timestamps_to_warsaw_naive(series)
 
 
 def history_to_wide(long_df: pd.DataFrame) -> pd.DataFrame:
@@ -416,7 +443,7 @@ def fetch_all(
     db_path: str = 'data/energy_model.db',
     save_csv: bool = True,
     api_delay: Optional[float] = None,
-    max_retries: int = 10,
+    max_retries: Optional[int] = None,
     replace_range: bool = True,
 ) -> dict:
     """
@@ -425,6 +452,10 @@ def fetch_all(
     Returns:
         statystyki importu
     """
+    from src.data.foxess_api_guard import assert_api_allowed
+
+    assert_api_allowed()
+    retries = _max_api_retries(max_retries)
     foxess.api_key = _api_key()
     start, end, total_days = resolve_date_range(start_date, end_date, days)
     delay = _api_delay_sec(api_delay)
@@ -438,7 +469,7 @@ def fetch_all(
     if env_sn:
         foxess.device_sn = env_sn
 
-    device = _retry_api('get_device', foxess.get_device, max_retries=max_retries)
+    device = _retry_api('get_device', foxess.get_device, max_retries=retries)
     if not device:
         raise RuntimeError(
             'Nie można załadować urządzenia (get_device). '
@@ -462,7 +493,7 @@ def fetch_all(
     foxess.device_sn = api_device_sn
     device_sn = _DB_DEVICE_SN_PLACEHOLDER
     print(f'📟 Urządzenie: API OK ({device.get("deviceType", "?")}) → zapis w DB jako {device_sn}')
-    variables = _retry_api('get_vars', foxess.get_vars, max_retries=max_retries)
+    variables = _retry_api('get_vars', foxess.get_vars, max_retries=retries)
     if not variables:
         raise RuntimeError('Brak listy zmiennych (get_vars) — spróbuj ponownie za chwilę.')
 

@@ -187,16 +187,13 @@ export class HomeDataService {
         const timedOut = err?.name === 'TimeoutError';
         const rateLimitMsg = foxRateLimitMessage(err);
         const rateLimited = timedOut || rateLimitMsg !== null;
-        this.sync$.next({
-          ...this.sync$.value,
-          syncing: false,
-          message: rateLimitMsg
-            ?? (timedOut
-              ? 'Synchronizacja z FoxESS trwa długo — możliwy limit API (40402). Spróbuj ponownie za 30–60 min.'
-              : 'Synchronizacja nie powiodła się. Sprawdź połączenie z API.'),
-          messageKind: 'error',
-          rateLimited,
-        });
+        const syncMessage = rateLimitMsg
+          ?? (timedOut
+            ? 'Synchronizacja z FoxESS trwa długo — możliwy limit API (40402). Spróbuj ponownie za 30–60 min.'
+            : 'Synchronizacja nie powiodła się. Sprawdź połączenie z API.');
+        // KPI i lastSyncedAt bierzemy z SQLite przez GET /overview — sync z chmurą Fox może paść
+        // (limit/timeout), a dane w bazie nadal są aktualne.
+        this.refreshOverview(syncMessage, 'error', rateLimited, true);
         return of(null);
       }),
       map(() => this.sync$.value),

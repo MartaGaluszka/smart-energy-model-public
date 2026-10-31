@@ -30,20 +30,21 @@ DEFAULT_AC_POWER_KW = 1.2
 AC_BATTERY_NIGHT_START_HOUR = 18
 AC_MORNING_HOUR = 6
 
-BATTERY_POLICY_TITLE = 'System tylko doradza — automatyka wyłączona (MVP)'
+BATTERY_POLICY_TITLE = 'Doradztwo + stopniowa automatyka (XI 2026)'
 
 BATTERY_POLICY_BODY = (
-    'Mój system na razie tylko doradza i wyświetla powiadomienia na dashboardzie. '
-    'Pokazuje, ile BYŚMY zaoszczędzili, gdybyśmy włączyli automatykę. Dopiero gdy po roku '
-    'testów upewnię się, że algorytm się nie myli, udostępnię przycisk do fizycznego '
-    'sterowania falownikiem.'
+    'System liczy plan ładowania (G12w, prognoza PV, kalendarz domu) i pokazuje sugestie — '
+    'także wieczorem przed oknem 22:00–6:00. Od listopada 2026 walidujemy automatykę na '
+    'produkcji (log, KPI, kill-switch w .env); fizyczne sterowanie falownikiem włączamy '
+    'etapami (najpierw sugestie i dry-run, potem apply w taniej strefie z timerem stop FC). '
+    'Szczegóły: NOTATKA_DECYZJA_AUTOMATYKA_BATERII_XI_2026.md.'
 )
 
 BATTERY_POLICY_REASONS = [
-    'Ryzyko kosztowe przy błędzie algorytmu (ładowanie w droższej strefie, zbędny import).',
-    'Limit i niestabilność API FoxESS; brak dojrzałego OAuth sterowania w produkcie.',
-    'Konieczność zebrania sezonu zimowego i letniego pod walidację shadow vs reality.',
-    'Odpowiedzialność użytkownika / bezpieczeństwo instalacji (opt-in dopiero po dowodach).',
+    'Skrócony gate (2026-10-31): noc bez operatora — reguła B2 zamiast wyłącznie rocznego shadow.',
+    'Guardrails: tylko strefa tania G12w, cap minut FC, timer stop, BATTERY_CONTROL_ENABLED.',
+    'Ryzyko kosztowe nadal realne — zbędny import tanio lub zły stop FC; KPI i rollback opisane w notatce decyzji.',
+    'API FoxESS: limit wywołań, brak OAuth — apply tylko z audit logiem i kill-switch.',
 ]
 
 

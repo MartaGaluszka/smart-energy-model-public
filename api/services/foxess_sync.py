@@ -36,13 +36,15 @@ def sync_range(start: str, end: str) -> dict:
     """Wywołuje `src.data.foxess_fetch_all.fetch_all()` (upsert = idempotentne, §12.1)."""
     from src.data.foxess_fetch_all import fetch_all
 
-    if os.getenv('FOXESS_SYNC_DISABLED', '').strip().lower() in ('1', 'true', 'yes'):
+    from src.data.foxess_api_guard import is_api_paused, pause_message
+
+    if is_api_paused():
         return {
             'status': 'skipped',
             'start': start,
             'end': end,
             'days': 0,
-            'message': 'Sync Fox wyłączony (FOXESS_SYNC_DISABLED) — odczekaj reset limitu 40402.',
+            'message': pause_message(),
         }
 
     settings = get_settings()

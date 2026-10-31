@@ -8,6 +8,7 @@ Użycie:
     ./venv/bin/python mlops/generate_battery_suggestions.py --context morning
     ./venv/bin/python mlops/generate_battery_suggestions.py --context pre_cheap
     ./venv/bin/python mlops/generate_battery_suggestions.py --context peak
+    ./venv/bin/python mlops/generate_battery_suggestions.py --context evening
 """
 
 from __future__ import annotations
@@ -32,8 +33,8 @@ def main() -> int:
     parser.add_argument(
         '--context',
         required=True,
-        choices=['morning', 'pre_cheap', 'peak'],
-        help='morning=5:00, pre_cheap=12:00, peak=16:00',
+        choices=['morning', 'pre_cheap', 'peak', 'evening'],
+        help='morning=5:00, pre_cheap=12:00, peak=16:00, evening=~21:15 (B2 przed 22:00)',
     )
     args = parser.parse_args()
 

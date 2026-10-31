@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -11,10 +12,12 @@ from sqlalchemy.orm import sessionmaker
 from api.db import Base
 from api.models import AdviceEvent, AppUser, Notification
 from api.services.notifications_service import (
+    NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY,
     _pretty_g12w_window,
     generate_suggestions_for_all_users,
     generate_suggestions_for_user,
     list_notifications,
+    maybe_upsert_charge_tonight_cloudy,
     maybe_upsert_cheap_window,
     suggestion_context_for_hour,
 )
@@ -36,6 +39,12 @@ def test_suggestion_context_for_hour():
     assert suggestion_context_for_hour(5) == 'morning'
     assert suggestion_context_for_hour(12) == 'pre_cheap'
     assert suggestion_context_for_hour(16) == 'peak'
+    assert suggestion_context_for_hour(21) == 'evening'
+
+
+def test_suggestion_context_peak_vs_evening_boundary():
+    assert suggestion_context_for_hour(19) == 'peak'
+    assert suggestion_context_for_hour(20) == 'evening'
 
 
 def test_pretty_g12w_window():
@@ -145,6 +154,81 @@ def test_cheap_window_marks_older_unread_as_read():
     assert old.read_at is not None
     assert '13:00' in fresh.title
     assert db.query(Notification).filter(Notification.user_id == user_id, Notification.read_at.is_(None)).count() == 1
+    db.close()
+
+
+@patch('api.services.notifications_service.maybe_upsert_soc16_reserve', return_value=None)
+@patch('api.services.notifications_service.maybe_upsert_charge_tonight_cloudy', return_value=None)
+def test_cheap_window_evening_copy(_cloudy, _soc16):
+    db, user_id = _session()
+    snap = MagicMock(soc_percent=48.0)
+    wait = MagicMock(triggered=False, title='', body='')
+    with (
+        patch('src.optimization.battery_advisor.get_battery_snapshot', return_value=snap),
+        patch('src.optimization.battery_advisor.seasonal_soc_reserve', return_value=20.0),
+        patch('src.optimization.battery_advisor.evaluate_below_reserve_wait_cheap', return_value=wait),
+        patch('src.optimization.battery_advisor.get_day_pv_forecast_sum', return_value=7.0),
+        patch('src.optimization.battery_advisor.get_today_pv_observed_kwh', return_value=None),
+        patch('src.optimization.battery_advisor.next_cheap_window_label', return_value='22–6'),
+        patch(
+            'src.optimization.battery_advisor.format_evening_battery_plan_note',
+            return_value='B2: rozważ FC w taniej strefie.',
+        ),
+        patch('src.optimization.g12w_tariff.is_cheap_zone', return_value=False),
+    ):
+        notif = maybe_upsert_cheap_window(db, user_id, 'evening')
+    assert notif is not None
+    assert 'Plan przed nocą' in notif.title
+    assert '22:00' in notif.title
+    assert 'SoC ~48%' in notif.body
+    assert 'Nocne FC (B2)' in notif.body
+    payload = json.loads(notif.payload_json)
+    assert payload['context'] == 'evening'
+    db.close()
+
+
+@patch('api.services.notifications_service.maybe_upsert_soc16_reserve', return_value=None)
+def test_charge_tonight_not_triggered_marks_stale_b2_read(_soc16):
+    db, user_id = _session()
+    stale = Notification(
+        user_id=user_id,
+        notif_type=NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY,
+        title='Nocne FC',
+        body='stara karta B2',
+        payload_json='{"day":"2026-10-31"}',
+        created_at=datetime.utcnow(),
+        read_at=None,
+    )
+    db.add(stale)
+    db.commit()
+
+    snap = MagicMock(soc_percent=70.0)
+    rule = MagicMock(triggered=False)
+    with (
+        patch('src.optimization.battery_advisor.get_battery_snapshot', return_value=snap),
+        patch('src.optimization.battery_advisor.get_day_pv_forecast_sum', return_value=15.0),
+        patch('src.optimization.battery_advisor.get_day_mean_temp_c', return_value=8.0),
+        patch('src.optimization.battery_advisor.evaluate_charge_tonight_cloudy', return_value=rule),
+        patch('api.services.battery_planner.household_night_flags', return_value={}),
+        patch('api.services.battery_planner.yesterday_had_przetwory', return_value=False),
+    ):
+        out = maybe_upsert_charge_tonight_cloudy(db, user_id)
+    db.refresh(stale)
+    assert out is None
+    assert stale.read_at is not None
+    db.close()
+
+
+@patch('api.services.notifications_service.maybe_upsert_household_context', return_value=None)
+@patch('api.services.notifications_service.maybe_upsert_charge_tonight_cloudy', return_value=MagicMock())
+@patch('api.services.notifications_service.maybe_upsert_cheap_window', return_value=MagicMock())
+def test_evening_skips_soc16_reserve(_cheap, _charge, _hh):
+    db, user_id = _session()
+    with patch('api.services.notifications_service.maybe_upsert_soc16_reserve') as soc16:
+        out = generate_suggestions_for_user(db, user_id, 'evening')
+    soc16.assert_not_called()
+    assert out['context'] == 'evening'
+    assert out['soc_reserve'] is None
     db.close()
 
 

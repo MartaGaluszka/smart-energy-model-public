@@ -40,7 +40,9 @@ function isJwtExpired(token: string, skewSeconds = 30): boolean {
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly baseUrl = resolveApiBaseUrl();
+  private get baseUrl(): string {
+    return resolveApiBaseUrl();
+  }
   /** In-flight login/register — NIE cache'ujemy porażki (API chwilowo down → demo forever). */
   private sessionInFlight$: Observable<string | null> | null = null;
 

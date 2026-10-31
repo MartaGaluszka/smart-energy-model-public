@@ -175,7 +175,9 @@ def foxess_sync_ranges(refresh_today: bool = True) -> list[tuple[str, str]]:
 
 def foxess_sync_disabled() -> bool:
     """Pauza sync FoxESS (np. po 40402) — pogoda/prognoza działają bez API Fox."""
-    return os.getenv('FOXESS_SYNC_DISABLED', '').strip().lower() in ('1', 'true', 'yes', 'on')
+    from src.data.foxess_api_guard import is_api_paused
+
+    return is_api_paused()
 
 
 def sync_foxess(
@@ -188,8 +190,8 @@ def sync_foxess(
     if foxess_sync_disabled():
         print('\n🔋 FoxESS')
         print(
-            '   ⏸️  FOXESS_SYNC_DISABLED=1 — pomijam wywołania API '
-            '(odczekaj ~24h limitu; użyj plant CSV / --skip-sync).'
+            '   ⏸️  Pauza FoxESS API — pomijam wywołania '
+            '(odczekaj koniec blokady; użyj plant CSV / --skip-sync).'
         )
         return True
     if save_csv is None:

@@ -322,9 +322,12 @@ export interface SimulateBillResponse {
  */
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly baseUrl = resolveApiBaseUrl();
-
   constructor(private readonly http: HttpClient, private readonly auth: AuthService) {}
+
+  /** Na nowo co wywołanie — IP LAN / build:sim mogły się zmienić bez restartu bundla. */
+  private get baseUrl(): string {
+    return resolveApiBaseUrl();
+  }
 
   /** Dołącza JWT i, po wygaśnięciu access tokena (401), próbuje raz odświeżyć sesję i powtórzyć wywołanie. */
   private authed<T>(request: (token: string) => Observable<T>): Observable<T> {

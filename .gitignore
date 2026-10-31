@@ -13,12 +13,12 @@ build/
 .ipynb_checkpoints
 *.ipynb_checkpoints/
 
-# Environment variables / secrets
+# Environment variables
 .env
 .env.local
 .streamlit/credentials.toml
 
-# Database (dane instalacji — nie publikować)
+# Database
 *.db
 *.db-shm
 *.db-wal
@@ -26,36 +26,46 @@ build/
 *.sqlite
 *.sqlite3
 
-# Data files (mogą zawierać dane osobowe / produkcję PV)
-data/raw/*
-data/processed/*
+# Data files (mogą zawierać dane osobowe)
+data/raw/*.csv
+data/raw/*.xlsx
+data/raw/*.xls
+data/processed/*.csv
 data/*.db
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-data/photos/
+data/.foxess_api_pause_until
 
-# IDE / OS
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# macOS
 .DS_Store
 .matplotlib_cache/
-.pytest_cache/
 
-# Logs / temp
+# Logs
 *.log
 logs/
+
+# Temporary files
 *.tmp
 tmp/
+.env
+__pycache__/
+*.ipynb_checkpoints/
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
 
 # Saved ML models (local artifacts)
 models/*.joblib
 models/*.metadata.json
 !models/.gitkeep
 
-# MLflow
+# MLflow — lokalne śledzenie eksperymentów (Lekcja 39), nie commitować (duże, per-maszyna)
 mlruns/
 mlartifacts/
 
@@ -63,12 +73,13 @@ mlartifacts/
 reports/figures/*
 !reports/figures/.gitkeep
 
-# Materiały prywatne na obronę (nie w kopii publicznej)
+# Obserwacje pogodowe — zdjęcia lokalnie; w repo tylko opisy tekstowe (PHOTO_METADATA / CSV)
+data/photos/
+# Ściąga prezentacji (lokalna, nie na GitHub)
 docs/SCIAG_PREZENTACJA_ZALICZENIE.md
-docs/NOTATKA_OBRONA_*.md
-docs/PLAN_DYPLOM_CHECKLIST.md
 
-# Sekrety / certyfikaty
+# Sekrety / certyfikaty podpisywania (backend api/, iOS w mobile/) — na wszelki wypadek,
+# gdyby ktoś kiedyś dorzucił realny klucz/cert zamiast trzymać go poza repo.
 *.pem
 *.p12
 *.pfx
@@ -77,12 +88,7 @@ docs/PLAN_DYPLOM_CHECKLIST.md
 *.jks
 *.keystore
 
-# Mobile local / build
+# Xcode — dane per-użytkownik (bywają w nich lokalne ścieżki bezwzględne)
 **/xcuserdata/
 mobile/GoogleService-Info.plist
 mobile/android/app/google-services.json
-mobile/node_modules/
-mobile/.angular/
-mobile/www/
-mobile/android/
-mobile/ios/

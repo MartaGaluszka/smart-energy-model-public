@@ -12,6 +12,7 @@ import {
   BatterySuggestionResponse,
   HouseholdEventDto,
 } from '../services/api.service';
+import { resolveApiBaseUrl } from '../services/api-base-url';
 import { HomeDataService, HomeKpi, SyncStatus, Suggestion } from '../services/home-data.service';
 import { BatteryStateService } from '../battery/services/battery-state.service';
 import { eventTypeDef } from '../household/household.types';
@@ -36,6 +37,9 @@ export interface HomeCalendarDay {
 })
 export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter {
   @ViewChild('planCanvas') private canvasRef?: ElementRef<HTMLCanvasElement>;
+
+  /** Do komunikatu offline (Home + Sync). */
+  readonly devApiUrl = (): string => resolveApiBaseUrl();
 
   kpi$!: Observable<HomeKpi | null>;
   sync$!: Observable<SyncStatus>;

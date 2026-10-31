@@ -71,19 +71,20 @@
 
     <ion-card class="se-card">
       <ion-card-header>
-        <ion-card-title class="se-more__subtitle">Polityka doradczo-only</ion-card-title>
+        <ion-card-title class="se-more__subtitle">Polityka baterii (XI 2026)</ion-card-title>
       </ion-card-header>
       <ion-card-content>
         <p class="se-more__text">
-          Mój system na razie tylko doradza i wyświetla powiadomienia na dashboardzie. Pokazuje, ile
-          BYŚMY zaoszczędzili, gdybyśmy włączyli automatykę. Dopiero gdy po roku testów upewnię się,
-          że algorytm się nie myli, udostępnię przycisk do fizycznego sterowania falownikiem.
+          System doradza i pokazuje sugestie na dashboardzie (w tym plan przed nocą ~21:15).
+          Automatyka nocna B2 w strefie taniej G12w jest wdrażana etapami — najpierw log i KPI
+          listopada, potem apply z limitem minut i kill-switch w konfiguracji serwera.
+          Szczegóły i guardrails: karta Bateria → polityka z API.
         </p>
         <ul class="se-more__list">
-          <li>Ryzyko kosztowe przy błędzie algorytmu (ładowanie w droższej strefie).</li>
-          <li>Limit i niestabilność API FoxESS; brak dojrzałego OAuth sterowania.</li>
-          <li>Konieczność zebrania sezonu zimowego i letniego do walidacji.</li>
-          <li>Odpowiedzialność użytkownika — opt-in dopiero po dowodach.</li>
+          <li>Ryzyko kosztowe przy błędzie (ładowanie poza strefą 2).</li>
+          <li>Limit i niestabilność API FoxESS — apply tylko z guardrails.</li>
+          <li>Walidacja na produkcji (min SoC rano, Tauron), nie rok shadow-only.</li>
+          <li>Sterowanie falownikiem — opt-in; domyślnie nadal doradztwo.</li>
         </ul>
       </ion-card-content>
     </ion-card>

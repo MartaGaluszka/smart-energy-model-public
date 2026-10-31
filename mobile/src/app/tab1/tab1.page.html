@@ -52,8 +52,10 @@
     <ion-card class="se-card se-offline-hint" *ngIf="(sync$ | async)?.offline">
       <ion-card-content>
         <p class="se-offline-hint__text">
-          Brak połączenia z API na Macu. Po restarcie / braku prądu poczekaj chwilę
-          albo uruchom: <code>docker compose up -d db api</code>
+          Brak połączenia z API na Macu (<code>{{ devApiUrl() }}</code>).
+          Uruchom backend: <code>docker compose up -d db api</code>
+          (dane Fox/pogoda z <code>data/energy_model.db</code>).
+          Po zmianie Wi‑Fi: <code>npm run build:sim</code> w <code>mobile/</code>.
         </p>
         <ion-button fill="outline" size="small" (click)="homeData.refreshAll(true)">
           Spróbuj ponownie

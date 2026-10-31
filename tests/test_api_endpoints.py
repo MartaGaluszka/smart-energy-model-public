@@ -40,8 +40,10 @@ def test_battery_policy_automation_disabled(client, auth_headers):
     assert response.status_code == 200
     data = response.json()
     assert data['automation_enabled'] is False
-    assert data['title']
+    assert 'XI 2026' in data['title']
+    assert 'NOTATKA_DECYZJA_AUTOMATYKA_BATERII' in data['body']
     assert isinstance(data['reasons'], list)
+    assert len(data['reasons']) >= 3
 
 
 def test_battery_suggestion_advise_only(client, auth_headers):

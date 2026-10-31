@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ViewWillEnter } from '@ionic/angular';
 import { Observable } from 'rxjs';
+import { resolveApiBaseUrl } from '../services/api-base-url';
 import { HomeDataService, SyncStatus } from '../services/home-data.service';
 
 @Component({
@@ -10,6 +11,8 @@ import { HomeDataService, SyncStatus } from '../services/home-data.service';
   standalone: false,
 })
 export class Tab2Page implements OnInit, ViewWillEnter {
+  readonly devApiUrl = (): string => resolveApiBaseUrl();
+
   sync$!: Observable<SyncStatus>;
 
   constructor(readonly homeData: HomeDataService) {}

@@ -5,7 +5,7 @@ T4.20: generator (cron + GET) upsertuje na dzień:
 - charge_tonight_cloudy — B2 (T+PV → FC 22–6),
 - soc_reserve — BAT.3 (SoC@16).
 
-Cron: mlops/generate_battery_suggestions.py (daily/midday/peak).
+Cron: mlops/generate_battery_suggestions.py (daily/midday/peak/evening).
 GET /notifications woła ten sam generator dla bieżącego użytkownika.
 
 Wszystkie treści są doradcze — nigdy „wykonano automatycznie” (§9.6, T4.24).
@@ -47,7 +47,7 @@ _HOUSEHOLD_INSIGHT_KWH = {
     'podlogowka': 1.2,
 }
 
-SuggestionContext = Literal['morning', 'pre_cheap', 'peak']
+SuggestionContext = Literal['morning', 'pre_cheap', 'peak', 'evening']
 
 
 def suggestion_context_for_hour(hour: int | None = None) -> SuggestionContext:
@@ -56,7 +56,9 @@ def suggestion_context_for_hour(hour: int | None = None) -> SuggestionContext:
         return 'morning'
     if h < 15:
         return 'pre_cheap'
-    return 'peak'
+    if h < 20:
+        return 'peak'
+    return 'evening'
 
 
 def _pretty_g12w_window(label: str) -> str:
@@ -235,6 +237,14 @@ def maybe_upsert_cheap_window(
             f' (do 13:00 ~{today_pv_until_13:.0f} kWh). '
             'Jeśli SoC jest niski, rozważ doładowanie z sieci.'
         )
+    elif context == 'evening':
+        soc_txt = f'{snap.soc_percent:.0f}%' if snap.soc_percent is not None else '—'
+        title = f'🔔 Plan przed nocą ({window})'
+        body = (
+            f'SoC ~{soc_txt} · jutro PV ~{tomorrow_pv:.0f} kWh. '
+            f'{evening_note} '
+            'Szczegół: karta „Nocne FC (B2)” poniżej.'
+        )
     else:
         if 'cała doba tanio' in nxt:
             title = '🔔 Weekendowa strefa całodobowa'
@@ -323,6 +333,7 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
         floor_heating_kwh=float(hh.get('floor_heating_kwh') or 0.0) or None,
     )
     if not rule.triggered:
+        _mark_unread_type_read(db, user_id, NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY)
         return None
 
     day_key = as_of.date().isoformat()
@@ -512,14 +523,26 @@ def generate_suggestions_for_user(
     user_id: int,
     context: SuggestionContext | None = None,
 ) -> dict:
-    """T4.20: jeden przebieg generatora. Woła go cron (rano, południe, szczyt), nie odczyt listy."""
+    """T4.20: jeden przebieg generatora. Woła go cron (rano, południe, szczyt, wieczór)."""
     ctx = context or suggestion_context_for_hour()
+    cheap = maybe_upsert_cheap_window(db, user_id, ctx)
+    charge = maybe_upsert_charge_tonight_cloudy(db, user_id)
+    household = maybe_upsert_household_context(db, user_id)
+    if ctx == 'evening':
+        # BAT.3 @16 jest już po szczycie; wieczorem liczy się B2 (22–6).
+        return {
+            'context': ctx,
+            'cheap_window': cheap,
+            'charge_tonight_cloudy': charge,
+            'soc_reserve': None,
+            'household_context': household,
+        }
     return {
         'context': ctx,
-        'cheap_window': maybe_upsert_cheap_window(db, user_id, ctx),
-        'charge_tonight_cloudy': maybe_upsert_charge_tonight_cloudy(db, user_id),
+        'cheap_window': cheap,
+        'charge_tonight_cloudy': charge,
         'soc_reserve': maybe_upsert_soc16_reserve(db, user_id),
-        'household_context': maybe_upsert_household_context(db, user_id),
+        'household_context': household,
     }
 
 
