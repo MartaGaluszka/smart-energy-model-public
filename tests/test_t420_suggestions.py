@@ -222,6 +222,20 @@ def test_charge_tonight_not_triggered_marks_stale_b2_read(_soc16):
 @patch('api.services.notifications_service.maybe_upsert_household_context', return_value=None)
 @patch('api.services.notifications_service.maybe_upsert_charge_tonight_cloudy', return_value=MagicMock())
 @patch('api.services.notifications_service.maybe_upsert_cheap_window', return_value=MagicMock())
+@patch('api.services.notifications_service.maybe_upsert_soc16_reserve', return_value=MagicMock())
+def test_generate_for_all_users_evening_never_counts_soc16(_soc16, _cheap, _charge, _hh):
+    db, user_id = _session()
+    summary = generate_suggestions_for_all_users(db, 'evening')
+    assert summary['context'] == 'evening'
+    assert summary['users'] == 1
+    assert summary['soc_reserve'] == 0
+    _soc16.assert_not_called()
+    db.close()
+
+
+@patch('api.services.notifications_service.maybe_upsert_household_context', return_value=None)
+@patch('api.services.notifications_service.maybe_upsert_charge_tonight_cloudy', return_value=MagicMock())
+@patch('api.services.notifications_service.maybe_upsert_cheap_window', return_value=MagicMock())
 def test_evening_skips_soc16_reserve(_cheap, _charge, _hh):
     db, user_id = _session()
     with patch('api.services.notifications_service.maybe_upsert_soc16_reserve') as soc16:

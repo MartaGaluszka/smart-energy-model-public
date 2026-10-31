@@ -9,11 +9,11 @@ from src.optimization.battery_advisor import (
     BatteryAdvice,
     BatterySnapshot,
     ChargeTonightCloudyRule,
-    Context,
     PvOutlook,
     advise,
 )
-from src.optimization.battery_control import build_plan, evening_apply_allowed
+from src.optimization.battery_advisor import format_advice
+from src.optimization.battery_control import build_plan, evening_apply_allowed, format_plan, plan_and_run
 
 
 def _pv() -> PvOutlook:
@@ -144,6 +144,82 @@ def test_advise_evening_uses_b2_rule(_eval, _t, _pv_sum, _pv_out, _snap):
     _eval.assert_called_once()
 
 
-def test_evening_context_in_advisor_literal():
-    ctx: Context = 'evening'
-    assert ctx == 'evening'
+@patch('src.optimization.battery_advisor.get_battery_snapshot')
+@patch('src.optimization.battery_advisor.get_pv_outlook')
+@patch('src.optimization.battery_advisor.get_day_pv_forecast_sum', return_value=15.0)
+@patch('src.optimization.battery_advisor.get_day_mean_temp_c', return_value=5.0)
+@patch('src.optimization.battery_advisor.evaluate_charge_tonight_cloudy')
+def test_advise_evening_pomin_when_b2_not_triggered(_eval, _t, _pv_sum, _pv_out, _snap):
+    _snap.return_value = BatterySnapshot(None, 72.0, None, None, None, None)
+    _pv_out.return_value = _pv()
+    _eval.return_value = ChargeTonightCloudyRule(
+        triggered=False,
+        soc_percent=72.0,
+        tomorrow_pv_kwh=15.0,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='',
+        title='',
+        body='',
+        skip_reason='Jutro dużo PV',
+    )
+    advice = advise('evening', as_of=datetime(2026, 11, 3, 21, 15))
+    assert advice.recommendation == 'POMIŃ NOCNE FC (B2)'
+    assert advice.charge_tonight is not None
+    assert advice.charge_tonight.triggered is False
+    assert 'Jutro dużo PV' in advice.action
+
+
+def test_format_advice_and_plan_evening_labels():
+    rule = ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=43.0,
+        tomorrow_pv_kwh=11.0,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='',
+        body='',
+        target_soc_percent=90.0,
+        fc_minutes=30.0,
+    )
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 21, 15), rule=rule)
+    plan = build_plan(advice)
+    assert 'WIECZÓR' in format_advice(advice)
+    rendered = format_plan(advice, plan, [])
+    assert 'WIECZÓR' in rendered or 'B2' in rendered
+    assert plan.context == 'evening'
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+@patch('src.optimization.battery_advisor.get_battery_snapshot')
+@patch('src.optimization.battery_advisor.get_pv_outlook')
+@patch('src.optimization.battery_advisor.get_day_pv_forecast_sum', return_value=11.0)
+@patch('src.optimization.battery_advisor.get_day_mean_temp_c', return_value=2.0)
+@patch('src.optimization.battery_advisor.evaluate_charge_tonight_cloudy')
+def test_plan_and_run_evening_dry_run(_eval, _t, _pv_sum, _pv_out, _snap, _fox):
+    _snap.return_value = BatterySnapshot(None, 43.0, None, None, None, None)
+    _pv_out.return_value = _pv()
+    _eval.return_value = ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=43.0,
+        tomorrow_pv_kwh=11.0,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='',
+        body='',
+        target_soc_percent=90.0,
+        fc_minutes=30.0,
+    )
+    _fox.return_value.read_state.side_effect = ValueError('no fox in test')
+    advice, plan, results = plan_and_run(
+        'evening',
+        as_of=datetime(2026, 11, 3, 21, 15),
+        dry_run=True,
+        read_state=True,
+    )
+    assert advice.context == 'evening'
+    assert plan.context == 'evening'
+    assert results == []
+    assert any('FoxESS' in n for n in plan.notes)

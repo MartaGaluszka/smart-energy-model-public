@@ -27,3 +27,11 @@ def test_sync_disabled_env(monkeypatch):
     monkeypatch.setenv('FOXESS_SYNC_DISABLED', '1')
     monkeypatch.delenv('FOXESS_SYNC_PAUSED_UNTIL', raising=False)
     assert is_api_paused()
+
+
+def test_pause_message_mentions_guard(monkeypatch):
+    from src.data.foxess_api_guard import pause_message
+
+    monkeypatch.setenv('FOXESS_SYNC_DISABLED', '1')
+    msg = pause_message()
+    assert 'FOXESS' in msg.upper() or 'sync' in msg.lower()
