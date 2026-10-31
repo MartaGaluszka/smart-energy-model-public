@@ -35,7 +35,9 @@ export interface HomeCalendarDay {
   styleUrls: ['tab1.page.scss'],
   standalone: false,
 })
-export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter {
+export class Tab1Page implements AfterViewInit, OnInit, OnDestroy, ViewWillEnter {
+  nightControlBusy = false;
+  nightControlDetail = '';
   @ViewChild('planCanvas') private canvasRef?: ElementRef<HTMLCanvasElement>;
 
   /** Do komunikatu offline (Home + Sync). */
@@ -521,5 +523,28 @@ export class Tab1Page implements OnInit, AfterViewInit, OnDestroy, ViewWillEnter
     if (!dayIso) return '';
     const [, month, day] = dayIso.split('-');
     return `${day}.${month}`;
+  }
+
+  onNightPreview(): void {
+    this.runNightControl('dry-run');
+  }
+
+  onNightApply(): void {
+    this.runNightControl('apply');
+  }
+
+  private runNightControl(action: 'dry-run' | 'apply'): void {
+    this.nightControlBusy = true;
+    const req = action === 'apply' ? this.api.postBatteryControlApply() : this.api.postBatteryControlDryRun();
+    req.subscribe({
+      next: (row) => {
+        this.nightControlBusy = false;
+        this.nightControlDetail = row.detail;
+      },
+      error: () => {
+        this.nightControlBusy = false;
+        this.nightControlDetail = 'Nie udało się wykonać planu nocnego.';
+      },
+    });
   }
 }

@@ -33,10 +33,11 @@ class BatterySettingsResponse(BaseModel):
     ac_power_kw: float | None = None
     fc_max_minutes: float = 15.0
     fc_night_start_hour: int = 22
+    battery_automation_enabled: bool = False
     recommended_fc_max_minutes: float = 15.0
     schedule_windows: list[BatteryScheduleWindow] = Field(default_factory=list)
     schedule_max_windows: int = 8
-    schedule_preset: str = 'g12w'
+    schedule_preset: str = Field(default='g12w')
 
 
 class BatterySettingsUpdate(BaseModel):
@@ -50,8 +51,9 @@ class BatterySettingsUpdate(BaseModel):
     ac_power_kw: float | None = None
     fc_max_minutes: float = 15.0
     fc_night_start_hour: int = 22
+    battery_automation_enabled: bool = False
     schedule_windows: list[BatteryScheduleWindow] = Field(default_factory=list)
-    schedule_preset: str = 'g12w'
+    schedule_preset: str = Field(default='g12w')
 
 class BatteryPlanHour(BaseModel):
     hour: int
@@ -150,9 +152,18 @@ class AcRuntimeResponse(BaseModel):
     battery_covers_from: str
     ac_power_kw: float
     show_card: bool = False
-    ac_day: bool = False
+    ac_day: bool = Field(default=False)
     soc_now_percent: float | None
     soc_min_morning_percent: float
     battery_capacity_kwh: float
     efficiency_pct: float
     note: str
+
+
+class BatteryControlResponse(BaseModel):
+    action: str
+    allowed: bool
+    dry_run: bool
+    detail: str
+    recommendation: str = ''
+    notes: list[str] = Field(default_factory=list)

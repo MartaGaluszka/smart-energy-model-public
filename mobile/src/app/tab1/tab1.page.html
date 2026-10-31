@@ -12,9 +12,19 @@
 
     <ion-card class="se-card se-banner se-banner--global">
       <ion-card-content>
-        <p class="se-banner__text">
-          💡 Tryb doradczy: System nie steruje falownikiem. Przycisk sterowania odblokujemy po walidacji algorytmu.
+        <p class="se-banner__text" *ngIf="batteryState.state()?.battery_automation_enabled">
+        Automatyka nocna włączona.
         </p>
+        <p class="se-banner__text" *ngIf="!batteryState.state()?.battery_automation_enabled">
+        💡 Tryb doradczy: System nie steruje falownikiem. Przycisk sterowania odblokujemy po walidacji algorytmu.
+        </p>
+        <ion-button *ngIf="batteryState.state()?.battery_automation_enabled" fill="outline" size="small" (click)="onNightPreview()" [disabled]="nightControlBusy">
+        Plan nocny
+        </ion-button>
+        <ion-button *ngIf="batteryState.state()?.battery_automation_enabled" size="small" (click)="onNightApply()" [disabled]="nightControlBusy">
+        Wyślij do Fox
+        </ion-button>
+        <p class="se-banner__text" *ngIf="nightControlDetail">{{ nightControlDetail }}</p>
       </ion-card-content>
     </ion-card>
 

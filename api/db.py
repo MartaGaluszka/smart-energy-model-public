@@ -67,6 +67,7 @@ def _ensure_battery_strategy_columns() -> None:
         ('fc_night_start_hour', 'INTEGER DEFAULT 22'),
         ('schedule_windows_json', 'TEXT'),
         ('schedule_preset', "VARCHAR(10) DEFAULT 'g12w'"),
+        ('battery_automation_enabled', 'BOOLEAN DEFAULT 0'),
     ]
     with engine.begin() as conn:
         if url.startswith('sqlite'):
@@ -81,10 +82,15 @@ def _ensure_battery_strategy_columns() -> None:
                     )
             return
         for col, col_type in alters:
+            pg_type = (
+                'BOOLEAN NOT NULL DEFAULT FALSE'
+                if col == 'battery_automation_enabled'
+                else col_type
+            )
             conn.execute(
                 text(
                     f'ALTER TABLE battery_strategy_settings '
-                    f'ADD COLUMN IF NOT EXISTS {col} {col_type}'
+                    f'ADD COLUMN IF NOT EXISTS {col} {pg_type}'
                 )
             )
 

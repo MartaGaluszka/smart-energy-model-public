@@ -11,7 +11,7 @@ type SeasonMode = 'auto' | 'summer' | 'autumn' | 'spring' | 'winter';
 })
 export class BatterySettingsPage {
   /** Ostatnia kalibracja round-trip z liczników FoxESS (25–26.08.2026). */
-  readonly efficiencyCalibrationLabel = '08.2026';
+  readonly efficiencyCalibrationLabel = "08.2026";
   readonly efficiencyNextReviewLabel = '08.2027';
 
   readonly seasonOptions: { value: SeasonMode; label: string }[] = [
@@ -77,5 +77,9 @@ export class BatterySettingsPage {
       soc_min_percent: rec,
       soc_reserve_percent: rec,
     });
+  }
+
+  onAutomationChange(enabled: boolean): void {
+    this.stateService.updateSettings({ battery_automation_enabled: enabled });
   }
 }

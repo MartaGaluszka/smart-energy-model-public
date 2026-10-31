@@ -62,7 +62,8 @@ export class BatteryStateService {
       JSON.stringify(current.schedule_windows) !== JSON.stringify(saved.schedule_windows) ||
       current.schedule_preset !== saved.schedule_preset ||
       current.price_zone1 !== saved.price_zone1 ||
-      current.price_zone2 !== saved.price_zone2
+      current.price_zone2 !== saved.price_zone2 ||
+      current.battery_automation_enabled !== saved.battery_automation_enabled
     );
   });
 
@@ -132,19 +133,20 @@ export class BatteryStateService {
 
     // Konwersja BatterySettingsResponse → BatterySettingsUpdate
     const body: BatterySettingsUpdate = {
-      soc_min_percent: current.soc_min_percent,
-      soc_target_percent: current.soc_target_percent,
-      efficiency_pct: current.efficiency_pct,
-      battery_capacity_kwh: current.battery_capacity_kwh,
-      season: current.season,
-      ac_power_kw: current.ac_power_kw,
-      fc_max_minutes: current.fc_max_minutes,
-      fc_night_start_hour: current.fc_night_start_hour,
-      schedule_windows: current.schedule_windows,
-      schedule_preset: current.schedule_preset,
-      price_zone1: current.price_zone1,
-      price_zone2: current.price_zone2,
-    };
+          soc_min_percent: current.soc_min_percent,
+          soc_target_percent: current.soc_target_percent,
+          efficiency_pct: current.efficiency_pct,
+          battery_capacity_kwh: current.battery_capacity_kwh,
+          season: current.season,
+          ac_power_kw: current.ac_power_kw,
+          fc_max_minutes: current.fc_max_minutes,
+          fc_night_start_hour: current.fc_night_start_hour,
+          schedule_windows: current.schedule_windows,
+          schedule_preset: current.schedule_preset,
+          price_zone1: current.price_zone1,
+          price_zone2: current.price_zone2 ?? null,
+          battery_automation_enabled: current.battery_automation_enabled,
+        }
 
     return this.api.updateBatterySettings(body).pipe(
       tap({

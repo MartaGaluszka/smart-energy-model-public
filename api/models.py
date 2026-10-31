@@ -134,12 +134,28 @@ class BatteryStrategySettings(Base):
     # Preferencje bloku doładowania nocnego (plan SE, advise-only).
     fc_max_minutes: Mapped[float] = mapped_column(Float, default=15.0, nullable=False)
     fc_night_start_hour: Mapped[int] = mapped_column(Integer, default=22, nullable=False)
+    battery_automation_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Plan dnia SE (JSON) + opcjonalny preset taryfy (g11/g12w/g13/custom) — uniwersalny edytor.
     schedule_windows_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     schedule_preset: Mapped[str] = mapped_column(String(10), default='g12w', nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
+
+
+class BatteryControlAudit(Base):
+    """Audit żądań POST /battery/control (T6.2c)."""
+
+    __tablename__ = 'battery_control_audit'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey('app_users.id', ondelete='CASCADE'), nullable=False, index=True
+    )
+    action: Mapped[str] = mapped_column(String(16), nullable=False)
+    allowed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    detail: Mapped[str] = mapped_column(Text, default='', nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class Notification(Base):

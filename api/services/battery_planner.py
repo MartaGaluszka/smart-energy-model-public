@@ -921,10 +921,11 @@ def settings_payload(settings_row, d: date | None = None) -> dict:
         'ac_power_kw': settings_row.ac_power_kw,
         'fc_max_minutes': effective_fc_max(settings_row, resolved),
         'fc_night_start_hour': _settings_night_start(settings_row),
+        'battery_automation_enabled': bool(getattr(settings_row, 'battery_automation_enabled', False)),
         'recommended_fc_max_minutes': recommended_fc_max_minutes_for(resolved),
         'schedule_windows': schedule_windows_from_settings(settings_row),
         'schedule_max_windows': SCHEDULE_MAX_WINDOWS,
-        'schedule_preset': getattr(settings_row, 'schedule_preset', None) or 'g12w',
+        'schedule_preset': getattr(settings_row, 'schedule_preset', None) or "g12w",
     }
 
 

@@ -104,9 +104,10 @@
           <span class="se-battery-page__fixed-tag">kalibracja {{ efficiencyCalibrationLabel }}</span>
         </p>
         <p class="se-battery-page__slider-note">
-          Z liczników FoxESS (~15 mies.): Δ rozładowanie / Δ ładowanie ≈ 92,7% → w apce 93%.
-          Następny przegląd: {{ efficiencyNextReviewLabel }}. Nie mierzymy na żywo co dzień.
+        Z liczników FoxESS (~15 mies.): Δ rozładowanie / Δ ładowanie ≈ 92,7% → w apce 93%.
+        Następny przegląd: {{ efficiencyNextReviewLabel }}. Nie mierzymy na żywo co dzień.
         </p>
+        <ion-toggle [checked]="!!state.battery_automation_enabled" (ionChange)="onAutomationChange($any($event.detail.checked))">Automatyka nocna</ion-toggle>
       </div>
     </ion-card-content>
   </ion-card>

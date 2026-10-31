@@ -544,4 +544,52 @@ def test_battery_settings_put_schedule_roundtrip(client, auth_headers):
     again = get.json()
     assert again['schedule_windows'][2]['start'] == '06:00'
     assert again['schedule_windows'][2]['enabled'] is True
-    assert again['schedule_max_windows'] == 8
+    assert again['schedule_max_windows'] == 8 and again['battery_automation_enabled'] is False
+
+
+def test_battery_automation_flag_and_control(client, auth_headers, monkeypatch):
+    """T6.1 flaga użytkownika; T6.2c dry-run bez Fox i apply zablokowane bez hosta."""
+    from api.routers import battery as battery_router
+
+    try:
+        got = client.get('/api/v1/battery/settings', headers=auth_headers)
+        assert got.status_code == 200
+        assert got.json()['battery_automation_enabled'] is False
+
+        off = client.post('/api/v1/battery/control/apply', headers=auth_headers)
+        assert off.status_code == 200, off.text
+        assert off.json()['allowed'] is False
+        assert 'wyłączona' in off.json()['detail']
+
+        put = client.put(
+            '/api/v1/battery/settings',
+            json={'battery_automation_enabled': True},
+            headers=auth_headers,
+        )
+        assert put.status_code == 200, put.text
+        assert put.json()['battery_automation_enabled'] is True
+
+        monkeypatch.delenv('BATTERY_CONTROL_ENABLED', raising=False)
+        denied = client.post('/api/v1/battery/control/apply', headers=auth_headers)
+        assert denied.status_code == 200, denied.text
+        assert denied.json()['allowed'] is False
+        assert 'BATTERY_CONTROL_ENABLED' in denied.json()['detail']
+
+        class _Plan:
+            notes = []
+            recommendation = 'POMIŃ'
+
+        monkeypatch.setattr(battery_router, '_evening_preview', lambda: (None, _Plan()))
+        dry = client.post('/api/v1/battery/control/dry-run', headers=auth_headers)
+        assert dry.status_code == 200, dry.text
+        body = dry.json()
+        assert body['action'] == 'dry_run'
+        assert body['allowed'] is True
+        assert body['dry_run'] is True
+    finally:
+        client.put(
+            '/api/v1/battery/settings',
+            json={'battery_automation_enabled': False},
+            headers=auth_headers,
+        )
+

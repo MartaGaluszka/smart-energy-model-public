@@ -100,6 +100,7 @@ export interface BatterySettingsResponse {
   ac_power_kw: number | null;
   fc_max_minutes: number;
   fc_night_start_hour: number;
+  battery_automation_enabled: boolean;
   recommended_fc_max_minutes: number;
   schedule_windows: BatteryScheduleWindow[];
   schedule_max_windows: number;
@@ -118,6 +119,7 @@ export type BatterySettingsUpdate = Partial<{
   ac_power_kw: number | null;
   fc_max_minutes: number;
   fc_night_start_hour: number;
+  battery_automation_enabled: boolean;
   schedule_windows: BatteryScheduleWindow[];
   schedule_preset: string;
 }>;
@@ -320,7 +322,7 @@ export interface SimulateBillResponse {
  * Wszystkie wywołania czekają na sesję JWT (AuthService.ensureSession) i dołączają
  * nagłówek Authorization automatycznie.
  */
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class ApiService {
   constructor(private readonly http: HttpClient, private readonly auth: AuthService) {}
 
@@ -600,6 +602,22 @@ export class ApiService {
         { period_start: periodStart, period_end: periodEnd },
         { headers: { Authorization: `Bearer ${token}` } },
       ),
+    );
+  }
+
+  postBatteryControlDryRun(): Observable<{ action: string; allowed: boolean; dry_run: boolean; detail: string; recommendation: string; notes: string[] }> {
+    return this.authed((token) =>
+      this.http.post<{ action: string; allowed: boolean; dry_run: boolean; detail: string; recommendation: string; notes: string[] }>(`${this.baseUrl}/api/v1/battery/control/dry-run`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  postBatteryControlApply(): Observable<{ action: string; allowed: boolean; dry_run: boolean; detail: string; recommendation: string; notes: string[] }> {
+    return this.authed((token) =>
+      this.http.post<{ action: string; allowed: boolean; dry_run: boolean; detail: string; recommendation: string; notes: string[] }>(`${this.baseUrl}/api/v1/battery/control/apply`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     );
   }
 }
