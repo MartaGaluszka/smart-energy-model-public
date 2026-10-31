@@ -1556,21 +1556,26 @@ def get_winter_night_load_stats(
         return 2.0, 4.0
 
     conn = sqlite3.connect(db_path)
-    row = conn.execute(
-        '''
-        SELECT AVG(load_power_kw), MAX(load_power_kw)
-        FROM foxess_data
-        WHERE date(timestamp) >= date('now', ?)
-          AND CAST(strftime('%H', timestamp) AS INTEGER) BETWEEN 1 AND 5
-          AND load_power_kw IS NOT NULL
-          AND load_power_kw > 0.2
-        ''',
-        (f'-{lookback_days} days',),
-    ).fetchone()
+    try:
+        row = conn.execute(
+            '''
+            SELECT AVG(load_power_kw), MAX(load_power_kw)
+            FROM foxess_data
+            WHERE date(timestamp) >= date('now', ?)
+              AND CAST(strftime('%H', timestamp) AS INTEGER) BETWEEN 1 AND 5
+              AND load_power_kw IS NOT NULL
+              AND load_power_kw > 0.2
+            ''',
+            (f'-{lookback_days} days',),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        conn.close()
+        return 2.0, 4.0  # brak tabeli foxess_data — domyślne obciążenie nocy
     conn.close()
     if not row or row[0] is None:
         return 2.0, 4.0
     return float(row[0]), float(row[1])
+
 
 
 def detect_outage_last_night(
@@ -1595,8 +1600,8 @@ def detect_outage_last_night(
 
     grid_thr = _outage_grid_kw_threshold()
     conn = sqlite3.connect(db_path)
-    df = pd.read_sql_query(
-        '''
+    try:
+        df = pd.read_sql_query('''
         SELECT timestamp, load_power_kw, grid_power_kw, battery_power_kw, battery_soc_percent
         FROM foxess_data
         WHERE date(timestamp) = ?
@@ -1604,8 +1609,10 @@ def detect_outage_last_night(
         ORDER BY timestamp
         ''',
         conn,
-        params=(night_day,),
-    )
+        params=(night_day,),)
+    except (sqlite3.OperationalError, pd.errors.DatabaseError):
+        conn.close()
+        return False, None, None, None  # brak tabeli foxess_data — brak awarii
     conn.close()
 
     if df.empty:
