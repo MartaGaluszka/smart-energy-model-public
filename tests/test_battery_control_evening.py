@@ -463,7 +463,7 @@ def test_evening_stop_if_due_self_use(_fox, tmp_path, monkeypatch):
     assert load_evening_session()['stop_done'] is False
 
 
-def test_record_evening_session_after_apply(tmp_path, monkeypatch):
+def test_record_evening_session_after_apply(tmp_path, monkeypatch):  # sesja
     monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(tmp_path / 'sess.json'))
     rule = ChargeTonightCloudyRule(
         triggered=True,
@@ -487,3 +487,58 @@ def test_record_evening_session_after_apply(tmp_path, monkeypatch):
     sess = load_evening_session()
     assert sess is not None
     assert sess['stop_at'] == '2026-11-03T22:30:00'
+
+
+def test_get_winter_night_load_stats_missing_file(tmp_path):
+    from src.optimization.battery_advisor import get_winter_night_load_stats
+
+    missing = tmp_path / 'missing-night.db'
+    assert get_winter_night_load_stats(str(missing)) == (2.0, 4.0)
+
+
+def test_get_winter_night_load_stats_operational_error(tmp_path):
+    import sqlite3
+    from src.optimization.battery_advisor import get_winter_night_load_stats
+
+    db = tmp_path / 'empty-night.db'
+    sqlite3.connect(db).close()
+    assert get_winter_night_load_stats(str(db)) == (2.0, 4.0)
+
+
+def test_detect_outage_last_night_missing_file(tmp_path):
+    from src.optimization.battery_advisor import detect_outage_last_night
+
+    missing = tmp_path / 'missing-outage.db'
+    assert detect_outage_last_night(
+        str(missing),
+        reference=datetime(2026, 11, 3, 21, 15),
+    ) == (False, None, None, None)
+
+
+def test_detect_outage_last_night_database_error(tmp_path):
+    import sqlite3
+    from src.optimization.battery_advisor import detect_outage_last_night
+
+    db = tmp_path / 'empty-outage.db'
+    sqlite3.connect(db).close()
+    assert detect_outage_last_night(
+        str(db),
+        reference=datetime(2026, 11, 3, 21, 15),
+    ) == (False, None, None, None)
+
+
+def test_detect_outage_last_night_operational_error(tmp_path):
+    import sqlite3
+    from src.optimization.battery_advisor import detect_outage_last_night
+
+    db = tmp_path / 'empty-outage-op.db'
+    sqlite3.connect(db).close()
+    with patch(
+        'src.optimization.battery_advisor.pd.read_sql_query',
+        side_effect=sqlite3.OperationalError('no such table: foxess_data'),
+    ):
+        assert detect_outage_last_night(
+            str(db),
+            reference=datetime(2026, 11, 3, 21, 15),
+        ) == (False, None, None, None)
+
