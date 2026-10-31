@@ -296,8 +296,8 @@ Suwaki G12w + plan ładowania nocą / rozładowania w szczycie; decyzja „czy �
 ### 10.1 Kalendarz kontekstowy
 
 - Wakacje, urodziny, „przetwory”, ferie, **dzień prania / suszenia**, posiłki AGD
-- Tabela `household_events` (data, typ, wpływ: ↑zużycie / ↓zużycie / tryb_ferie)
-- Żywy log → [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · reguła FC → [`NOTATKA_REGULA_BATERIA_POCHMURNO_22.md`](NOTATKA_REGULA_BATERIA_POCHMURNO_22.md)
+- Tabela `household_events` (data, typ, wpływ: ↑zużycie / ↓zużycie / tryb_ferie) — **nakładki AGD pisz tu**, nie w 3 plikach: [`NOTATKA_WORKFLOW_AGD.md`](NOTATKA_WORKFLOW_AGD.md)
+- Żywy log SoC → [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · reguła FC → [`NOTATKA_REGULA_BATERIA_POCHMURNO_22.md`](NOTATKA_REGULA_BATERIA_POCHMURNO_22.md)
 
 **Kalibracja typów (żywe pomiary Fox → reguły sugestii T4.9):**
 
@@ -312,7 +312,7 @@ Suwaki G12w + plan ładowania nocą / rozładowania w szczycie; decyzja „czy �
 | `zmywarka` | **14.10** start ~10:00 SoC **~12%** (słabe PV) · **16.10** cykl ~2 h, koniec **~13:35** przy PV **~4 kW** / SoC **99%** · **17.10** start **11:28–11:32**, grzanie **11:32–11:46** i znów **12:08** | cykl **~1–2 h** | typowo **~1–1,5 kWh**/cykl · **17.10** cykl otwarty @12:17, bez sumy | **~1,5–3 kW** · **17.10 ~2,1–2,2 kW** | `impact=up` · **nie** w drogim **6–13** przy pustej baterii / ciemnym dniu · przy Accu **jasny/mix** + SoC wysoki → **szczyt PV (11–15)** OK (case **16.10** bez importu) · inaczej tania **13–15** / po **22** · **17.10** SoC **100%** od **11:50**, eksport **~4 kW** |
 | `pranie` | **16.10.2026** **2×** program po **~2,5 h**, jedno po drugim (rano→południe) | **~2,5 h**/cykl | ciągły load μ **~1–1,5 kW** w oknie prania (dom+AGD); godz. load **11–12** Fox **~1,4–1,5 kWh** | **~2–3 kW** (piki z innym AGD) | `impact=up` · **najlepiej dzień Accu jasny/RF + ENS ≳18** · start gdy PV już sensowne (**≳1–2 kW**, typowo po **~9**) · 2 cykle z rzędu OK jeśli SoC rośnie / bateria pełna · **nie** planować na CS4/pochmurno rano |
 | `suszarka` | **16.10.2026** start **~16:10**, finisz **~17:40** (po 2× praniu) | **~1,5 h** | Fox **16:10–17:40** load **~1,2 kWh** · SoC **98→94** · import **~0** | ciągły **~0,6–0,8 kW** (dom+suszarka) | `impact=up` · start **po praniu**, gdy PV jeszcze jest albo SoC **≳80%** · po **15–16** PV spada → zejdzie z **baterii**; kalibracja EOD: **~1,2 kWh**/cykl (nie 2–4) przy wysokim SoC |
-| `chleb` | **16.10.2026** maszynka Lidl · **~20 min do końca @13:35** (w tle zmywarka/obiad) | cykl pieczenia **~2–3 h** (finisz krótki) | niski–średni ciągły + finisz | **≲1–2 kW** (szacunek) | `impact=up` (lekki) · można równolegle z `zmywarka` / `obiad` przy PV **≳3–4 kW** · nie wymaga osobnego FC |
+| `chleb` | wypiekarnica · **23.10** start **10:57** · tryb **3 h 55 min** (stały) → **~14:52** · **16.10** Lidl finisz krótki @13:35 | **3 h 55 min** (domyślny program) | niski–średni ciągły **~0,2–0,4 kW** (≠ `piekarnik`) | **≲1–2 kW** (szacunek) | `impact=up` (lekki) · równolegle AGD OK przy RF · kWh do kalibracji po Fox |
 | `piekarnik` | kura / pieczeń — osobno od maszynki `chleb` | **~1–1,5 h** | szacunek **~2 kWh** (piekarnik ~2 kW) | **~2–2,5 kW** | `impact=up` · złoty stopień skali · najlepiej w szczycie PV · nie mieszać budżetu z `chleb` (~0,8 kWh) |
 | `odkurzacz` | Dreamy, jedno przejście + ładowanie | **~1 h** | szacunek **~0,2 kWh** (brak pomiaru Fox) | niski | `impact=up` · zielony stopień |
 | `mac_mini` | dzień pracy przy biurku · **17.10** czuwanie cały czas, obudzony kilka minut koło południa | **~8–10 h** (ikona) | szacunek **~0,2 kWh** za dzień pracy (~20 W) · czuwanie już w tle domu **~0,20 kW**, kilka minut jawy **nie do odjęcia** | niski | `impact=up` · zielony stopień · czuwania nie doliczać drugi raz |

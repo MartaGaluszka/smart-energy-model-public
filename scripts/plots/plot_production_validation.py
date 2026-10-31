@@ -63,6 +63,7 @@ MILESTONES = [
     {'date': '2026-10-04', 'label': 'Retrain + L30', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-10-11', 'label': 'Retrain (XGB REVIEW)', 'color': '#F39C12', 'type': 'retrain'},
     {'date': '2026-10-18', 'label': 'Retrain (ACCEPT×3)', 'color': '#F39C12', 'type': 'retrain'},
+    {'date': '2026-10-25', 'label': 'Retrain (ACCEPT×3)', 'color': '#F39C12', 'type': 'retrain'},
 ]
 
 ENS_PRIMARY_START = '2026-09-02'
@@ -321,7 +322,12 @@ def main() -> None:
         print(f'⚠️  Pusty plik walidacji: {args.input}')
         print('   Uruchom evening_closeout po zebraniu danych FoxESS.')
 
-    build_plot(df, Path(args.output), long_start=args.date_from)
+    out = Path(args.output)
+    build_plot(df, out, long_start=args.date_from)
+    docs_out = ROOT / 'docs/images/ml/production_validation_plot.png'
+    docs_out.parent.mkdir(parents=True, exist_ok=True)
+    docs_out.write_bytes(out.read_bytes())
+    print(f'✓ Kopia: {docs_out.relative_to(ROOT)}')
     print(f'   Wierszy walidacji: {len(df)}')
     if not df.empty:
         print(f'   Zakres: {df["target_day"].min().date()} → {df["target_day"].max().date()}')
