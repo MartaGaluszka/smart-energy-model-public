@@ -16,7 +16,7 @@ import pandas as pd
 
 from src.data.foxess_control import BatteryControlState, ForceChargeWindow, FoxEssControl
 from src.optimization.battery_advisor import BatteryAdvice, Context, advise
-from src.optimization.g12w_tariff import is_cheap_zone, is_weekend, weekday_force_charge_windows
+from src.optimization.g12w_tariff import is_cheap_zone, is_public_holiday, is_weekend, weekday_force_charge_windows
 
 ActionKind = Literal[
     'set_force_charge_windows',
@@ -99,6 +99,49 @@ def evening_only_enforced() -> bool:
     return os.getenv('BATTERY_CONTROL_EVENING_ONLY', '1').strip().lower() in ('1', 'true', 'yes')
 
 
+def morning_cloudy_apply_enabled() -> bool:
+    """Apply @~5:00 przed końcem tania (6:00) gdy mało PV / pochmurny dzień."""
+    return os.getenv('BATTERY_CONTROL_MORNING_CLOUDY', '0').strip().lower() in ('1', 'true', 'yes')
+
+
+def morning_cloudy_pv_kwh_threshold() -> float:
+    return _env_float('BATTERY_MORNING_CLOUDY_PV_KWH', 12.0)
+
+
+def morning_apply_allowed(as_of: datetime) -> bool:
+    """Tania strefa przed 6:00 (pn–pt) lub weekend/święto."""
+    if as_of.hour >= 6:
+        return False
+    if is_weekend(as_of.date()) or is_public_holiday(as_of.date()):
+        return True
+    return is_cheap_zone(as_of)
+
+
+def morning_cloudy_apply_trigger(advice: BatteryAdvice) -> bool:
+    """Pochmurny / słabe PV — zgodnie z doradcą morning + prognoza doby."""
+    if advice.context != 'morning':
+        return False
+    if advice.recommendation != 'ŁADUJ Z SIECI (TANIO)':
+        return False
+    from src.optimization.battery_advisor import get_day_pv_forecast_sum
+
+    today_pv = get_day_pv_forecast_sum(advice.target_day, as_of=advice.as_of)
+    if today_pv is not None and today_pv < morning_cloudy_pv_kwh_threshold():
+        return True
+    morning_pv = advice.pv.morning_forecast_kwh if advice.pv else None
+    if morning_pv is not None and morning_pv < 8.0:
+        return True
+    return False
+
+
+def planned_morning_stop_at(as_of: datetime) -> datetime:
+    """Koniec FC przed szczytem G12w (6:00)."""
+    stop = as_of.replace(hour=6, minute=0, second=0, microsecond=0)
+    if as_of >= stop:
+        stop = stop + timedelta(days=1)
+    return stop
+
+
 def max_applies_per_day() -> int:
     raw = os.getenv('BATTERY_CONTROL_MAX_APPLIES_PER_DAY', '3').strip()
     try:
@@ -152,8 +195,10 @@ def validate_apply_request(
         pass
     if phase == 'stop':
         return None
-    if evening_only_enforced() and context != 'evening':
-        return 'BATTERY_CONTROL_EVENING_ONLY=1 — apply tylko --context evening.'
+    if evening_only_enforced() and context not in ('evening', 'morning'):
+        return 'BATTERY_CONTROL_EVENING_ONLY=1 — apply tylko evening/morning.'
+    if context == 'morning' and not morning_cloudy_apply_enabled():
+        return 'BATTERY_CONTROL_MORNING_CLOUDY=0 — poranny apply wyłączony.'
     if count_real_applies_today(as_of=advice.as_of) >= max_applies_per_day():
         return (
             f'Limit apply/dzień ({max_applies_per_day()}) — '
@@ -165,6 +210,11 @@ def validate_apply_request(
         rule = advice.charge_tonight
         if not rule or not rule.triggered:
             return 'Reguła B2 bez triggera — apply pominięte (POMIŃ).'
+    if phase == 'apply' and context == 'morning':
+        if not morning_apply_allowed(advice.as_of):
+            return 'Poza oknem tanio przed 6:00 — apply morning pominięte.'
+        if not morning_cloudy_apply_trigger(advice):
+            return 'Dzień nie pochmurny / PV rano wystarczy — apply morning POMIŃ.'
     return None
 
 
@@ -199,23 +249,32 @@ def save_evening_session(data: dict[str, Any]) -> None:
 
 
 def record_evening_session_after_apply(advice: BatteryAdvice, plan: ControlPlan, results: list[dict[str, Any]]) -> None:
-    """Po udanym start FC zapisz stop_at dla T6.2b."""
-    if plan.dry_run or plan.context != 'evening':
+    """Po udanym start FC zapisz stop_at dla T6.2b (evening lub morning @5)."""
+    if plan.dry_run or plan.context not in ('evening', 'morning'):
         return
     applied = sum(1 for r in results if r.get('action') != 'noop' and not r.get('dry_run'))
     if applied <= 0:
         return
-    stop = planned_stop_at(advice)
-    if stop is None:
-        return
-    rule = advice.charge_tonight
+    if plan.context == 'evening':
+        stop = planned_stop_at(advice)
+        if stop is None:
+            return
+        rule = advice.charge_tonight
+        fc_min = rule.fc_minutes if rule else None
+        target = rule.target_soc_percent if rule else None
+    else:
+        stop = planned_morning_stop_at(advice.as_of)
+        mins = max(0.0, (stop - advice.as_of).total_seconds() / 60.0)
+        fc_min = round(mins, 1)
+        target = _env_float('BATTERY_SOC_TARGET', 80.0)
     save_evening_session(
         {
             'day': advice.as_of.date().isoformat(),
+            'kind': plan.context,
             'started_at': advice.as_of.isoformat(timespec='seconds'),
             'stop_at': stop.isoformat(timespec='seconds'),
-            'fc_minutes': rule.fc_minutes if rule else None,
-            'target_soc_percent': rule.target_soc_percent if rule else None,
+            'fc_minutes': fc_min,
+            'target_soc_percent': target,
             'stop_done': False,
         }
     )
@@ -377,6 +436,10 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
                     'Natychmiastowe ładowanie z sieci do 6:00 (ForceCharge).',
                     {'mode': 'ForceCharge'},
                 ))
+                stop = planned_morning_stop_at(advice.as_of)
+                notes.append(
+                    f'Poranny top-up pochmurny: stop FC o {stop.strftime("%H:%M")} (przed szczytem G12w).'
+                )
         elif rec in ('SOC OK', 'POCZEKAJ NA PV'):
             actions.append(ControlAction(
                 'set_work_mode',
@@ -516,21 +579,49 @@ def execute_plan(
     controller = controller or FoxEssControl()
     results: list[dict[str, Any]] = []
     plan.dry_run = dry_run
+    fox_schedule_on = False
+    if not dry_run:
+        try:
+            fox_schedule_on = bool(controller.read_state().schedule_enabled)
+        except (ValueError, RuntimeError):
+            fox_schedule_on = False
 
     for action in plan.actions:
         if action.kind == 'noop':
             results.append({'dry_run': dry_run, 'action': 'noop', 'description': action.description})
             continue
         if action.kind == 'set_force_charge_windows':
-            results.append(controller.set_force_charge_windows(
-                period1=action.params.get('period1'),
-                period2=action.params.get('period2'),
-                dry_run=dry_run,
-            ))
+            if fox_schedule_on:
+                plan.notes.append(
+                    'Harmonogram FoxESS włączony — pomijam set_charge; zostaje tryb ForceCharge (T6.2).'
+                )
+                results.append({
+                    'dry_run': dry_run,
+                    'action': 'set_force_charge_windows',
+                    'skipped': True,
+                    'reason': 'fox_schedule_enabled',
+                })
+                continue
+            try:
+                results.append(controller.set_force_charge_windows(
+                    period1=action.params.get('period1'),
+                    period2=action.params.get('period2'),
+                    dry_run=dry_run,
+                ))
+            except RuntimeError as exc:
+                plan.notes.append(f'⚠️ set_charge: {exc}')
+                results.append({
+                    'dry_run': dry_run,
+                    'action': 'set_force_charge_windows',
+                    'error': str(exc),
+                })
         elif action.kind == 'set_work_mode':
+            mode = action.params['mode']
+            force = 1 if (not dry_run and mode == 'ForceCharge') else 0
             results.append(controller.set_work_mode(
-                action.params['mode'],
+                mode,
                 dry_run=dry_run,
+                force=force,
             ))
         elif action.kind == 'set_min_soc':
             results.append(controller.set_min_soc(

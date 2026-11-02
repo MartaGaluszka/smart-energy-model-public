@@ -19,6 +19,8 @@ from src.optimization.battery_control import (
     evening_apply_allowed,
     count_real_applies_today,
     evening_stop_if_due,
+    morning_apply_allowed,
+    morning_cloudy_apply_trigger,
     stop_fox_quota_status,
     format_plan,
     work_mode_is_force_charge,
@@ -285,13 +287,66 @@ def _b2_rule(*, triggered: bool) -> ChargeTonightCloudyRule:
     )
 
 
-def test_validate_apply_evening_only_blocks_morning(monkeypatch):
+def _advice_morning(
+    *,
+    as_of: datetime,
+    recommendation: str = 'ŁADUJ Z SIECI (TANIO)',
+    morning_pv: float = 4.0,
+) -> BatteryAdvice:
+    return BatteryAdvice(
+        context='morning',
+        as_of=as_of,
+        target_day=as_of.date().isoformat(),
+        season='winter',
+        tariff_zone=2,
+        tariff_label='tanio (pozaszczyt)',
+        snapshot=BatterySnapshot(None, 35.0, None, None, None, None),
+        pv=PvOutlook(
+            sunrise_hour=7.0,
+            first_production_hour=9,
+            morning_forecast_kwh=morning_pv,
+            window_forecast_kwh=2.0,
+            remaining_forecast_kwh=3.0,
+            actual_so_far_kwh=0.0,
+        ),
+        resilience=None,
+        recommendation=recommendation,
+        action='test',
+        details=[],
+        charge_tonight=None,
+    )
+
+
+def test_validate_apply_evening_only_blocks_morning_when_morning_off(monkeypatch):
     monkeypatch.delenv('FOXESS_SYNC_DISABLED', raising=False)
     monkeypatch.setenv('BATTERY_CONTROL_EVENING_ONLY', '1')
-    advice = _advice_evening(as_of=datetime(2026, 11, 3, 22, 1), rule=_b2_rule(triggered=True))
+    monkeypatch.setenv('BATTERY_CONTROL_MORNING_CLOUDY', '0')
+    advice = _advice_morning(as_of=datetime(2026, 11, 3, 5, 0))
     reason = validate_apply_request('morning', advice, phase='apply')
     assert reason is not None
-    assert 'EVENING_ONLY' in reason
+    assert 'MORNING_CLOUDY' in reason
+
+
+def test_validate_apply_morning_cloudy_ok(monkeypatch):
+    monkeypatch.delenv('FOXESS_SYNC_DISABLED', raising=False)
+    monkeypatch.setenv('BATTERY_CONTROL_MORNING_CLOUDY', '1')
+    advice = _advice_morning(as_of=datetime(2026, 11, 3, 5, 0), morning_pv=3.0)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=5.0,
+    ):
+        reason = validate_apply_request('morning', advice, phase='apply')
+    assert reason is None
+
+
+def test_morning_apply_allowed_before_six_only():
+    assert morning_apply_allowed(datetime(2026, 11, 3, 5, 30)) is True
+    assert morning_apply_allowed(datetime(2026, 11, 3, 6, 0)) is False
+
+
+def test_morning_cloudy_trigger_requires_low_pv():
+    advice = _advice_morning(as_of=datetime(2026, 11, 3, 5, 0), recommendation='SOC OK')
+    assert morning_cloudy_apply_trigger(advice) is False
 
 
 def test_validate_apply_denies_when_b2_not_triggered(monkeypatch):

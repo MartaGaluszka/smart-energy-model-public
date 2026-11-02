@@ -21,6 +21,7 @@ LABELS=(
   "pl.smart-energy-model.daily"
   "pl.smart-energy-model.midday"
   "pl.smart-energy-model.peak"
+  "pl.smart-energy-model.morning-battery-apply"
   "pl.smart-energy-model.evening-battery"
   "pl.smart-energy-model.evening-battery-apply"
   "pl.smart-energy-model.evening-battery-stop"
@@ -60,6 +61,7 @@ install_launchd() {
   chmod +x "${PROJECT_ROOT}/mlops/daily_workflow.sh" \
     "${PROJECT_ROOT}/mlops/midday_forecast.sh" \
     "${PROJECT_ROOT}/mlops/peak_arrival.sh" \
+    "${PROJECT_ROOT}/mlops/morning_battery_apply.sh" \
     "${PROJECT_ROOT}/mlops/evening_battery_plan.sh" \
     "${PROJECT_ROOT}/mlops/evening_battery_apply.sh" \
     "${PROJECT_ROOT}/mlops/evening_battery_stop.sh" \
@@ -95,6 +97,7 @@ install_launchd() {
   echo "   10:00 codziennie  → weather_morning_run.sh (po wpisie Accu: MB fetch + Accu×MB×modele → stub)"
   echo "   12:00 codziennie  → midday_forecast.sh (16 + CS4 + XGB+TS)"
   echo "   16:00 codziennie  → peak_arrival.sh (16 + CS4 + XGB+TS)"
+  echo "   05:00 codziennie  → morning_battery_apply.sh (pochmurny top-up przed 6:00, MORNING_CLOUDY=1)"
   echo "   21:15 codziennie  → evening_battery_plan.sh (B2: sugestie + dry-run foxess_control)"
   echo "   22:00 codziennie  → evening_battery_apply.sh (--apply gdy BATTERY_CONTROL_ENABLED=1)"
   echo "   co 5 min (noc)    → evening_battery_stop.sh (Fox tylko po stop_at, max 4 próby / 10 min)"
