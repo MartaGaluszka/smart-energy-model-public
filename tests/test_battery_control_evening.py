@@ -433,13 +433,17 @@ def test_evening_stop_second_tick_does_not_call_fox(_fox, tmp_path, monkeypatch)
         {'day': '2026-11-03', 'stop_at': '2026-11-03T22:30:00', 'stop_done': False}
     )
     ctrl = _fox.return_value
-    ctrl.read_state.side_effect = [_fox_state('ForceCharge'), _fox_state('ForceCharge')]
+    ctrl.read_state.side_effect = [
+        _fox_state('ForceCharge'),
+        _fox_state('ForceCharge'),
+        _fox_state('ForceCharge'),
+    ]
     ctrl.set_work_mode.return_value = {'action': 'set_work_mode', 'dry_run': False}
     first, _, _ = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 31))
     second, _, _ = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 34))
     assert first == 'still_force_charge'
     assert second == 'quota_wait'
-    assert ctrl.read_state.call_count == 2
+    assert ctrl.read_state.call_count == 3
 
 
 def test_work_mode_is_force_charge():
@@ -455,11 +459,15 @@ def test_evening_stop_sends_selfuse_when_still_force_charge(_fox, tmp_path, monk
         {'day': '2026-11-03', 'stop_at': '2026-11-03T22:30:00', 'stop_done': False}
     )
     ctrl = _fox.return_value
-    ctrl.read_state.side_effect = [_fox_state('ForceCharge'), _fox_state('SelfUse')]
+    ctrl.read_state.side_effect = [
+        _fox_state('ForceCharge'),
+        _fox_state('ForceCharge'),
+        _fox_state('SelfUse'),
+    ]
     ctrl.set_work_mode.return_value = {'action': 'set_work_mode', 'dry_run': False, 'mode': 'SelfUse'}
     status, plan, results = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 31))
     assert status == 'stopped'
-    ctrl.set_work_mode.assert_called_once_with('SelfUse', dry_run=False)
+    ctrl.set_work_mode.assert_called_once_with('SelfUse', dry_run=False, force=0)
     assert plan is not None
     assert results
     assert load_evening_session()['stop_done'] is True
