@@ -104,14 +104,40 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
     except (ValueError, KeyError) as exc:
         raise ApiError(422, 'FORECAST_NO_WEATHER_DATA', f'Brak danych pogodowych dla {target_day}: {exc}') from exc
 
-    day_frame = predictions[predictions['day'].astype(str) == target_day].sort_values('hour')
-    if day_frame.empty:
+    primary_frame = predictions[predictions['day'].astype(str) == target_day].sort_values('hour')
+    if primary_frame.empty:
         raise ApiError(422, 'FORECAST_NO_WEATHER_DATA', f'Brak prognozy dla dnia {target_day} (brak cech pogodowych)')
+
+    primary_total_kwh = round(float(primary_frame['predicted_kwh'].sum()), 2)
+    day_frame = primary_frame.copy()
+
+    from src.weather.forecast_routing import (
+        archived_cs4_hourly,
+        predict_day_frame_cs4,
+        resolve_forecast_display,
+        routing_payload,
+    )
+
+    settings = get_settings()
+    routing = resolve_forecast_display(target_day, db_path=settings.DATABASE_PATH)
+    routing_info = routing_payload(routing)
+    if routing.uses_cs4:
+        cs4_frame = pd.DataFrame()
+        if base_date < date.today():
+            cs4_frame = archived_cs4_hourly(target_day)
+        if cs4_frame.empty:
+            cs4_frame = predict_day_frame_cs4(
+                target_day,
+                db_path=settings.DATABASE_PATH,
+                hybrid_today=False,
+                use_actual_pv=False,
+            )
+        if not cs4_frame.empty:
+            day_frame = cs4_frame.sort_values('hour')
 
     from src.models.forecast_validation import get_actual_hourly_ml
     from src.models.pv_hourly_predictor import APPLIANCE_PROFILES, rank_hours_for_appliances
 
-    settings = get_settings()
     try:
         actual_df = get_actual_hourly_ml(target_day, db_path=settings.DATABASE_PATH)
         actual_by_hour = {
@@ -162,9 +188,11 @@ def get_hourly_forecast(predictor, day: str | None = None) -> dict:
         'day': target_day,
         'hours': hours,
         'total_kwh': total_kwh,
+        'primary_total_kwh': primary_total_kwh,
         'model_path': predictor.model_path,
         'appliance_tips': appliance_tips,
         'appliance_thresholds': appliance_thresholds,
+        **routing_info,
     }
     _hourly_cache[cache_key] = (now, payload)
     if len(_hourly_cache) > 8:

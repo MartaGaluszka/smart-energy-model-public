@@ -1,7 +1,7 @@
 # Kryteria: closeout tygodniowy (live) i przejście L30 na twardy gate
 
-**Data ustalenia:** 2026-10-05 · **Status:** propozycja robocza (do rewizji po 6 tygodniach i po wejściu w zimę)  
-**Kontekst:** dual report (shuffle + L30 soft) — [`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md) · pierwszy pełny weekly z dual: [`NOTATKA_WEEKLY_2026-10-04.md`](NOTATKA_WEEKLY_2026-10-04.md)
+**Data ustalenia:** 2026-10-05 · **Status:** soft L30 w prod · **ocena hard gate ~08.11** (6. punkt RF16 po weekly **02.11**)  
+**Kontekst:** dual report — [`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md) · podsumowanie XI: [`NOTATKA_PODSUMOWANIE_CS4_L30_XI_2026.md`](NOTATKA_PODSUMOWANIE_CS4_L30_XI_2026.md) · operacyjny CS4 od 01.11: [`NOTATKA_DECYZJA_CS4_XI_2026.md`](NOTATKA_DECYZJA_CS4_XI_2026.md)
 
 Trzy testy jakości modelu PV:
 
@@ -56,7 +56,7 @@ Mediana WAPE ≈ 13%, najlepszy tydzień ≈ 6%, najgorszy 34% (tydzień o bardz
 
 Wszystkie cztery warunki naraz:
 
-1. **Historia:** co najmniej **6** tygodniowych punktów L30 dla danego modelu. Stan na 05.10: RF16 — 2 (27.09, 04.10), CS4 i XGB+TS — 1 (04.10). Najwcześniej ok. **08.11**.
+1. **Historia:** co najmniej **6** tygodniowych punktów L30 dla danego modelu. Stan **31.10.2026:** RF16 — **5** (27.09 → 25.10); **6.** po weekly **02.11** → ocena formalna **~08.11**. CS4 — **4** pełne L30.
 2. **Kalibracja progu z danych**, nie z zakresu 0,75–1,00: próg WATCH = **P90 historii L30** (albo mediana + 2×MAD). Zakres 0,75–1,00 był oszacowany na jesień i zimą się przesunie.
 3. **Predykcyjność:** korelacja Spearmana L30 (daily MAE) z WAPE closeoutu z kolejnego tygodnia ≥ **0,5**. Jeśli L30 nie przewiduje live — zostaje informacyjny.
 4. **Reguła odrzucenia wielosygnałowa:** rollback wag tylko gdy jednocześnie: L30 > próg P90 **i** shuffle gate = REVIEW **i** closeout = WATCH/ALARM. Rollback **ręczny** do poprzedniego `.joblib`; pojedyncza metryka nigdy nie odrzuca wag.
@@ -131,7 +131,7 @@ Tygodniowe WAPE przeliczone z danych różni się od tabeli wyżej w dwóch tygo
 
 | Kiedy | Co |
 |-------|----|
-| co niedzielę (weekly) | dopisać L30 + tabelę WAPE / bias do `NOTATKA_WEEKLY_*.md` |
+| co niedzielę (weekly) | **XI 2026:** weekly = CS4 closeout + shuffle (bez L30) do ~08.11; L30 tylko CSV + review **~08.11** |
 | 11.10, 18.10, 25.10, 01.11 | kolejne punkty L30 (RF16: 3.–6.) |
 | ~08.11 | pierwsza ocena warunków 1–3; decyzja o twardym gate |
 | grudzień / styczeń | przeliczenie progów dla zimy |

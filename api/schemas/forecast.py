@@ -32,6 +32,15 @@ class ApplianceThreshold(BaseModel):
     min_kw: float
 
 
+class AccuRegimeSnapshot(BaseModel):
+    brightness: float | None = None
+    cloud_pct: float | None = None
+    precip_mm: float | None = None
+    precip_prob_pct: float | None = None
+    thunder_prob_pct: float | None = None
+    note_kind: str | None = None
+
+
 class HourlyForecastResponse(BaseModel):
     day: str
     hours: list[HourlyForecastPoint]
@@ -39,6 +48,13 @@ class HourlyForecastResponse(BaseModel):
     model_path: str
     appliance_tips: list[ApplianceTip] = []
     appliance_thresholds: list[ApplianceThreshold] = []
+    primary_total_kwh: float | None = None
+    routing_enabled: bool = False
+    regime: str | None = None
+    display_model: str = 'ensemble'
+    primary_model: str = 'ensemble'
+    accu: AccuRegimeSnapshot | None = None
+    lumen_label: str | None = None
 
 
 class ForecastValidationHourlyRow(BaseModel):

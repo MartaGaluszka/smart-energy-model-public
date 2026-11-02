@@ -216,6 +216,20 @@ export interface HourlyForecastResponse {
     label: string;
     min_kw: number;
   }[];
+  primary_total_kwh?: number | null;
+  routing_enabled?: boolean;
+  regime?: string | null;
+  display_model?: string;
+  primary_model?: string;
+  accu?: {
+    brightness: number | null;
+    cloud_pct: number | null;
+    precip_mm: number | null;
+    precip_prob_pct: number | null;
+    thunder_prob_pct: number | null;
+    note_kind: string | null;
+  } | null;
+  lumen_label?: string | null;
 }
 
 export interface ForecastValidationHourlyRow {

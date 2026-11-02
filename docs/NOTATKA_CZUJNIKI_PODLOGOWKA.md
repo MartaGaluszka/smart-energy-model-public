@@ -47,7 +47,7 @@ Z1 w X–XI 2026 **może spaść** przez baterię nawet przy load/HDD bez zmian.
 
 **Kontekst:** formalny werdykt czujników = **load/HDD** w **X–XI 2026 vs X–XI 2025** (§D). Poniżej — **jakość + wczesny sygnał Fox**, żeby nie mylić „pamięci o grzaniu” z samą pogodą zewnętrzną.
 
-Pełny miesiąc, wykresy dnia i godziny: September 2025 vs 2026 (lokalny canvas — tylko prywatne).
+Pełny miesiąc, wykresy dnia i godziny: September 2025 vs 2026 (wykres lokalny — tylko repo prywatne).
 
 ### Obserwacja terenowa
 
@@ -176,6 +176,70 @@ Do 20.10 przekroczone **100 kWh** = jesteśmy na torze zeszłorocznego importu (
 
 ---
 
+## Obserwacja 01.11.2026 — październik 2025 vs 2026
+
+**Kontekst:** formalny werdykt czujników = **load/HDD** w **X–XI** (§D). Poniżej domknięcie samego **X**, tą samą metodą co wrzesień (§ Obserwacja 18.09.2026). Load / import / PV = `foxess_report_daily` (`loads`, `gridConsumption`, `PVEnergyTotal`). Noc i wieczór = średnie `load_power_kw` z `foxess_data`. HDD = suma `(15 − Tśr dnia)⁺` z `weather_data`. X 2025 w §A (load **492**, HDD **200**, load/HDD **2,47**) jest tym samym miesiącem.
+
+### Pogoda (`weather_data`)
+
+| Okres | T śr. | T min (w oknie) | HDD | Uwaga |
+|-------|------:|----------------:|----:|-------|
+| **2025-10-01 → 17** | **~8,9 °C** | **~−2,0 °C** | **~104** | chłodniejsza pierwsza połowa |
+| **2026-10-01 → 17** | **~11,1 °C** | **~0,0 °C** | **~66** | wyraźnie łagodniej; węższe 1–8.10 jest jeszcze letnie (§ 08.10) |
+| **2025-10-18 → 31** | **~8,2 °C** | **~−2,2 °C** | **~96** | 14 dni |
+| **2026-10-18 → 31** | **~7,7 °C** | **~−2,0 °C** | **~102** | lekko chłodniej niż rok temu; **22.10** strych 21→22°C, **23.10** córka 20→22°C |
+
+### 1–17.10
+
+| Metryka | **2025-10-01 → 17** | **2026-10-01 → 17** |
+|---------|---------------------:|---------------------:|
+| **Load Σ (loads)** | **~259 kWh** | **~258 kWh** |
+| **Load / dzień** | **~15,2 kWh** | **~15,2 kWh** |
+| **HDD (baza 15 °C)** | **~104** | **~66** |
+| **Load / HDD** | **~2,50** | **~3,91** |
+| **Śr. load 00–05** | **~0,26 kW** | **~0,27 kW** |
+| **Śr. load 22–06** | **~0,27 kW** | **~0,30 kW** |
+| **Śr. load 18–23** | **~0,41 kW** | **~0,43 kW** |
+| **Import (gridConsumption)** | **~108 kWh** | **~53 kWh** |
+| **PV (PVEnergyTotal)** | **~194 kWh** | **~363 kWh** |
+
+**Wniosek (1–17.10):** load domu jest **ten sam** przy **mniejszym HDD**. Noc **00–05** też jest zbliżona — po uśrednieniu 17 dni nie widać dłuższego grzania podłogi rok temu (węższe **1–8.10** zostaje w § 08.10: wtedy 2026 było jeszcze na poziomie lata). **Load/HDD ~3,91 vs ~2,50 nie jest werdyktem:** HDD 2026 jest małe, a stały load domu winduje iloraz, tak jak w końcówce września. Wieczór **18–23** zbliżony. Spadek importu to **PV** (~363 vs ~194) i bateria od **7.01.2026**, nie czujniki.
+
+### 18–31.10
+
+Październik kończy się **31**. Okno **18–31** to **14 dni**. Tu HDD jest już porównywalne, a 2026 lekko chłodniejszy.
+
+| Metryka | **2025-10-18 → 31** | **2026-10-18 → 31** |
+|---------|---------------------:|---------------------:|
+| **Load Σ (loads)** | **~233 kWh** | **~250 kWh** |
+| **Load / dzień** | **~16,6 kWh** | **~17,9 kWh** |
+| **HDD (baza 15 °C)** | **~96** | **~102** |
+| **Load / HDD** | **~2,43** | **~2,46** |
+| **Śr. load 00–05** | **~0,46 kW** | **~0,42 kW** |
+| **Śr. load 22–06** | **~0,47 kW** | **~0,46 kW** |
+| **Śr. load 18–23** | **~0,61 kW** | **~0,60 kW** |
+| **Import (gridConsumption)** | **~79 kWh** | **~126 kWh** |
+| **PV (PVEnergyTotal)** | **~198 kWh** | **~174 kWh** |
+
+**Wniosek (18–31.10):** to pierwsza połówka października, w której pogoda jest porównywalna. **Load/HDD ~2,46 vs ~2,43** mieści się w paśmie **−10…+5%** (szum / komfort, nie złotówki). Surowy load jest wyższy w 2026 o tyle, o ile wyższe jest HDD. Noc **00–05** lekko niższa w 2026 (**0,42** vs **0,46 kW**) przy chłodniejszej średniej — zgodne z regulacją pokojową, za mało na werdykt czujników. Wieczór **18–23** taki sam. Import w tej połówce jest **wyższy** w 2026 przy słabszym PV — znowu pogoda i bateria, nie czujniki. Podniesione setpointy (**22.10** strych, **23.10** sypialnia córki) siedzą w tym oknie, a iloraz i tak został przy **~2,45**.
+
+### Cały X — nie czytać surowego load/HDD
+
+| Metryka | **X 2025** | **X 2026** |
+|---------|----------:|----------:|
+| **T śr.** | **~8,6 °C** | **~9,6 °C** |
+| **HDD** | **~200** | **~168** |
+| **Load Σ** | **~492 kWh** | **~508 kWh** |
+| **Load / HDD** | **~2,46** | **~3,03** |
+| **Śr. load 00–05** | **~0,34 kW** | **~0,34 kW** |
+| **Śr. load 18–23** | **~0,49 kW** | **~0,51 kW** |
+| **Import** | **~187 kWh** | **~179 kWh** |
+| **PV** | **~392 kWh** | **~537 kWh** |
+
+**Wniosek (cały X):** surowe **load/HDD ~3,03 vs ~2,46 (+23%)** wygląda jak pogorszenie, ale to artefakt ciepłego **1–17.10.2026** (ten sam load przy mniejszym HDD). Porównywalny kawałek to **18–31**, i tam iloraz stoi. Noc całego miesiąca **00–05** jest **taka sama (0,34 kW)**. Wieczór **18–23** też (**0,49** vs **0,51 kW**) — średnia nie pokazuje dłuższego oglądania; ewentualny rzutnik w **18–22** siedzi poza plateau grzałki i w tej średniej ginie, bo w tych samych godzinach jest mniej pracy grzałki. Import miesiąca prawie bez zmian (**179** vs **187**): pierwsza połowa w dół przez PV, druga w górę. **Nie przypisywać tego czujnikom.** Werdykt zostaje w §D po **30.11.2026**.
+
+---
+
 ## A. Baseline — bez świadomego FC
 
 | Okres | Czujniki | FC | n | T śr. | HDD | Load kWh | Load/d | **Load/HDD** | Import Fox | Peak load kWh | Peak/HDD |
@@ -274,7 +338,8 @@ Jesień (do końca X) bez tej automatycznej nalepki: kafelek `podlogowka` w kale
 - [ ] **Od XI (sezon zimny):** cykl Fox 2,3–3,6 kW nazywać podłogówką tylko przy Tnoc &lt; 10°C; latem i przy Tnoc ≥ 10°C ten sam kształt to bufor CWU, nie podłogówka
 - [ ] Sprawdzić **04.10** (plateau nocne) w logu sterowników, jeśli jest
 - [ ] Zapisać w `household_events` pieczenie chleba (np. **07.10 ~05:10–07:00**), żeby odfiltrować poranek przy werdykcie
-- [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD) + link September 2025 vs 2026 (lokalny canvas — tylko prywatne)
+- [x] **01.10.2026** — domknięcie **18–30.09** (load, noc, HDD) + link September 2025 vs 2026 (wykres lokalny — tylko repo prywatne)
 - [x] **22–23.10.2026** — setpoint: strych **21→22°C** @**22.10 ~22:00** · córka **20→22°C** @**23.10 ~22:00** — [`NOTATKA_2026-10-23.md`](NOTATKA_2026-10-23.md)
+- [x] **01.11.2026** — domknięcie października 2025 vs 2026 (load, noc, HDD, load/HDD) — § Obserwacja 01.11.2026
 
-Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) · September 2025 vs 2026 (lokalny canvas — tylko prywatne)
+Powiązane: [`PLAN_BATERIA_JESIEN_ZIMA_2026.md`](PLAN_BATERIA_JESIEN_ZIMA_2026.md) · [`NOTATKA_BATERIA_SOC_LOG.md`](NOTATKA_BATERIA_SOC_LOG.md) · [`NOTATKA_2026-09-05.md`](NOTATKA_2026-09-05.md) · [`NOTATKA_2026-09-18.md`](NOTATKA_2026-09-18.md) · September 2025 vs 2026 (wykres lokalny — tylko repo prywatne)

@@ -86,7 +86,7 @@ export class Tab1Page implements AfterViewInit, OnInit, OnDestroy, ViewWillEnter
   constructor(
     readonly homeData: HomeDataService,
     private readonly api: ApiService,
-    private readonly batteryState: BatteryStateService,
+    readonly batteryState: BatteryStateService,
   ) {
     addIcons({ chevronDownOutline, chevronForwardOutline, chevronUpOutline, flashOutline, walletOutline });
   }

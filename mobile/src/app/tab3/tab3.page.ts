@@ -2,7 +2,13 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@ang
 import { IonContent, RefresherCustomEvent, ViewDidEnter } from '@ionic/angular';
 import { Chart, registerables } from 'chart.js';
 import { addIcons } from 'ionicons';
-import { chevronBackOutline, chevronForwardOutline, gitCompareOutline, homeOutline } from 'ionicons/icons';
+import {
+  chevronBackOutline,
+  chevronForwardOutline,
+  cloudyOutline,
+  gitCompareOutline,
+  homeOutline,
+} from 'ionicons/icons';
 import { Subscription, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ApiService, ForecastValidationDailyRow, ForecastValidationHourlyRow, HouseholdEventDto } from '../services/api.service';
@@ -98,6 +104,12 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
     actualSoFarKwh: null,
     applianceTips: [],
     applianceThresholds: [],
+    displayModel: 'ensemble',
+    regime: null,
+    primaryTotalKwh: null,
+    routingEnabled: false,
+    lumenLabel: null,
+    accuBrightness: null,
   };
 
   private chart?: Chart;
@@ -126,7 +138,13 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
     private readonly api: ApiService,
     private readonly forecastBridge: ForecastBridgeService,
   ) {
-    addIcons({ chevronBackOutline, chevronForwardOutline, gitCompareOutline, homeOutline });
+    addIcons({
+      chevronBackOutline,
+      chevronForwardOutline,
+      cloudyOutline,
+      gitCompareOutline,
+      homeOutline,
+    });
   }
 
   ngAfterViewInit(): void {

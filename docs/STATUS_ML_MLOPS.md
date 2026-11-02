@@ -1,7 +1,7 @@
 # Status ML / MLOps — aktualny snapshot
 
-**Stan na:** 2026-10-25 (weekly **04:32** RF **0,673** ACCEPT ×3) · @05 **25.10** ENS **~16,3** · L30 INFO  
-**Źródła liczb:** `models/pv_hourly_model.joblib` (**weekly 25.10**) · `forecast_validation.csv` · [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · weekly [`NOTATKA_WEEKLY_2026-10-25.md`](NOTATKA_WEEKLY_2026-10-25.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
+**Stan na:** 2026-10-31 (decyzja **CS4 operacyjny** od **01.11**) · weekly **25.10** RF **0,673** ACCEPT ×3  
+**Źródła liczb:** `models/pv_hourly_model.joblib` · `forecast_validation.csv` · [`NOTATKA_POGODA.md`](NOTATKA_POGODA.md) · decyzja XI [`NOTATKA_DECYZJA_CS4_XI_2026.md`](NOTATKA_DECYZJA_CS4_XI_2026.md) · gate [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md)
 **Paper-trade Accu:** tylko repo prywatne (nie linkować w public)
 
 Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia → linki poniżej (nie duplikuj tu ablacji / gate’ów).
@@ -16,7 +16,16 @@ Ten plik to **jedyna** krótka tabela „aktualne wyniki”. Metoda i historia �
 | Target | Δ`PVEnergyTotal` (PVE = skala app FoxESS) |
 | Pogoda | Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, gate **01.09**, daily od **02.09**) · GPS dach |
 | Artefakt | `models/pv_hourly_model.joblib` |
-| Shadow | **ICON solo** (`pv_forecast_icon.csv` + closeout `daily_icon`) · CS4 · XGB+TS · kopia ens CSV |
+| Shadow | **ICON solo** · **CS4** · **XGB+TS** · kopia ens CSV |
+
+## Operacyjny display (od 01.11.2026)
+
+| | |
+|--|--|
+| **Użytkownik / bateria** | Accu **pochmurny** → prognoza **CS4** (`ACCU_CS4_UI=1`) |
+| **Ensemble (ENS)** | **Shadow operacyjny** — audit w apce, closeout; launchd **`ENSEMBLE_PRIMARY=1`** bez zmian |
+| **Mix/jasny / brak Accu** | Display = **ensemble** |
+| Dokument | [`NOTATKA_DECYZJA_CS4_XI_2026.md`](NOTATKA_DECYZJA_CS4_XI_2026.md) · podsumowanie CS4+L30 [`NOTATKA_PODSUMOWANIE_CS4_L30_XI_2026.md`](NOTATKA_PODSUMOWANIE_CS4_L30_XI_2026.md) |
 
 ### Offline (80/20 po dniach, expanding)
 

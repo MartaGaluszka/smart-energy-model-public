@@ -3,12 +3,15 @@
 Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego dnia jest w `NOTATKA_YYYY-MM-DD.md`.
 
 **Lokalizacja:** okolice Krakowa (dokładne GPS tylko w lokalnym `.env`)  
-**Produkcja ML:** Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, od **02.09**) · RF16  
-**ICON solo / CS4 / Accu / MB:** shadow / obserwacja — nie primary  
-**Shadow ICON+UKMO CSV:** od 28.08; primary od 02.09
+**Launchd MLOps:** Open-Meteo **ensemble ICON+UKMO** (`ENSEMBLE_PRIMARY=1`, od **02.09**) → zapis `pv_forecast.csv` (RF16)  
+**Operacja apka/bateria (od 01.11.2026):** Accu pochmurny → **CS4** (`ACCU_CS4_UI=1`); **ensemble = shadow** (audit + closeout) — [`NOTATKA_DECYZJA_CS4_XI_2026.md`](NOTATKA_DECYZJA_CS4_XI_2026.md)  
+**ICON solo / XGB / MB:** shadow / obserwacja
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-11-02 ~14:10** | **Accu+MB+OM+ld+os** **02–04.11** · Accu **CS4/CS4/CS4** (`#286–288`, drift **02:** **2/95%/0,7→1/97%/0**) · MB **95/97/81%** · @05 ENS **5,13 / 4,82 / 9,93** · ICON **4,78 / 4,28 / 9,52** · CS4 **3,93 / 3,22 / 8,49** · os ½ **5,63 / 4,77 / 4,01*** · **04 U rad skip 13/15** · midday **02** cum **3,12** · Fox w toku **~1,5** — [`NOTATKA_2026-11-02.md`](NOTATKA_2026-11-02.md) |
+| **2026-11-01 ~20:10** | **Accu+MB+OM+ld+os** **01–03.11** · Accu **CS4/CS4/CS4** (`#277–279`, drift **01:** **2/89→1/97%**) · MB **94/96/97%** · **02** Accu **0,7 mm** vs MB **0** · @05 ENS **5,60 / 4,88 / 4,31** · ICON **6,59 / 5,96 / 4,32** · CS4 **5,42 / 4,83 / 3,33** · os ½ **6,67 / 5,22 / —** · **01 I≠U** (U **63%**) · **03 U rad skip** · Fox PVE **2,5** — [`NOTATKA_2026-11-01.md`](NOTATKA_2026-11-01.md) |
+| **2026-10-31 ~20:15** | **Decyzja go-live XI:** operacyjny **CS4** · **ENS → shadow** · podsumowanie + **L30 hard ~08.11:** [`NOTATKA_PODSUMOWANIE_CS4_L30_XI_2026.md`](NOTATKA_PODSUMOWANIE_CS4_L30_XI_2026.md) · [`NOTATKA_DECYZJA_CS4_XI_2026.md`](NOTATKA_DECYZJA_CS4_XI_2026.md) · [`NOTATKA_GO_LIVE_CS4_2026-11.md`](NOTATKA_GO_LIVE_CS4_2026-11.md) |
 | **2026-10-31 ~14:51** | **Accu+MB+OM+ld+os** **31.10–02.11** · Accu **CS4/CS4/CS4** (drift **31:** **4/81%/0,9→3/87%/5,8**) · MB **80/94/96%** · @05 ENS **12,4 / 6,5 / 6,4** · midday **12,8 / 6,3 / 5,7** · ICON **11,5/8,2/6,9** · CS4 **11,3/7,6/6,7** · os **½ 12,9/7,1/5,7*** · **31 I≠U** (U jaśniej) · **02 U rad skip** · Fox **~9,4** · start XI ciemny — [`NOTATKA_2026-10-31.md`](NOTATKA_2026-10-31.md) |
 | **2026-10-30 catch-up** | **MB+ld+closeout** (choroba — **bez Accu/oneshot 30.10**) · Accu ostatni **#263** **5/72%→CS4** · MB **83/77/94%** · Fox **29** **2,2** (peak CS4 **3,18**) · **30** **5,0** (peak XGB **5,76**; ENS @05 **+78%**, midday **+133%**) · @05 **30** ENS **8,9** · **31** **14,5** (I/CS4 **~9–10**) · **01.11** **7,1** — [`NOTATKA_2026-10-30.md`](NOTATKA_2026-10-30.md) |
 | **2026-10-29 ~13:57** | **Accu+MB+OM+ld+os** **29–31.10** · Accu **CS4/CS4/CS4** (drift **29:** **6/72→1/97%**) · MB **86/87/78%** · **31** MB **2,9 mm** · @05 ENS **7,8 / 14,4 / 8,2** · midday **6,4 / 8,0 / 10,6** (**30** @05 zawyżenie) · ICON **6,2/15,5/6,5** · CS4 **5,1/15,1/5,5** · os **½ 7,9/7,2/n/d*** · **31 U rad skip** · closeout **28** Fox **18,4** (peak **−0,7%**, ENS @05 **+16%**) · SoC **~11%** — [`NOTATKA_2026-10-29.md`](NOTATKA_2026-10-29.md) |
@@ -178,7 +181,57 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 ---
 
-## AccuWeather — 31.10 ~14:35–14:40 (obecny run · 31.10–02.11)
+## AccuWeather — 02.11 ~14:02–14:07 (obecny run · 02–04.11)
+
+| Dzień | Lumen | Cloud | Opad | P deszcz | Reżim → pick |
+|-------|------:|------:|-----:|---------:|--------------|
+| **02.11** pn. | **1** | **97%** | **0** | **15%** | **pochmurny→CS4** |
+| **03.11** wt. | **1** | **98%** | **0** | **17%** | **pochmurny→CS4** |
+| **04.11** śr. | **3** | **87%** | **0** | **4%** | **pochmurny→CS4** |
+
+Źródło: dashboard → `weather_notes` **`#286` `#287` `#288`**. Drift **02:** vs `#278` Lumen **2→1**, opad **0,7→0**, cloud **95→97%**. Matryca: [`NOTATKA_2026-11-02.md`](NOTATKA_2026-11-02.md).
+
+---
+
+## Meteoblue — 02.11 ~14:08 (obecny run)
+
+Update **2026-11-02 ~14:08** · Free API (`weather_notes` **`#289` `#290` `#291`**).
+
+| | **02.11** | **03.11** | **04.11** |
+|--|-----------|-----------|-----------|
+| **Cloud / opad / Pmax / Tmax** | **94,8%** · **0** · **25%** · **~7,1°** | **96,8%** · **0** · **11%** · **~6,5°** | **81,2%** · **0** · **15%** · **~7,1°** |
+| **vs Accu** | zgoda ciemno | zgoda | lekki **watch** chmury; oba **CS4** |
+
+@05 **02.11:** ENS **5,13** · (**03** **4,82** · **04** **9,93**). ENS shadow; pick apki = **CS4**.
+
+---
+
+## AccuWeather — 01.11 ~20:03–20:06 (archiwum · 01–03.11)
+
+| Dzień | T max | RealFeel | Lumen | Cloud | Opad | P deszcz | UV | Reżim → pick |
+|-------|------:|---------:|------:|------:|-----:|---------:|---:|--------------|
+| **01.11** nd. | **9°** | **6° / 6°** | **1** | **97%** | **0** | **25%** | **1** | **pochmurny→CS4** |
+| **02.11** pn. | **8°** | **6° / 6°** | **2** | **95%** | **0,7 mm** | **60%** | **1** | **pochmurny→CS4** |
+| **03.11** wt. | **7°** | **5° / 5°** | **1** | **88%** | **0** | **16%** | **1** | **pochmurny→CS4** |
+
+Źródło: dashboard → `weather_notes` **`#277` `#278` `#279`**. Drift **01:** vs `#272` Lumen **2→1**, cloud **89→97%**. Matryca: [`NOTATKA_2026-11-01.md`](NOTATKA_2026-11-01.md).
+
+---
+
+## Meteoblue — 01.11 ~20:08 (archiwum)
+
+Update **2026-11-01 ~20:08** · Free API (`weather_notes` **`#280` `#281` `#282`**).
+
+| | **01.11** | **02.11** | **03.11** |
+|--|-----------|-----------|-----------|
+| **Cloud / opad / Pmax / Tmax** | **94,0%** · **0** · **11%** · **~8,8°** | **95,8%** · **0** · **25%** · **~7,0°** | **96,6%** · **0,26** · **25%** · **~6,8°** |
+| **vs Accu** | zgoda ciemno | Accu **0,7 mm** vs MB sucho · **CS4** | MB ślad opadu vs Accu **0** · **CS4** |
+
+@05 **01.11:** ENS **5,60** · (**02** **4,88** · **03** **4,31**). ENS od dziś shadow; pick apki = **CS4**.
+
+---
+
+## AccuWeather — 31.10 ~14:35–14:40 (archiwum · 31.10–02.11)
 
 | Dzień | T max | RealFeel | Lumen | Cloud | Opad | P deszcz | UV | Reżim → pick |
 |-------|------:|---------:|------:|------:|-----:|---------:|---:|--------------|
@@ -190,7 +243,7 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 ---
 
-## Meteoblue — 31.10 ~10:00 (obecny run)
+## Meteoblue — 31.10 ~10:00 (archiwum)
 
 Update **2026-10-31 ~10:00** · Free API auto (`weather_notes` **`#268` `#269` `#270`**).
 

@@ -302,14 +302,26 @@ def get_pv_outlook(
     as_of = as_of or datetime.now()
     db_path = db_path or _db_path()
 
-    pred = _predict_one_day(
-        target_day,
-        as_of,
-        db_path,
-        hybrid_today=True,
-        use_actual_pv=True,
-    )
-    day_df = pred[pred['day'] == target_day].copy() if not pred.empty else pred
+    from src.weather.forecast_routing import predict_day_frame_cs4_cached, resolve_forecast_display
+
+    routing = resolve_forecast_display(target_day, db_path=db_path)
+    if routing.uses_cs4:
+        day_df = predict_day_frame_cs4_cached(
+            target_day,
+            as_of=as_of,
+            db_path=db_path,
+            hybrid_today=True,
+            use_actual_pv=True,
+        )
+    else:
+        pred = _predict_one_day(
+            target_day,
+            as_of,
+            db_path,
+            hybrid_today=True,
+            use_actual_pv=True,
+        )
+        day_df = pred[pred['day'] == target_day].copy() if not pred.empty else pred
 
     sunrise = float(day_df['sunrise_hour'].iloc[0]) if not day_df.empty else None
     first_h = None
@@ -998,22 +1010,37 @@ def get_day_pv_forecast_sum(
     db_path: str | None = None,
     until_hour: int | None = None,
 ) -> float | None:
-    """Suma prognozy RF (raw) na dzień — pod regułę pochmurno / sugestie.
+    """Suma prognozy na dzień — pod regułę pochmurno / sugestie baterii.
 
-    until_hour: jeśli podane (np. 13), suma tylko godzin ``hour < until_hour``
-    (prognoza „do 13:00”, bez godziny 13).
+    Gdy ``ACCU_CS4_UI=1`` i Accu = pochmurny → suma z modelu CS4 (shadow dual).
+    until_hour: jeśli podane (np. 13), suma tylko godzin ``hour < until_hour``.
     """
     as_of = as_of or datetime.now()
     db_path = db_path or _db_path()
     try:
-        pred = _predict_one_day(
-            target_day,
-            as_of,
-            db_path,
-            hybrid_today=False,
-            use_actual_pv=False,
+        from src.weather.forecast_routing import (
+            predict_day_frame_cs4_cached,
+            resolve_forecast_display,
         )
-        day_df = pred[pred['day'] == target_day] if not pred.empty else pred
+
+        routing = resolve_forecast_display(target_day, db_path=db_path)
+        if routing.uses_cs4:
+            day_df = predict_day_frame_cs4_cached(
+                target_day,
+                as_of=as_of,
+                db_path=db_path,
+                hybrid_today=False,
+                use_actual_pv=False,
+            )
+        else:
+            pred = _predict_one_day(
+                target_day,
+                as_of,
+                db_path,
+                hybrid_today=False,
+                use_actual_pv=False,
+            )
+            day_df = pred[pred['day'] == target_day] if not pred.empty else pred
         if day_df.empty:
             return None
         if until_hour is not None:
@@ -1026,7 +1053,18 @@ def get_day_pv_forecast_sum(
 
 
 def get_archived_day_pv_kwh(target_day: str) -> float | None:
-    """Suma PV z forecast_history.csv (bez ładowania modelu) — karta Home."""
+    """Suma PV operacyjna na kartę Home / reguły baterii.
+
+    Przy ``ACCU_CS4_UI=1`` preferuje bieżącą inferencję z routingiem (CS4 vs ensemble).
+    Fallback: ostatni wiersz ``forecast_history.csv`` (ensemble audit).
+    """
+    from src.weather.forecast_routing import accu_cs4_routing_enabled
+
+    if accu_cs4_routing_enabled():
+        live = get_day_pv_forecast_sum(target_day)
+        if live is not None:
+            return live
+
     path = os.path.join('data', 'processed', 'forecasts', 'forecast_history.csv')
     if not os.path.exists(path):
         return None

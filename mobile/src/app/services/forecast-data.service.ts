@@ -55,6 +55,12 @@ export interface ForecastState {
   /** T1.20 — kiedy włączyć AGD. */
   applianceTips: ApplianceTip[];
   applianceThresholds: ApplianceThreshold[];
+  displayModel: string;
+  regime: string | null;
+  primaryTotalKwh: number | null;
+  routingEnabled: boolean;
+  lumenLabel: string | null;
+  accuBrightness: number | null;
 }
 
 /** Pierwszy dzień, dla którego istnieje zarchiwizowana prognoza (forecast_history.csv). */
@@ -108,6 +114,12 @@ export class ForecastDataService {
     actualSoFarKwh: null,
     applianceTips: [],
     applianceThresholds: [],
+    displayModel: 'ensemble',
+    regime: null,
+    primaryTotalKwh: null,
+    routingEnabled: false,
+    lumenLabel: null,
+    accuBrightness: null,
   });
 
   constructor(private readonly api: ApiService) {
@@ -215,6 +227,12 @@ export class ForecastDataService {
       actualSoFarKwh: null,
       applianceTips: [],
       applianceThresholds: [],
+      displayModel: 'ensemble',
+      regime: null,
+      primaryTotalKwh: null,
+      routingEnabled: false,
+      lumenLabel: null,
+      accuBrightness: null,
     });
   }
 
@@ -244,6 +262,12 @@ export class ForecastDataService {
             actualSoFarKwh: null,
             applianceTips: [],
             applianceThresholds: [],
+            displayModel: 'ensemble',
+            regime: null,
+            primaryTotalKwh: null,
+            routingEnabled: false,
+            lumenLabel: null,
+            accuBrightness: null,
           }),
     };
 
@@ -296,6 +320,12 @@ export class ForecastDataService {
               label: t.label,
               minKw: t.min_kw,
             })),
+            displayModel: hourly.display_model ?? 'ensemble',
+            regime: hourly.regime ?? null,
+            primaryTotalKwh: hourly.primary_total_kwh ?? null,
+            routingEnabled: hourly.routing_enabled ?? false,
+            lumenLabel: hourly.lumen_label ?? null,
+            accuBrightness: hourly.accu?.brightness ?? null,
           })),
           catchError((err: HttpErrorResponse) =>
             of({

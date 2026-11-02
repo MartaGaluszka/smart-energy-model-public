@@ -45,13 +45,36 @@
       </ion-button>
     </div>
 
+    <div
+      class="se-regime-banner"
+      *ngIf="state.displayModel === 'cs4' && state.regime === 'pochmurny'"
+    >
+      <ion-icon name="cloudy-outline" aria-hidden="true"></ion-icon>
+      <span>
+        Reżim pochmurny
+        <ng-container *ngIf="state.lumenLabel"> · Lumen {{ state.accuBrightness ?? '—' }} ({{ state.lumenLabel }})</ng-container>
+        · prognoza <strong>CS4</strong> (ensemble w tle)
+      </span>
+    </div>
+
     <!-- Plan vs rzeczywistość: suma modelu + produkcja dotychczas, układ 1×2 -->
     <div class="se-kpi-pair" *ngIf="!state.error">
       <ion-card class="se-card se-kpi">
         <ion-card-content>
           <ion-icon name="sunny-outline" class="se-kpi__icon se-kpi__icon--solar"></ion-icon>
           <span class="se-kpi__value">{{ state.totalKwh !== null ? (state.totalKwh | number: '1.1-2') : '—' }} <small>kWh</small></span>
-          <span class="se-kpi__label">Suma prognozy modelu na {{ selectedIsToday ? 'dziś' : formatDay(state.day) }}</span>
+          <span class="se-kpi__label">
+            Suma prognozy
+            <ng-container *ngIf="state.displayModel === 'cs4'; else ensLabel">CS4</ng-container>
+            <ng-template #ensLabel>modelu</ng-template>
+            na {{ selectedIsToday ? 'dziś' : formatDay(state.day) }}
+          </span>
+          <p
+            class="se-kpi__audit"
+            *ngIf="state.primaryTotalKwh !== null && state.displayModel === 'cs4' && state.primaryTotalKwh !== state.totalKwh"
+          >
+            Ensemble (audit): {{ state.primaryTotalKwh | number: '1.1-2' }} kWh
+          </p>
         </ion-card-content>
       </ion-card>
       <!-- Produkcja FoxESS: dziś = dotychczas (w trakcie); dni przeszłe = ostateczna suma. -->

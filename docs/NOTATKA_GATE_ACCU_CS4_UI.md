@@ -1,10 +1,10 @@
 # Gate — Accu → CS4 w UI (bez ICON-only)
 
-**Status:** **PROPOZYCJA** (do decyzji — nie wdrożone)  
+**Status:** **Faza A+B wdrożona** (2026-10-31) — flaga ``ACCU_CS4_UI=1`` · API ``/forecast/hourly`` · bateria · mobile tab3  
 **Data spisania:** 2026-09-26  
 **Poprzedni gate:** [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md) (01.09) — **REJECT** ICON≥30%→CS4 · **ACCEPT** ENS primary  
 **Dowód wrzesień:** analiza 1–25.09 (canvas *September-2026-Models-x-Weather*) · closeouty `forecast_validation.csv`  
-**Paper Accu (reguła reżimu):** log paper-trade — tylko repo prywatne
+**Paper Accu (reguła reżimu):** paper-trade (tylko repo prywatne) *(tylko repo prywatne)*
 
 ---
 
@@ -48,7 +48,7 @@ To jest **to samo drzewo co paper Accu**, tylko z celem **pokazać CS4 w produkc
 
 | | |
 |--|--|
-| **Gdzie** | log paper-trade — tylko repo prywatne |
+| **Gdzie** | paper-trade (tylko repo prywatne) + `scripts/analysis/paper_trade_accu_regime.py` *(prywatne)* |
 | **Co** | Reguła Accu→CS4 / mix→RF **bez zmiany UI i launchd**; po closeoucie: pick vs Fox, false positive (clearing), Fox ≲ 15 |
 | **Po co** | Domknąć n≥10 jakościowych (nie tylko Accu-pochmurnych „z kartą”) · zebrać **X–XII** zanim Faza A |
 | **Dodatek do logu** | kolumna / uwaga: `fox_bucket` (&lt;15 vs ≥15) · `cs4_ok?` · `watch_mix` (MB clearing) |
@@ -181,7 +181,7 @@ Czysty Accu bez progu kWh łapie false positive (12–13.09: Accu CS4, ENS ~2% A
 
 | # | Task | Est. | Zależność |
 |---|------|-----:|-----------|
-| G0 | Checklist n Accu-pochmurnych + skrypt gate (reuse logu paper-trade) | 1 h | — |
+| G0 | Checklist n Accu-pochmurnych + skrypt gate (reuse paper_trade) | 1 h | — |
 | G1 | Flaga + helper `accu_regime_for_day()` w API | 2 h | G0 |
 | G2 | Endpoint / pole `display_kwh` + testy | 2–3 h | G1 |
 | G3 | Mobile Home: suma + badge reżimu | 2–3 h | G2 |
@@ -208,9 +208,9 @@ Czysty Accu bez progu kWh łapie false positive (12–13.09: Accu CS4, ENS ~2% A
 | | |
 |--|--|
 | Gate ICON/ENS 01.09 | [`NOTATKA_TEST_ROUTING_28-31_08.md`](NOTATKA_TEST_ROUTING_28-31_08.md) |
-| Paper Accu RF↔CS4 | log paper-trade — tylko repo prywatne |
+| Paper Accu RF↔CS4 | paper-trade (tylko repo prywatne) *(prywatne)* |
 | STATUS ML | [`STATUS_ML_MLOPS.md`](STATUS_ML_MLOPS.md) |
-| Skrypt paper | skrypt paper-trade — tylko repo prywatne |
+| Skrypt paper | `scripts/analysis/paper_trade_accu_regime.py` |
 | Closeout CS4 | kolumny `predicted_*_cs4` w `forecast_validation.csv` |
 
 ---
