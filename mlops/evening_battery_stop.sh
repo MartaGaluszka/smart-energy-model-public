@@ -13,7 +13,7 @@ mkdir -p "${PROJECT_ROOT}/logs"
 # shellcheck source=/dev/null
 source "${PROJECT_ROOT}/mlops/_venv.sh"
 
-HOUR="$(date '+%H')"
+HOUR="$((10#$(date '+%H')))"
 if [[ "${HOUR}" -lt 22 && "${HOUR}" -ge 6 ]]; then
   exit 0
 fi

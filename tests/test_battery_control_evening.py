@@ -20,7 +20,11 @@ from src.optimization.battery_control import (
     count_real_applies_today,
     evening_stop_if_due,
     morning_apply_allowed,
+    compute_morning_topup,
+    g12w_force_charge_windows,
     morning_cloudy_apply_trigger,
+    morning_soc_floor,
+    morning_topup_target_soc,
     stop_fox_quota_status,
     format_plan,
     work_mode_is_force_charge,
@@ -344,9 +348,115 @@ def test_morning_apply_allowed_before_six_only():
     assert morning_apply_allowed(datetime(2026, 11, 3, 6, 0)) is False
 
 
-def test_morning_cloudy_trigger_requires_low_pv():
-    advice = _advice_morning(as_of=datetime(2026, 11, 3, 5, 0), recommendation='SOC OK')
-    assert morning_cloudy_apply_trigger(advice) is False
+def test_morning_cloudy_trigger_skips_when_pv_high():
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 3, 5, 0),
+        recommendation='SOC OK',
+        morning_pv=15.0,
+    )
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=20.0,
+    ):
+        assert morning_cloudy_apply_trigger(advice) is False
+
+
+def test_morning_cloudy_trigger_on_rezerwa_when_soc_low():
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 3, 5, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=3.0,
+    )
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=4.0,
+    ):
+        assert morning_cloudy_apply_trigger(advice) is True
+
+
+def test_morning_topup_skips_when_soc_at_floor():
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 3, 5, 0),
+        morning_pv=3.0,
+    )
+    advice.snapshot = BatterySnapshot(None, morning_soc_floor(), None, None, None, None)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=4.0,
+    ):
+        assert compute_morning_topup(advice) is None
+
+
+def test_morning_topup_half_battery_to_ninety_at_0400():
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 3, 4, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=3.0,
+    )
+    advice.snapshot = BatterySnapshot(None, 50.0, None, None, None, None)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=4.0,
+    ):
+        topup = compute_morning_topup(advice)
+    assert topup is not None
+    assert topup.target_soc == morning_topup_target_soc()
+    assert topup.fc_minutes == 24.0
+    assert topup.stop_at == datetime(2026, 11, 3, 4, 24)
+
+
+def test_build_plan_morning_rezerwa_starts_force_charge():
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 3, 4, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=3.0,
+    )
+    advice.snapshot = BatterySnapshot(None, 50.0, None, None, None, None)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=4.0,
+    ):
+        plan = build_plan(advice)
+    kinds = [a.kind for a in plan.actions]
+    assert 'set_work_mode' in kinds
+    assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
+
+
+def test_g12w_morning_fc_enables_0400_0600_window():
+    p1, p2 = g12w_force_charge_windows(enabled=True)
+    assert p1.enabled and p1.start_hour == 22.0 and p1.end_hour == 1.0
+    assert p2.enabled and p2.start_hour == 4.0 and p2.end_hour == 6.0
+
+
+def test_morning_apply_at_0400_is_cheap_and_enables_fc_window_in_plan():
+    assert morning_apply_allowed(datetime(2026, 11, 3, 4, 0)) is True
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 3, 4, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=3.0,
+    )
+    advice.snapshot = BatterySnapshot(None, 50.0, None, None, None, None)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=4.0,
+    ):
+        plan = build_plan(advice)
+    fc_action = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
+    p2 = fc_action.params['period2']
+    assert p2.enabled is True
+    assert p2.start_hour == 4.0
+    assert p2.end_hour == 6.0
+
+
+def test_launchd_morning_battery_apply_runs_at_0400():
+    from pathlib import Path
+
+    plist = (
+        Path(__file__).resolve().parents[1]
+        / 'config/launchd/pl.smart-energy-model.morning-battery-apply.plist'
+    ).read_text(encoding='utf-8')
+    assert '<integer>4</integer>' in plist
+    assert '<key>Hour</key>' in plist
 
 
 def test_validate_apply_denies_when_b2_not_triggered(monkeypatch):

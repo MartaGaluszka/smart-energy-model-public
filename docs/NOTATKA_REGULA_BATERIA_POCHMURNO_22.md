@@ -67,6 +67,9 @@ TO
 | `BATTERY_MORNING_BOILER_KWH` | **0,42** | kalibracja **12.10** ~03:15 · **13.10** ~02:52 (**~0,4**, peak **2,6**) |
 | `BATTERY_MORNING_HEAT_BUFFER_KWH` | **0,58** | kalibracja **12.10** ~05:50 · **13.10** ~06:10–06:25 (**~0,6**, peak **2,6**) |
 | `BATTERY_MORNING_TOWEL_HEATER_KWH` | **0,75** | szacunek **grzejnik łazienka** całą noc (**12→13.10**); kalendarz `grzejnik_lazienka` |
+| `BATTERY_MORNING_SOC_FLOOR` | **80** | **@~4:00** (launchd **4:00**): poniżej → top-up w oknie Fox **04–06** (G12w tanio) |
+| `BATTERY_MORNING_TOPUP_TARGET` | **90** | cel SoC po porannym FC (ΔSoC × 30 min / 50 pp, stop przed 6:00) |
+| `BATTERY_MORNING_CLOUDY_PV_KWH` | **12** | suma PV doby &lt; próg → „słabe PV” (razem z &lt;8 kWh rano 5–12h) |
 
 ### Lekcja 12→13.10 — „miało starczyć” przy 50%@22
 

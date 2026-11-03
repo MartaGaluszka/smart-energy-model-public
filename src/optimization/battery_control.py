@@ -77,6 +77,14 @@ def _disabled_window() -> ForceChargeWindow:
     return ForceChargeWindow(enabled=False, start_hour=0.0, end_hour=0.0)
 
 
+def g12w_force_charge_windows(*, enabled: bool = True) -> tuple[ForceChargeWindow, ForceChargeWindow]:
+    """Fox (2 okna): 22–01 i 04–06 — tanio G12w; drugie okno = ładowanie / ogrzewanie od ~4:00."""
+    return (
+        ForceChargeWindow(enabled=enabled, start_hour=22.0, end_hour=1.0),
+        ForceChargeWindow(enabled=enabled, start_hour=4.0, end_hour=6.0),
+    )
+
+
 def control_enabled() -> bool:
     return os.getenv('BATTERY_CONTROL_ENABLED', '0').strip().lower() in ('1', 'true', 'yes')
 
@@ -117,21 +125,66 @@ def morning_apply_allowed(as_of: datetime) -> bool:
     return is_cheap_zone(as_of)
 
 
-def morning_cloudy_apply_trigger(advice: BatteryAdvice) -> bool:
-    """Pochmurny / słabe PV — zgodnie z doradcą morning + prognoza doby."""
-    if advice.context != 'morning':
-        return False
-    if advice.recommendation != 'ŁADUJ Z SIECI (TANIO)':
-        return False
+def morning_soc_floor() -> float:
+    """@~4:00 (launchd): poniżej progu → top-up w oknie 04–06 G12w."""
+    return _env_float('BATTERY_MORNING_SOC_FLOOR', 80.0)
+
+
+def morning_topup_target_soc() -> float:
+    return _env_float('BATTERY_MORNING_TOPUP_TARGET', 90.0)
+
+
+def morning_topup_min_delta_soc() -> float:
+    return _env_float('BATTERY_MORNING_TOPUP_MIN_DELTA', 5.0)
+
+
+@dataclass
+class MorningTopupPlan:
+    target_soc: float
+    fc_minutes: float
+    stop_at: datetime
+
+
+def _morning_pv_weak(advice: BatteryAdvice) -> bool:
     from src.optimization.battery_advisor import get_day_pv_forecast_sum
 
     today_pv = get_day_pv_forecast_sum(advice.target_day, as_of=advice.as_of)
     if today_pv is not None and today_pv < morning_cloudy_pv_kwh_threshold():
         return True
     morning_pv = advice.pv.morning_forecast_kwh if advice.pv else None
-    if morning_pv is not None and morning_pv < 8.0:
-        return True
-    return False
+    return morning_pv is not None and morning_pv < 8.0
+
+
+def compute_morning_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
+    """Poranny top-up @~5:00 (G12w tanio do 6:00): słabe PV i SoC < floor → cel target."""
+    if advice.context != 'morning':
+        return None
+    if not _morning_pv_weak(advice):
+        return None
+    soc = advice.snapshot.soc_percent if advice.snapshot else None
+    if soc is None or soc >= morning_soc_floor():
+        return None
+    target = morning_topup_target_soc()
+    delta = max(0.0, target - soc)
+    if delta < morning_topup_min_delta_soc():
+        return None
+    from src.optimization.battery_advisor import fc_minutes_for_delta_soc
+
+    minutes = fc_minutes_for_delta_soc(delta)
+    cheap_end = planned_morning_stop_at(advice.as_of)
+    max_minutes = max(0.0, (cheap_end - advice.as_of).total_seconds() / 60.0)
+    minutes = min(minutes, max_minutes)
+    if minutes < 3.0:
+        return None
+    stop_at = advice.as_of + timedelta(minutes=minutes)
+    if stop_at > cheap_end:
+        stop_at = cheap_end
+    return MorningTopupPlan(target_soc=target, fc_minutes=minutes, stop_at=stop_at)
+
+
+def morning_cloudy_apply_trigger(advice: BatteryAdvice) -> bool:
+    """Apply launchd ~4:00 — patrz ``compute_morning_topup``."""
+    return compute_morning_topup(advice) is not None
 
 
 def planned_morning_stop_at(as_of: datetime) -> datetime:
@@ -214,7 +267,10 @@ def validate_apply_request(
         if not morning_apply_allowed(advice.as_of):
             return 'Poza oknem tanio przed 6:00 — apply morning pominięte.'
         if not morning_cloudy_apply_trigger(advice):
-            return 'Dzień nie pochmurny / PV rano wystarczy — apply morning POMIŃ.'
+            return (
+                f'Poranny apply @4:00 pominięty: PV OK lub SoC ≥ {morning_soc_floor():.0f}% '
+                f'(cel top-up {morning_topup_target_soc():.0f}%).'
+            )
     return None
 
 
@@ -263,10 +319,16 @@ def record_evening_session_after_apply(advice: BatteryAdvice, plan: ControlPlan,
         fc_min = rule.fc_minutes if rule else None
         target = rule.target_soc_percent if rule else None
     else:
-        stop = planned_morning_stop_at(advice.as_of)
-        mins = max(0.0, (stop - advice.as_of).total_seconds() / 60.0)
-        fc_min = round(mins, 1)
-        target = _env_float('BATTERY_SOC_TARGET', 80.0)
+        topup = compute_morning_topup(advice)
+        if topup:
+            stop = topup.stop_at
+            fc_min = topup.fc_minutes
+            target = topup.target_soc
+        else:
+            stop = planned_morning_stop_at(advice.as_of)
+            mins = max(0.0, (stop - advice.as_of).total_seconds() / 60.0)
+            fc_min = round(mins, 1)
+            target = _env_float('BATTERY_SOC_TARGET', 80.0)
     save_evening_session(
         {
             'day': advice.as_of.date().isoformat(),
@@ -422,8 +484,27 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
     midday_off = _disabled_window()
 
     if advice.context == 'morning':
+        topup = compute_morning_topup(advice)
         if not winter:
             actions.append(ControlAction('noop', 'Tryb letni — bez automatycznego ForceCharge.'))
+        elif topup and advice.as_of.hour < 6:
+            soc_txt = f'{soc:.0f}%' if soc is not None else '?'
+            fc1, fc2 = g12w_force_charge_windows(enabled=True)
+            actions.append(ControlAction(
+                'set_force_charge_windows',
+                'Poranny top-up @~4:00: Fox okna 22–01 + 04–06 (G12w tanio).',
+                {'period1': fc1, 'period2': fc2},
+            ))
+            actions.append(ControlAction(
+                'set_work_mode',
+                f'ForceCharge: SoC {soc_txt} → ~{topup.target_soc:.0f}% przed 6:00.',
+                {'mode': 'ForceCharge'},
+            ))
+            notes.append(
+                f'Poranny top-up @4:00: okno 04–06 włączone, ΔSoC → {topup.target_soc:.0f}%, '
+                f'~{topup.fc_minutes:.0f} min FC, stop {topup.stop_at.strftime("%H:%M")} '
+                f'(30 min ≈ +50 pp).'
+            )
         elif rec == 'ŁADUJ Z SIECI (TANIO)':
             actions.append(ControlAction(
                 'set_force_charge_windows',

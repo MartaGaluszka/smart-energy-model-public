@@ -2,7 +2,7 @@
 Rekomendacje ładowania baterii — G12w + prognoza PV (tryb zimowy / letni).
 
 Konteksty (zgodne z harmonogramem launchd):
-  morning    — 5:00  tanio do 6:00; czy ładować z sieci czy poczekać na PV?
+  morning    — ~4:00 tanio do 6:00; czy ładować z sieci czy poczekać na PV?
   pre_cheap  — 12:00 przed oknem 13:00–15:00 (tanio G12w pn–pt)
   peak       — 16:00 przed szczytem wieczornym 15:00–22:00
 """
@@ -197,9 +197,12 @@ def get_battery_snapshot(
     *,
     target_day: str | None = None,
     max_age_hours: float = 6.0,
+    as_of: datetime | None = None,
 ) -> BatterySnapshot:
     db_path = db_path or _db_path()
     target_day = target_day or date.today().isoformat()
+    as_of = as_of or datetime.now()
+    as_of_sql = as_of.strftime('%Y-%m-%d %H:%M:%S')
     empty = BatterySnapshot(None, None, None, None, None, None)
     if not os.path.exists(db_path):
         return empty
@@ -209,20 +212,22 @@ def get_battery_snapshot(
         '''
         SELECT timestamp, battery_soc_percent, battery_power_kw, pv_power_kw, load_power_kw
         FROM foxess_data
-        WHERE date(timestamp) = ?
+        WHERE date(timestamp) = ? AND timestamp <= ?
         ORDER BY timestamp DESC
         LIMIT 1
         ''',
-        (target_day,),
+        (target_day, as_of_sql),
     ).fetchone()
     if not row:
         row = conn.execute(
             '''
             SELECT timestamp, battery_soc_percent, battery_power_kw, pv_power_kw, load_power_kw
             FROM foxess_data
+            WHERE timestamp <= ?
             ORDER BY timestamp DESC
             LIMIT 1
-            '''
+            ''',
+            (as_of_sql,),
         ).fetchone()
     conn.close()
 
@@ -231,7 +236,7 @@ def get_battery_snapshot(
 
     ts = str(row[0]).replace(' ', 'T')[:19]
     last = datetime.fromisoformat(ts)
-    age = (datetime.now() - last).total_seconds() / 3600
+    age = (as_of - last).total_seconds() / 3600
     if age > max_age_hours:
         return BatterySnapshot(ts, row[1], row[2], row[3], row[4], round(age, 2))
 
@@ -785,7 +790,8 @@ def evaluate_charge_tonight_cloudy(
         and soc_percent is not None
         and soc_percent < (floor_soc_gate if floor_heating else _morning_buffer_soc_floor())
     )
-    if as_of.hour >= 22:
+    # Apply B2 o 22:00 musi przejść; blok dopiero po 22:59.
+    if as_of.hour >= 23:
         return _empty()
     if soc_percent is None:
         return _empty()
@@ -1862,7 +1868,7 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
     zone = classify_zone(as_of)
     tariff_label = 'tanio (pozaszczyt)' if zone == 2 else 'drogo (szczyt)'
 
-    snap = get_battery_snapshot(target_day=target_day)
+    snap = get_battery_snapshot(target_day=target_day, as_of=as_of)
     pv = get_pv_outlook(target_day, as_of=as_of)
     resilience = build_resilience_outlook(snap, as_of=as_of, winter=winter) if winter else None
 

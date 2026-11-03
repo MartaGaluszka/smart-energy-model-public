@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Top-up FC ~5:00 gdy pochmurny / mało PV + BATTERY_CONTROL_MORNING_CLOUDY=1 (T6.2c).
+# Top-up FC @~4:00 (launchd 4:00): słabe PV + SoC < floor → cel target (domyślnie 90%), okno Fox 04–06.
+# BATTERY_CONTROL_MORNING_CLOUDY=1 · progi: BATTERY_MORNING_SOC_FLOOR / BATTERY_MORNING_TOPUP_TARGET
 #
 # launchd: pl.smart-energy-model.morning-battery-apply
 
@@ -13,7 +14,7 @@ mkdir -p "${PROJECT_ROOT}/logs"
 source "${PROJECT_ROOT}/mlops/_venv.sh"
 
 echo ""
-echo "=== Morning battery APPLY (pochmurny ~5:00) | $(date '+%Y-%m-%d %H:%M:%S') ==="
+echo "=== Morning battery APPLY (@4:00 top-up) | $(date '+%Y-%m-%d %H:%M:%S') ==="
 
 if ! "$PYTHON" -c "from src.optimization.battery_control import control_enabled; import sys; sys.exit(0 if control_enabled() else 3)"; then
   echo "ℹ️  BATTERY_CONTROL_ENABLED≠1 — dry-run"
