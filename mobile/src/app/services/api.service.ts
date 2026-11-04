@@ -426,11 +426,23 @@ export class ApiService {
     );
   }
 
-  getBatterySettings(): Observable<BatterySettingsResponse> {
+  getBatterySettings(options?: { fox?: boolean }): Observable<BatterySettingsResponse> {
+    const fox = options?.fox !== false;
     return this.authed((token) =>
       this.http.get<BatterySettingsResponse>(`${this.baseUrl}/api/v1/battery/settings`, {
         headers: { Authorization: `Bearer ${token}` },
+        params: { fox: fox ? 'true' : 'false' },
       }),
+    );
+  }
+
+  syncBatterySettingsFromFox(): Observable<BatterySettingsResponse> {
+    return this.authed((token) =>
+      this.http.post<BatterySettingsResponse>(
+        `${this.baseUrl}/api/v1/battery/settings/sync-from-fox`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      ),
     );
   }
 

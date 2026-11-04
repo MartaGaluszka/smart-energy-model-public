@@ -28,11 +28,13 @@ def fox_period_to_window(period: dict[str, Any], *, schedule_enabled: bool) -> d
     if mode not in ('ForceCharge', 'SelfUse', 'ForceDischarge'):
         mode = 'SelfUse'
     extra = period.get('extraParam') or {}
+    # Slot w ``groups`` Fox = skonfigurowany okres (jak aktywny w app), niezależnie od
+    # globalnego ``enable`` w API (często False mimo włączonego harmonogramu w UI).
     window: dict[str, Any] = {
         'start': _hhmm(int(period.get('startHour', 0)), int(period.get('startMinute', 0))),
         'end': _hhmm(int(period.get('endHour', 0)), int(period.get('endMinute', 0))),
         'mode': mode,
-        'enabled': bool(schedule_enabled),
+        'enabled': True,
     }
     max_soc = extra.get('maxSoc')
     if max_soc is not None:

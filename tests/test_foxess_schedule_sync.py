@@ -39,6 +39,24 @@ def test_fox_period_to_se_window():
     assert windows[0]['max_soc_percent'] == 80.0
 
 
+def test_fox_period_enabled_even_when_master_flag_false():
+    """Global enable z API bywa rozjechany z app — sloty i tak są włączone w SE."""
+    periods = [
+        {
+            'startHour': 4,
+            'startMinute': 0,
+            'endHour': 5,
+            'endMinute': 0,
+            'workMode': 'ForceCharge',
+            'isRemainMode': False,
+            'extraParam': {'maxSoc': 90},
+        },
+    ]
+    windows = fox_periods_to_schedule_windows(periods, schedule_enabled=False)
+    assert len(windows) == 1
+    assert windows[0]['enabled'] is True
+
+
 def test_se_window_to_fox_group():
     groups = schedule_windows_to_fox_groups(
         [

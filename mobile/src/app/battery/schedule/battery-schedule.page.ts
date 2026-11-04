@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { ViewWillEnter } from '@ionic/angular';
 import { BatteryScheduleMode } from '../../services/api.service';
 import { BatteryStateService } from '../services/battery-state.service';
 
@@ -8,7 +9,31 @@ import { BatteryStateService } from '../services/battery-state.service';
   styleUrls: ['../battery-shared.scss'],
   standalone: false,
 })
-export class BatterySchedulePage {
+export class BatterySchedulePage implements ViewWillEnter {
+  foxSyncBlocked = false;
+
+  constructor(readonly stateService: BatteryStateService) {}
+
+  ionViewWillEnter(): void {
+    this.foxSyncBlocked = !this.stateService.refreshScheduleFromFox(false);
+  }
+
+  refreshFromFox(force = false): void {
+    this.foxSyncBlocked = !this.stateService.refreshScheduleFromFox(force);
+  }
+
+  scheduleSourceLabel(source: string | undefined): string {
+    switch (source) {
+      case 'fox_schedule':
+        return 'App FoxESS (harmonogram trybu pracy)';
+      case 'fox_force_charge':
+        return 'FoxESS (okna ForceCharge, harmonogram wyłączony)';
+      case 'database':
+        return 'Zapis w Smart Energy (bez świeżego odczytu Fox)';
+      default:
+        return source ?? '—';
+    }
+  }
   readonly scheduleModes: { value: BatteryScheduleMode; label: string }[] = [
     { value: 'ForceCharge', label: 'Doładuj z sieci' },
     { value: 'SelfUse', label: 'Zasilaj dom' },
@@ -20,8 +45,6 @@ export class BatterySchedulePage {
     { value: 'g12w', label: 'G12w', hint: 'kilka okien' },
     { value: 'g13', label: 'G13', hint: 'więcej okien' },
   ];
-
-  constructor(readonly stateService: BatteryStateService) {}
 
   estimatedDeltaSoc(): number {
     const state = this.stateService.state();

@@ -37,6 +37,13 @@ def read_fox_battery_mirror() -> dict[str, Any]:
         enabled = bool(sched.get('enabled'))
         periods = sched.get('periods') or []
         windows = fox_periods_to_schedule_windows(periods, schedule_enabled=enabled)
+        if enabled and periods and not windows:
+            return {
+                'ok': False,
+                'error': 'Fox zwrócił sloty harmonogramu, ale mapowanie SE nie utworzyło bloków.',
+                'schedule_windows': [],
+                'schedule_source': 'error',
+            }
         if not windows and not enabled:
             windows = force_charge_windows_to_schedule_windows(
                 state.force_charge_1,

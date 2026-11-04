@@ -84,7 +84,7 @@ export class BatteryStateService {
     this._loading.set(true);
     this._error.set(null);
 
-    this.api.getBatterySettings().subscribe({
+    this.api.getBatterySettings({ fox: true }).subscribe({
       next: (row) => {
         this._state.set(row);
         this._savedSnapshot.set(structuredClone(row));
@@ -203,6 +203,38 @@ export class BatteryStateService {
         },
       }),
     );
+  }
+
+  /**
+   * Harmonogram z app FoxESS → stan + snapshot (zakładka Harmonogram).
+   * Nie nadpisuje przy niezapisanych zmianach — wtedy zwraca false.
+   */
+  refreshScheduleFromFox(force = false): boolean {
+    if (!force && this.hasUnsavedChanges()) {
+      return false;
+    }
+    this._loading.set(true);
+    this._error.set(null);
+    this.api.syncBatterySettingsFromFox().subscribe({
+      next: (row) => {
+        this._state.set(row);
+        this._savedSnapshot.set(structuredClone(row));
+        this._loading.set(false);
+        if (row.fox_mirror?.ok) {
+          this._saveMessage.set('Harmonogram zsynchronizowany z app FoxESS');
+          setTimeout(() => this._saveMessage.set(null), 3500);
+        } else if (row.fox_mirror?.error) {
+          this._error.set(row.fox_mirror.error);
+        }
+      },
+      error: (err) => {
+        this._loading.set(false);
+        this._error.set(
+          this.formatHttpError(err, 'Sync z FoxESS — nieznany błąd'),
+        );
+      },
+    });
+    return true;
   }
 
   /**

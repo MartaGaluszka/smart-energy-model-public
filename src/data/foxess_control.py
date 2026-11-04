@@ -132,7 +132,11 @@ class FoxEssControl:
     def read_schedule(self) -> dict[str, Any]:
         """Pełny harmonogram trybu pracy (jak w appce FoxESS)."""
         self._ensure_device()
-        schedule = foxess.get_schedule() or {}
+        schedule = foxess.get_schedule()
+        if schedule is None:
+            raise RuntimeError(
+                'FoxESS get_schedule() — brak odpowiedzi (limit API, pauza 40402 lub brak urządzenia).'
+            )
         return {
             'enabled': schedule.get('enable'),
             'periods': list(schedule.get('periods') or []),

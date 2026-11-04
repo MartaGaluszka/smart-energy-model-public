@@ -73,18 +73,36 @@
 
   <ion-card class="se-card" *ngIf="!stateService.loading() && !stateService.error() && stateService.state() as state">
     <ion-card-header>
-      <ion-card-title class="font-serif">Harmonogram G12w</ion-card-title>
+      <ion-card-title class="font-serif">Harmonogram (Fox / SE)</ion-card-title>
     </ion-card-header>
     <ion-card-content>
       <div class="se-battery-page__schedule">
-        <span class="se-battery-page__label">
-          Plan dnia — uniwersalny ({{ state.schedule_windows.length }}/{{ state.schedule_max_windows }} bloków)
-        </span>
         <p class="se-battery-page__slider-note">
-          Szablon tylko startuje listę — zawsze możesz dodać lub usunąć bloki (max {{ state.schedule_max_windows }}).
+          Źródło listy: <strong>{{ scheduleSourceLabel(state.schedule_source) }}</strong>
+          <ng-container *ngIf="state.fox_schedule_enabled === true"> · harmonogram Fox <strong>włączony</strong></ng-container>
+          <ng-container *ngIf="state.fox_schedule_enabled === false"> · harmonogram Fox wyłączony</ng-container>
+        </p>
+        <p class="se-battery-page__slider-note" *ngIf="foxSyncBlocked">
+          Masz niezapisane zmiany — zapisz lub opuść ekran, potem odśwież z Fox.
+        </p>
+        <p class="se-battery-page__slider-note" *ngIf="state.fox_mirror?.error && !state.fox_mirror?.ok">
+          Odczyt Fox: {{ state.fox_mirror?.error }}
+        </p>
+        <ion-button expand="block" fill="outline" size="small" (click)="refreshFromFox(true)">
+          Odśwież sloty z app FoxESS
+        </ion-button>
+
+        <span class="se-battery-page__label">
+          Sloty ({{ state.schedule_windows.length }}/{{ state.schedule_max_windows }})
+        </span>
+        <p class="se-battery-page__slider-note" *ngIf="state.schedule_source === 'fox_schedule' || state.schedule_source === 'fox_force_charge'">
+          Godziny i tryb jak w app FoxESS; cel SoC (max) przy ForceCharge — jak w slocie producenta.
+        </p>
+        <p class="se-battery-page__slider-note" *ngIf="state.schedule_source === 'database'">
+          Poniżej zapis SE lub szablon G12w — użyj „Odśwież z app FoxESS”, żeby pobrać ręczne sloty z falownika.
         </p>
 
-        <span class="se-battery-page__label">Szablon startowy</span>
+        <span class="se-battery-page__label">Szablon startowy (tylko SE)</span>
         <ion-segment [value]="state.schedule_preset" (ionChange)="applyTariffPreset($event.detail.value)">
           <ion-segment-button *ngFor="let p of tariffPresets" [value]="p.value">
             <ion-label>{{ p.label }}</ion-label>
@@ -98,10 +116,6 @@
           <ng-container *ngFor="let p of tariffPresets">
             <ng-container *ngIf="p.value === state.schedule_preset"> ({{ p.hint }})</ng-container>
           </ng-container>
-        </p>
-
-        <p class="se-battery-page__slider-note">
-          Bloki startują wyłączone — włącz tylko te, które chcesz w planie SE.
         </p>
 
         <div class="se-schedule-row" *ngFor="let w of state.schedule_windows; let i = index">
@@ -130,6 +144,9 @@
               Do
               <input type="time" [value]="w.end" (change)="onWindowTimeChange(i, 'end', $any($event.target).value)" />
             </label>
+            <span class="se-battery-page__fixed-tag" *ngIf="w.max_soc_percent != null && w.mode === 'ForceCharge'">
+              max SoC {{ w.max_soc_percent | number:'1.0-0' }}%
+            </span>
           </div>
           <div class="se-chips se-chips--wrap" role="radiogroup" [attr.aria-label]="'Tryb bloku ' + (i + 1)">
             <button
