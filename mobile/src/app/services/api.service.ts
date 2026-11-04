@@ -85,6 +85,8 @@ export interface BatteryScheduleWindow {
   end: string;
   mode: BatteryScheduleMode;
   enabled: boolean;
+  max_soc_percent?: number | null;
+  min_soc_on_grid_percent?: number | null;
 }
 
 export interface BatterySettingsResponse {
@@ -105,6 +107,14 @@ export interface BatterySettingsResponse {
   schedule_windows: BatteryScheduleWindow[];
   schedule_max_windows: number;
   schedule_preset: string;
+  schedule_source?: string;
+  fox_schedule_enabled?: boolean | null;
+  fox_mirror?: {
+    ok?: boolean;
+    error?: string | null;
+    push_detail?: string | null;
+    fox_schedule_enabled?: boolean | null;
+  } | null;
 }
 
 /** Pełny zapis z ekranu Bateria; partial OK (np. sam ac_power_kw z Home). */
@@ -122,6 +132,7 @@ export type BatterySettingsUpdate = Partial<{
   battery_automation_enabled: boolean;
   schedule_windows: BatteryScheduleWindow[];
   schedule_preset: string;
+  push_schedule_to_fox?: boolean;
 }>;
 
 export interface BatteryPlanHour {

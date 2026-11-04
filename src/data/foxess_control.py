@@ -129,6 +129,34 @@ class FoxEssControl:
             schedule_enabled=schedule.get('enable'),
         )
 
+    def read_schedule(self) -> dict[str, Any]:
+        """Pełny harmonogram trybu pracy (jak w appce FoxESS)."""
+        self._ensure_device()
+        schedule = foxess.get_schedule() or {}
+        return {
+            'enabled': schedule.get('enable'),
+            'periods': list(schedule.get('periods') or []),
+            'support': schedule.get('support'),
+        }
+
+    def set_work_schedule(
+        self,
+        groups: list[dict[str, Any]],
+        *,
+        enable: bool = True,
+        dry_run: bool = True,
+    ) -> dict[str, Any]:
+        payload = {'enable': enable, 'groups': groups}
+        if dry_run:
+            logger.info('[DRY-RUN] set_work_schedule: %s', payload)
+            return {'dry_run': True, 'action': 'set_work_schedule', **payload}
+
+        self._ensure_device()
+        result = foxess.set_schedule(periods=groups, enable=enable)
+        if result is None:
+            raise RuntimeError('FoxESS set_schedule() nie powiodło się.')
+        return {'dry_run': False, 'action': 'set_work_schedule', **payload}
+
     def set_force_charge_windows(
         self,
         *,

@@ -131,6 +131,11 @@ export class BatteryStateService {
     }
     this._error.set(null);
 
+    const saved = this._savedSnapshot();
+    const scheduleChanged =
+      !!saved &&
+      JSON.stringify(current.schedule_windows) !== JSON.stringify(saved.schedule_windows);
+
     // Konwersja BatterySettingsResponse → BatterySettingsUpdate
     const body: BatterySettingsUpdate = {
           soc_min_percent: current.soc_min_percent,
@@ -146,6 +151,7 @@ export class BatteryStateService {
           price_zone1: current.price_zone1,
           price_zone2: current.price_zone2 ?? null,
           battery_automation_enabled: current.battery_automation_enabled,
+          push_schedule_to_fox: scheduleChanged,
         }
 
     return this.api.updateBatterySettings(body).pipe(

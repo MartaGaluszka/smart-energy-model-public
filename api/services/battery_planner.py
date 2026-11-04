@@ -83,15 +83,17 @@ def normalize_schedule_windows(raw) -> list[dict]:
         mode = str(item.get('mode') or 'SelfUse')
         if mode not in SCHEDULE_MODES:
             mode = 'SelfUse'
-        out.append(
-            {
-                'start': str(start),
-                'end': str(end),
-                'mode': mode,
-                # Domyślnie wyłączony — użytkownik włącza świadomie w UI
-                'enabled': bool(item.get('enabled', False)),
-            }
-        )
+        row: dict = {
+            'start': str(start),
+            'end': str(end),
+            'mode': mode,
+            # Domyślnie wyłączony — użytkownik włącza świadomie w UI
+            'enabled': bool(item.get('enabled', False)),
+        }
+        for opt in ('max_soc_percent', 'min_soc_on_grid_percent', 'source'):
+            if item.get(opt) is not None:
+                row[opt] = item.get(opt)
+        out.append(row)
         if len(out) >= SCHEDULE_MAX_WINDOWS:
             break
     return out
@@ -926,6 +928,9 @@ def settings_payload(settings_row, d: date | None = None) -> dict:
         'schedule_windows': schedule_windows_from_settings(settings_row),
         'schedule_max_windows': SCHEDULE_MAX_WINDOWS,
         'schedule_preset': getattr(settings_row, 'schedule_preset', None) or "g12w",
+        'schedule_source': 'database',
+        'fox_schedule_enabled': None,
+        'fox_mirror': None,
     }
 
 

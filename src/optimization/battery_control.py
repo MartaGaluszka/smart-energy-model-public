@@ -546,15 +546,22 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
     elif advice.context == 'evening':
         rule = advice.charge_tonight
         if rule and rule.triggered:
+            fc1, fc2 = g12w_force_charge_windows(enabled=True)
+            soc_txt = f'{soc:.0f}%' if soc is not None else '?'
+            target_txt = (
+                f'{rule.target_soc_percent:.0f}%'
+                if rule.target_soc_percent is not None
+                else '?'
+            )
             actions.append(ControlAction(
                 'set_force_charge_windows',
-                'B2: okno nocne 22:00–6:00 (G12w tanio).',
-                {'period1': night, 'period2': midday_off},
+                'B2 @22:00: Fox okna 22–01 + 04–06 (G12w tanio).',
+                {'period1': fc1, 'period2': fc2},
             ))
             if is_cheap_zone(advice.as_of):
                 actions.append(ControlAction(
                     'set_work_mode',
-                    'B2: ForceCharge w taniej strefie (22:00–6:00).',
+                    f'B2: ForceCharge {soc_txt} → ~{target_txt} (okna API + harmonogram).',
                     {'mode': 'ForceCharge'},
                 ))
             else:
@@ -672,9 +679,11 @@ def execute_plan(
             results.append({'dry_run': dry_run, 'action': 'noop', 'description': action.description})
             continue
         if action.kind == 'set_force_charge_windows':
-            if fox_schedule_on:
+            # evening/morning apply: okna API (22–01, 04–06) muszą iść mimo harmonogramu
+            # trybu pracy — sam ForceCharge bez set_charge nie ładuje z sieci (inc. 03.11 @22).
+            if fox_schedule_on and plan.context not in ('evening', 'morning'):
                 plan.notes.append(
-                    'Harmonogram FoxESS włączony — pomijam set_charge; zostaje tryb ForceCharge (T6.2).'
+                    'Harmonogram FoxESS włączony — pomijam set_charge (tylko pre_cheap/peak).'
                 )
                 results.append({
                     'dry_run': dry_run,
@@ -683,6 +692,10 @@ def execute_plan(
                     'reason': 'fox_schedule_enabled',
                 })
                 continue
+            if fox_schedule_on and plan.context in ('evening', 'morning'):
+                plan.notes.append(
+                    'Harmonogram trybu pracy włączony — set_charge i tak (B2 / poranny top-up).'
+                )
             try:
                 results.append(controller.set_force_charge_windows(
                     period1=action.params.get('period1'),

@@ -18,6 +18,21 @@ class BatteryScheduleWindow(BaseModel):
     mode: ScheduleMode = 'SelfUse'
     # Opt-in w UI: bloki startują wyłączone, użytkownik włącza świadomie
     enabled: bool = False
+    max_soc_percent: float | None = Field(default=None, description='Cel SoC w slocie (Fox maxSoc)')
+    min_soc_on_grid_percent: float | None = Field(default=None, description='Min SoC on-grid (Fox)')
+
+
+class FoxBatteryMirror(BaseModel):
+    ok: bool = False
+    as_of: str | None = None
+    error: str | None = None
+    schedule_source: str | None = None
+    fox_schedule_enabled: bool | None = None
+    work_mode: str | None = None
+    min_soc_percent: float | None = None
+    min_soc_on_grid_percent: float | None = None
+    period_count: int | None = None
+    push_detail: str | None = None
 
 
 class BatterySettingsResponse(BaseModel):
@@ -38,6 +53,12 @@ class BatterySettingsResponse(BaseModel):
     schedule_windows: list[BatteryScheduleWindow] = Field(default_factory=list)
     schedule_max_windows: int = 8
     schedule_preset: str = Field(default='g12w')
+    schedule_source: str = Field(
+        default='database',
+        description='database | fox_schedule | fox_force_charge — skąd pochodzi harmonogram w tej odpowiedzi',
+    )
+    fox_schedule_enabled: bool | None = None
+    fox_mirror: FoxBatteryMirror | None = None
 
 
 class BatterySettingsUpdate(BaseModel):
@@ -54,6 +75,10 @@ class BatterySettingsUpdate(BaseModel):
     battery_automation_enabled: bool = False
     schedule_windows: list[BatteryScheduleWindow] = Field(default_factory=list)
     schedule_preset: str = Field(default='g12w')
+    push_schedule_to_fox: bool = Field(
+        default=False,
+        description='Po zapisie DB wyślij włączone bloki do harmonogramu Fox (wymaga BATTERY_CONTROL_ENABLED)',
+    )
 
 class BatteryPlanHour(BaseModel):
     hour: int

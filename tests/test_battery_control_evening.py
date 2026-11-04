@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -21,6 +22,7 @@ from src.optimization.battery_control import (
     evening_stop_if_due,
     morning_apply_allowed,
     compute_morning_topup,
+    execute_plan,
     g12w_force_charge_windows,
     morning_cloudy_apply_trigger,
     morning_soc_floor,
@@ -33,6 +35,8 @@ from src.optimization.battery_control import (
     record_evening_session_after_apply,
     save_evening_session,
     validate_apply_request,
+    ControlAction,
+    ControlPlan,
 )
 
 
@@ -134,6 +138,66 @@ def test_build_plan_evening_charge_at_22_includes_force_charge():
     assert kinds.count('set_force_charge_windows') == 1
     assert any(a.kind == 'set_work_mode' and a.params.get('mode') == 'ForceCharge' for a in plan.actions)
     assert any('30' in n and 'stop' in n.lower() for n in plan.notes)
+    fc = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
+    p1, p2 = fc.params['period1'], fc.params['period2']
+    assert p1.enabled and p1.start_hour == 22.0 and p1.end_hour == 1.0
+    assert p2.enabled and p2.start_hour == 4.0 and p2.end_hour == 6.0
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_execute_plan_evening_still_set_charge_when_fox_schedule_on(_fox):
+    """Inc. 03.11 @22: pomijanie set_charge przy wł. harmonogramie blokowało ładowanie."""
+    rule = ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=10.0,
+        tomorrow_pv_kwh=6.0,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='',
+        body='',
+        target_soc_percent=60.0,
+        fc_minutes=51.0,
+    )
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 22, 0), rule=rule)
+    plan = build_plan(advice)
+    ctrl = _fox.return_value
+    ctrl.read_state.return_value = replace(_fox_state('SelfUse'), schedule_enabled=True)
+    ctrl.set_force_charge_windows.return_value = {'dry_run': False, 'action': 'set_force_charge_windows'}
+    ctrl.set_work_mode.return_value = {'dry_run': False, 'action': 'set_work_mode'}
+    results = execute_plan(plan, controller=ctrl, dry_run=False)
+    assert ctrl.set_force_charge_windows.called
+    skipped = [r for r in results if r.get('skipped')]
+    assert not skipped
+    assert any('set_charge i tak' in n for n in plan.notes)
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_execute_plan_pre_cheap_skips_set_charge_when_fox_schedule_on(_fox):
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 12, 0), rule=_b2_rule(triggered=False))
+    advice.context = 'pre_cheap'
+    plan = ControlPlan(
+        context='pre_cheap',
+        as_of=advice.as_of,
+        recommendation='ŁADUJ 13:00–15:00 (G12w TANIO)',
+        actions=[
+            ControlAction(
+                'set_force_charge_windows',
+                'test',
+                {
+                    'period1': ForceChargeWindow(True, 22.0, 6.0),
+                    'period2': ForceChargeWindow(True, 13.0, 15.0),
+                },
+            ),
+        ],
+        notes=[],
+        dry_run=False,
+    )
+    ctrl = _fox.return_value
+    ctrl.read_state.return_value = replace(_fox_state('SelfUse'), schedule_enabled=True)
+    results = execute_plan(plan, controller=ctrl, dry_run=False)
+    assert not ctrl.set_force_charge_windows.called
+    assert any(r.get('skipped') for r in results)
 
 
 @patch('src.optimization.battery_advisor.get_battery_snapshot')

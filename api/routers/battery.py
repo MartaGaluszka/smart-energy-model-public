@@ -40,9 +40,23 @@ def _get_or_create_settings(db: Session, user_id: int) -> BatteryStrategySetting
 
 
 @router.get('/settings', response_model=BatterySettingsResponse, summary='SoC min, sprawność, sezon, ceny z1/z2')
-def get_settings_(current_user: AppUser = Depends(get_current_user), db: Session = Depends(get_db)) -> BatterySettingsResponse:
+def get_settings_(
+    current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    fox: bool = Query(
+        True,
+        description='Odczytaj harmonogram z FoxESS (app) i zsynchronizuj bloki w odpowiedzi + DB',
+    ),
+) -> BatterySettingsResponse:
     row = _get_or_create_settings(db, current_user.id)
-    return BatterySettingsResponse(**battery_planner.settings_payload(row))
+    payload = battery_planner.settings_payload(row)
+    if fox:
+        from api.services.foxess_battery_mirror import merge_fox_into_settings_payload
+
+        payload = merge_fox_into_settings_payload(payload, persist_row=row)
+        db.commit()
+        db.refresh(row)
+    return BatterySettingsResponse(**payload)
 
 
 @router.put('/settings', response_model=BatterySettingsResponse, summary='Zapis ustawień strategii baterii')
@@ -52,11 +66,63 @@ def update_settings(
     db: Session = Depends(get_db),
 ) -> BatterySettingsResponse:
     row = _get_or_create_settings(db, current_user.id)
+    dump = body.model_dump(exclude_unset=True)
+    push_fox = bool(dump.pop('push_schedule_to_fox', False))
+    windows_for_fox = dump.get('schedule_windows')
     # exclude_unset: zapis AC / jednego pola nie nadpisuje season defaultami modelu
-    battery_planner.apply_settings_update(row, body.model_dump(exclude_unset=True))
+    battery_planner.apply_settings_update(row, dump)
     db.commit()
     db.refresh(row)
-    return BatterySettingsResponse(**battery_planner.settings_payload(row))
+
+    push_detail: str | None = None
+    if push_fox:
+        from src.optimization.battery_control import control_enabled
+
+        from api.services.foxess_battery_mirror import push_schedule_windows_to_fox
+
+        if not control_enabled():
+            push_detail = 'push_schedule_to_fox: BATTERY_CONTROL_ENABLED=0 — tylko zapis w DB.'
+        else:
+            try:
+                win = windows_for_fox
+                if win is None:
+                    win = battery_planner.schedule_windows_from_settings(row)
+                push_schedule_windows_to_fox(win, dry_run=False)
+                push_detail = 'Harmonogram wysłany do FoxESS.'
+            except Exception as exc:
+                push_detail = f'push_schedule_to_fox nieudany: {exc}'
+
+    payload = battery_planner.settings_payload(row)
+    from api.services.foxess_battery_mirror import merge_fox_into_settings_payload
+
+    payload = merge_fox_into_settings_payload(payload, persist_row=None)
+    if push_detail:
+        mirror = payload.get('fox_mirror') or {}
+        mirror = dict(mirror)
+        mirror['push_detail'] = push_detail
+        payload['fox_mirror'] = mirror
+    return BatterySettingsResponse(**payload)
+
+
+@router.post(
+    '/settings/sync-from-fox',
+    response_model=BatterySettingsResponse,
+    summary='Pobierz harmonogram z app FoxESS → zapis w ustawieniach SE',
+)
+def sync_settings_from_fox(
+    current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> BatterySettingsResponse:
+    row = _get_or_create_settings(db, current_user.id)
+    from api.services.foxess_battery_mirror import merge_fox_into_settings_payload
+
+    payload = merge_fox_into_settings_payload(battery_planner.settings_payload(row), persist_row=row)
+    db.commit()
+    db.refresh(row)
+    if not (payload.get('fox_mirror') or {}).get('ok'):
+        err = (payload.get('fox_mirror') or {}).get('error') or 'Odczyt Fox niedostępny'
+        raise HTTPException(status_code=503, detail=err)
+    return BatterySettingsResponse(**payload)
 
 
 @router.get('/plan', response_model=BatteryPlanResponse, summary='Okna G12w + plan SoC 24h (reguły, bez komend do falownika)')

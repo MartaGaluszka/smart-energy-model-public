@@ -521,6 +521,7 @@ def test_battery_settings_put_schedule_roundtrip(client, auth_headers):
         'fc_max_minutes': 15,
         'fc_night_start_hour': 22,
         'schedule_preset': 'g12w',
+        'battery_automation_enabled': False,
         'schedule_windows': [
             {'start': '22:00', 'end': '22:15', 'mode': 'ForceCharge', 'enabled': False},
             {'start': '22:15', 'end': '06:00', 'mode': 'SelfUse', 'enabled': False},
@@ -583,7 +584,7 @@ def test_battery_automation_flag_and_control(app, client, auth_headers, monkeypa
             db.close()
 
     app.dependency_overrides[get_db] = _db
-    monkeypatch.delenv('BATTERY_CONTROL_ENABLED', raising=False)
+    monkeypatch.setenv('BATTERY_CONTROL_ENABLED', '0')
 
     got = client.get('/api/v1/battery/settings', headers=auth_headers)
     assert got.status_code == 200
