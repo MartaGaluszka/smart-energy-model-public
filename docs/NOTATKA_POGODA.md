@@ -9,6 +9,8 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 | Aktualizacja | Źródło |
 |--------------|--------|
+| **2026-11-05 ~11:08** | **Tula** closeout **04** Fox **4,60** + run **05–07** · MB **6/58/1%** (`#305–307`) · Accu **`#298`** tylko **05** (**9/7%→RF**) · os **`20261105_1108`** · **06 watch** (MB **86→58%**) · **04 CS4** ✓ · **05/07 RF** — [`NOTATKA_2026-11-05.md`](NOTATKA_2026-11-05.md) · [`NOTATKA_2026-11-04.md`](NOTATKA_2026-11-04.md) (closeout 04) |
+| **2026-11-04 ~19:45** | **Tula** (MB+OM, **brak Accu dziś**) **04–06.11** · MB **87/28/86%** (`#299–301`) · Accu **`#298`** tylko **05** · os **`20261104_1944`** — archiwum runu wieczór — [`NOTATKA_2026-11-04.md`](NOTATKA_2026-11-04.md) |
 | **2026-11-02 ~14:10** | **Accu+MB+OM+ld+os** **02–04.11** · Accu **CS4/CS4/CS4** (`#286–288`, drift **02:** **2/95%/0,7→1/97%/0**) · MB **95/97/81%** · @05 ENS **5,13 / 4,82 / 9,93** · ICON **4,78 / 4,28 / 9,52** · CS4 **3,93 / 3,22 / 8,49** · os ½ **5,63 / 4,77 / 4,01*** · **04 U rad skip 13/15** · midday **02** cum **3,12** · Fox w toku **~1,5** — [`NOTATKA_2026-11-02.md`](NOTATKA_2026-11-02.md) |
 | **2026-11-01 ~20:10** | **Accu+MB+OM+ld+os** **01–03.11** · Accu **CS4/CS4/CS4** (`#277–279`, drift **01:** **2/89→1/97%**) · MB **94/96/97%** · **02** Accu **0,7 mm** vs MB **0** · @05 ENS **5,60 / 4,88 / 4,31** · ICON **6,59 / 5,96 / 4,32** · CS4 **5,42 / 4,83 / 3,33** · os ½ **6,67 / 5,22 / —** · **01 I≠U** (U **63%**) · **03 U rad skip** · Fox PVE **2,5** — [`NOTATKA_2026-11-01.md`](NOTATKA_2026-11-01.md) |
 | **2026-10-31 ~20:15** | **Decyzja go-live XI:** operacyjny **CS4** · **ENS → shadow** · podsumowanie + **L30 hard ~08.11:** [`NOTATKA_PODSUMOWANIE_CS4_L30_XI_2026.md`](NOTATKA_PODSUMOWANIE_CS4_L30_XI_2026.md) · [`NOTATKA_DECYZJA_CS4_XI_2026.md`](NOTATKA_DECYZJA_CS4_XI_2026.md) · [`NOTATKA_GO_LIVE_CS4_2026-11.md`](NOTATKA_GO_LIVE_CS4_2026-11.md) |
@@ -163,12 +165,12 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 | **2026-08-20 ~16:24** | **MB MultiModel + meteogram + ensemble** (czw.–sob.) |
 | **2026-08-17** | **Alert RCB** — burze / silny wiatr / intensywne opady **17.08**; możliwe przerwy w prądzie |
 | **2026-08-20 ~16:45** | **Alert RCB** — burze / silny wiatr / intensywne opady **20–21.08**; możliwe przerwy w prądzie |
-| **2026-08-20 ~17:00** | Archiwum RCB uzupełnione: **19.07**, **01.08**, **06/07.08** → RCB archiwum (tylko repo prywatne) |
+| **2026-08-20 ~17:00** | Archiwum RCB uzupełnione: **19.07**, **01.08**, **06/07.08** (pełne SMS — repo prywatne) |
 | **2026-08-21 ~09:05** | AccuWeather dziś-na-dziś (21) / jutro (22) / +2 (23) |
 | **2026-08-21 ~09:12** | **MB MultiModel + meteogram + ensemble** (pt.–nd.+) |
 | **2026-08-22 ~18:04** | AccuWeather dziś-na-dziś (22) / jutro (23) / +2 (24) |
 | **2026-08-22 ~18:05** | **MB MultiModel + meteogram + ensemble** (sob.–pon.) |
-| **2026-09-25** | **Matryca porównawcza** (Accu · MB · ICON · UKMO · ENS · CS4 · oneshot) — sekcja §Matryca poniżej · closeout **12–17.09** w paper-trade (tylko repo prywatne) |
+| **2026-09-25** | **Matryca porównawcza** (Accu · MB · ICON · UKMO · ENS · CS4 · oneshot) — sekcja §Matryca poniżej · closeout **12–17.09** (paper-trade — repo prywatne) |
 | **2026-10-29 ~13:57** | Accu **29–31** · MB **29–31** · @05 + midday + oneshot · [`NOTATKA_2026-10-29.md`](NOTATKA_2026-10-29.md) |
 | **2026-10-28 ~16:58** | Accu **28–30** · MB **28–30** · closeout Fox **18,4** · [`NOTATKA_2026-10-28.md`](NOTATKA_2026-10-28.md) |
 | **2026-10-27 ~11:42** | Accu **27–29** · MB **27–29** · @05 + oneshot · [`NOTATKA_2026-10-27.md`](NOTATKA_2026-10-27.md) |
@@ -181,7 +183,49 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 
 ---
 
-## AccuWeather — 02.11 ~14:02–14:07 (obecny run · 02–04.11)
+## AccuWeather — 05.11 ~11:08 (obecny run · **05–07.11**)
+
+| Dzień | Lumen | Cloud | Opad | Uwaga | Reżim → pick |
+|-------|------:|------:|-----:|-------|--------------|
+| **04.11** | **3** * | **87%** * | **0** | *closeout · `#288`* | **CS4** · Fox **4,60** |
+| **05.11** | **9** | **7%** | **0** | **`#298`** (wpis 04.11) | **jasny→RF16** |
+| **06.11** | — | — | — | brak Accu | **mix→RF** (MB) |
+| **07.11** | — | — | — | brak Accu | **RF** (MB) |
+
+Matryca: [`NOTATKA_2026-11-05.md`](NOTATKA_2026-11-05.md) · closeout **04:** [`NOTATKA_2026-11-04.md`](NOTATKA_2026-11-04.md).
+
+---
+
+## Meteoblue — 05.11 ~11:08 (obecny run)
+
+Update **2026-11-05 ~11:08** · Free API (`weather_notes` **`#305` `#306` `#307`**).
+
+| | **05.11** | **06.11** | **07.11** |
+|--|-----------|-----------|-----------|
+| **Cloud / opad / Pmax / Tmax** | **5,8%** · **0** · **0%** · **~9,6°** | **57,8%** · **0** · **0%** · **~5,8°** | **0,8%** · **0** · **0%** · **~6,7°** |
+| **vs Accu / drift** | **zgoda** `#298` | **watch** vs os. **04.11** **86→58%** | jasno |
+
+Oneshot **`20261105_1108`**: **05** ½ **19,5** · **06** ½ **7,0** · **07** U rad skip.
+
+---
+
+## AccuWeather — 04.11 ~19:14 (archiwum · brak Accu na 04)
+
+| Dzień | Lumen | Cloud | Opad | Reżim → pick |
+|-------|------:|------:|-----:|--------------|
+| **04.11** | **3** * | **87%** * | **0** | **CS4** (*`#288`*) |
+| **05.11** | **9** | **7%** | **0** | **RF** |
+| **06.11** | — | MB **86%** | **0** | **CS4** (MB) |
+
+---
+
+## Meteoblue — 04.11 ~19:44 (archiwum)
+
+Update **2026-11-04 ~19:44** · **`#299–301`** · os **`20261104_1944`**.
+
+---
+
+## AccuWeather — 02.11 ~14:02–14:07 (archiwum · 02–04.11)
 
 | Dzień | Lumen | Cloud | Opad | P deszcz | Reżim → pick |
 |-------|------:|------:|-----:|---------:|--------------|
@@ -189,20 +233,17 @@ Oś wszystkich wklejeń Accu i Meteoblue od **16.08.2026**. Pełny run jednego d
 | **03.11** wt. | **1** | **98%** | **0** | **17%** | **pochmurny→CS4** |
 | **04.11** śr. | **3** | **87%** | **0** | **4%** | **pochmurny→CS4** |
 
-Źródło: dashboard → `weather_notes` **`#286` `#287` `#288`**. Drift **02:** vs `#278` Lumen **2→1**, opad **0,7→0**, cloud **95→97%**. Matryca: [`NOTATKA_2026-11-02.md`](NOTATKA_2026-11-02.md).
+Źródło: dashboard → `weather_notes` **`#286` `#287` `#288`**. Matryca: [`NOTATKA_2026-11-02.md`](NOTATKA_2026-11-02.md).
 
 ---
 
-## Meteoblue — 02.11 ~14:08 (obecny run)
+## Meteoblue — 02.11 ~14:08 (archiwum)
 
 Update **2026-11-02 ~14:08** · Free API (`weather_notes` **`#289` `#290` `#291`**).
 
 | | **02.11** | **03.11** | **04.11** |
 |--|-----------|-----------|-----------|
 | **Cloud / opad / Pmax / Tmax** | **94,8%** · **0** · **25%** · **~7,1°** | **96,8%** · **0** · **11%** · **~6,5°** | **81,2%** · **0** · **15%** · **~7,1°** |
-| **vs Accu** | zgoda ciemno | zgoda | lekki **watch** chmury; oba **CS4** |
-
-@05 **02.11:** ENS **5,13** · (**03** **4,82** · **04** **9,93**). ENS shadow; pick apki = **CS4**.
 
 ---
 
@@ -857,7 +898,7 @@ Godziny produkcyjne **6–20** jak w feature pipeline. **UKMO rad skip** → nie
 |----|--------|
 | Oneshot RF I/U + CS4 | [`scripts/analysis/oneshot_rf_icon_vs_ukmo.py`](../scripts/analysis/oneshot_rf_icon_vs_ukmo.py) |
 | Oneshot shadow (forecast + **retro archive**) | [`scripts/analysis/oneshot_shadow_icon_ukmo.py`](../scripts/analysis/oneshot_shadow_icon_ukmo.py) · `--start YYYY-MM-DD --days 3 --archive --stamp YYYYMMDD_archive` |
-| Paper Accu→RF/CS4 | paper-trade + log (tylko repo prywatne) |
+| Paper Accu→RF/CS4 | skrypt `paper_trade_accu_regime` · log paper-trade (repo prywatne) |
 | Runy launchd | `data/processed/forecasts/forecast_history.csv` · walidacja [`forecast_validation.csv`](../data/processed/forecasts/forecast_validation.csv) |
 | MAPE zbiorcze (bez Accu/MB) | [`docs/images/ml/weekly_model_weather_review.md`](images/ml/weekly_model_weather_review.md) · PNG walidacji [`july_validation_summary.md`](images/ml/july_validation_summary.md) |
 
@@ -865,7 +906,7 @@ Godziny produkcyjne **6–20** jak w feature pipeline. **UKMO rad skip** → nie
 
 ---
 
-## Alerty RCB (skrót; pełne SMS — tylko repo prywatne)
+## Alerty RCB (skrót; pełne SMS — repo prywatne)
 
 | Data | Okno | Skrót | Kontekst lokalny |
 |------|------|-------|------------------|
@@ -879,7 +920,7 @@ Godziny produkcyjne **6–20** jak w feature pipeline. **UKMO rad skip** → nie
 | **20–21.08** | 20/21.08 | Burze + wiatr + intensywne opady; blackout | DB `#131` `#132` · Accu pomarańcz 17:00→03:00 · lokalnie 20.08 front ~17:09 |
 | **31.08** | **31.08 11:00–23:59** | Burze + wiatr + intensywne opady; blackout | DB `#148` · Accu żółte burze 15–00 · CS4 · [`NOTATKA_2026-08-31.md`](NOTATKA_2026-08-31.md) |
 
-Pełne SMS + id wierszy: archiwum RCB (tylko repo prywatne).  
+Pełne SMS + id wierszy: notatka RCB (repo prywatne).  
 Przy blackoucie: luki FoxESS / cron — przed closeoutem sprawdzić kompletność serii.
 
 ---
