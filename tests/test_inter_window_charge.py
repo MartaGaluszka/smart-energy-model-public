@@ -92,15 +92,22 @@ def test_morning_topup_prefers_inter_window_over_legacy_sunny_skip():
         action='test',
         details=[],
     )
-    iw = compute_inter_window_charge_plan(
-        context='morning',
-        as_of=as_of,
-        soc_percent=25.0,
-        reserve_percent=40.0,
-        season='winter',
-        temp_c=2.0,
-        day_pv_kwh=4.0,
-    )
+    with patch(
+        'src.optimization.inter_window_charge._forecast_pv_kwh',
+        return_value=1.5,
+    ), patch(
+        'src.optimization.inter_window_charge._segment_load_kwh',
+        return_value=9.0,
+    ):
+        iw = compute_inter_window_charge_plan(
+            context='morning',
+            as_of=as_of,
+            soc_percent=25.0,
+            reserve_percent=40.0,
+            season='winter',
+            temp_c=2.0,
+            day_pv_kwh=4.0,
+        )
     with patch(
         'src.optimization.inter_window_charge.compute_inter_window_charge_plan',
         return_value=iw,
@@ -145,15 +152,6 @@ def test_advise_morning_includes_inter_window_details():
 
 def test_pre_cheap_trigger_follows_inter_window():
     as_of = datetime(2026, 11, 3, 12, 0, 0)
-    iw = compute_inter_window_charge_plan(
-        context='pre_cheap',
-        as_of=as_of,
-        soc_percent=35.0,
-        reserve_percent=40.0,
-        season='winter',
-        temp_c=3.0,
-        day_pv_kwh=6.0,
-    )
     with patch(
         'src.optimization.inter_window_charge._forecast_pv_kwh',
         return_value=2.0,
