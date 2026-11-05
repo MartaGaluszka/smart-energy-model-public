@@ -38,6 +38,8 @@ export interface HomeCalendarDay {
 export class Tab1Page implements AfterViewInit, OnInit, OnDestroy, ViewWillEnter {
   nightControlBusy = false;
   nightControlDetail = '';
+  nightPlanRecommendation = '';
+  nightPlanNotes: string[] = [];
   @ViewChild('planCanvas') private canvasRef?: ElementRef<HTMLCanvasElement>;
 
   /** Do komunikatu offline (Home + Sync). */
@@ -164,6 +166,27 @@ export class Tab1Page implements AfterViewInit, OnInit, OnDestroy, ViewWillEnter
       return 'Zasilanie wyłącznie z PV. Dziś bez ładowania z sieci.';
     }
     return bat.charge_when_summary || 'Doładuj w taniej G12w.';
+  }
+
+  /** Treść planu nocnego B2 — wcześniej tylko w osobnej karcie alertu. */
+  nightPlanSummary(bat: BatterySuggestionResponse): string {
+    if (!bat.force_charge_night_recommended) {
+      return bat.force_charge_night_label || 'Pomiń ForceCharge (reguła B2).';
+    }
+    const window =
+      bat.force_charge_night_start && bat.force_charge_night_end
+        ? `${bat.force_charge_night_start}–${bat.force_charge_night_end}`
+        : bat.force_charge_night_label || 'noc';
+    const minutes =
+      bat.force_charge_night_minutes != null
+        ? ` (~${Math.round(bat.force_charge_night_minutes)} min)`
+        : '';
+    const kwh = bat.charge_kwh != null ? ` · ~${bat.charge_kwh.toFixed(1)} kWh` : '';
+    const target =
+      bat.charge_target_soc_percent != null
+        ? ` · cel ${Math.round(bat.charge_target_soc_percent)}%`
+        : '';
+    return `${window}${minutes}${kwh}${target}`;
   }
 
   planG12w(bat: BatterySuggestionResponse): string {
@@ -540,6 +563,8 @@ export class Tab1Page implements AfterViewInit, OnInit, OnDestroy, ViewWillEnter
       next: (row) => {
         this.nightControlBusy = false;
         this.nightControlDetail = row.detail;
+        this.nightPlanRecommendation = row.recommendation || '';
+        this.nightPlanNotes = row.notes || [];
       },
       error: () => {
         this.nightControlBusy = false;

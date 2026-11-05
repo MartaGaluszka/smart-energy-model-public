@@ -10,24 +10,6 @@
 <ion-content [fullscreen]="true" class="se-home">
   <div class="se-page">
 
-    <ion-card class="se-card se-banner se-banner--global">
-      <ion-card-content>
-        <p class="se-banner__text" *ngIf="batteryState.state()?.battery_automation_enabled">
-        Automatyka nocna włączona.
-        </p>
-        <p class="se-banner__text" *ngIf="!batteryState.state()?.battery_automation_enabled">
-        💡 Tryb doradczy: System nie steruje falownikiem. Przycisk sterowania odblokujemy po walidacji algorytmu.
-        </p>
-        <ion-button *ngIf="batteryState.state()?.battery_automation_enabled" fill="outline" size="small" (click)="onNightPreview()" [disabled]="nightControlBusy">
-        Plan nocny
-        </ion-button>
-        <ion-button *ngIf="batteryState.state()?.battery_automation_enabled" size="small" (click)="onNightApply()" [disabled]="nightControlBusy">
-        Wyślij do Fox
-        </ion-button>
-        <p class="se-banner__text" *ngIf="nightControlDetail">{{ nightControlDetail }}</p>
-      </ion-card-content>
-    </ion-card>
-
     <!-- Sync status -->
     <ion-card class="se-card se-sync-card" *ngIf="sync$ | async as sync">
       <ion-card-content>
@@ -175,6 +157,24 @@
       </ion-card-content>
     </ion-card>
 
+    <ion-card class="se-card se-banner se-banner--global">
+      <ion-card-content>
+        <p class="se-banner__text" *ngIf="batteryState.state()?.battery_automation_enabled">
+        Automatyka nocna włączona.
+        </p>
+        <p class="se-banner__text" *ngIf="!batteryState.state()?.battery_automation_enabled">
+        💡 Tryb doradczy: System nie steruje falownikiem. Przycisk sterowania odblokujemy po walidacji algorytmu.
+        </p>
+        <ion-button *ngIf="batteryState.state()?.battery_automation_enabled" fill="outline" size="small" (click)="onNightPreview()" [disabled]="nightControlBusy">
+        Odśwież plan nocny
+        </ion-button>
+        <ion-button *ngIf="batteryState.state()?.battery_automation_enabled" size="small" (click)="onNightApply()" [disabled]="nightControlBusy">
+        Wyślij do Fox
+        </ion-button>
+        <p class="se-banner__text" *ngIf="nightControlDetail">{{ nightControlDetail }}</p>
+      </ion-card-content>
+    </ion-card>
+
     <ion-card
       class="se-card se-battery"
       *ngIf="battery$ | async as bat"
@@ -184,6 +184,9 @@
         <p class="se-battery__plan-title">PLAN: TRYB {{ planModeAdjective(bat.season) }}</p>
         <ul class="se-battery__plan">
           <li>Cel: {{ planGoal(bat) }}</li>
+          <li>Plan nocny: {{ nightPlanSummary(bat) }}</li>
+          <li *ngIf="nightPlanRecommendation">Dry-run: {{ nightPlanRecommendation }}</li>
+          <li *ngFor="let note of nightPlanNotes">{{ note }}</li>
           <li>Bateria (SoC): Aktualnie {{ formatSoc(bat.soc_now_percent) }}% (rezerwa: {{ bat.soc_reserve_percent | number:'1.0-0' }}%)</li>
         </ul>
       </ion-card-content>
