@@ -15,7 +15,8 @@ Aktualne metryki modelu / live: [`docs/STATUS_ML_MLOPS.md`](../docs/STATUS_ML_ML
 | **10:00** | `./mlops/weather_morning_run.sh` | Po wpisie Accu: MB Free API + porównanie Accu × MB × ENS/ICON/CS4 → `data/processed/weather_runs/morning_latest.md` |
 | **12:00** | `./mlops/midday_forecast.sh` | sync + midday (16 + shadow) |
 | **16:00** | `./mlops/peak_arrival.sh` | sync + peak (16 + shadow) |
-| **04:00** | `./mlops/morning_battery_apply.sh` | top-up FC (okno Fox 04–06) gdy pochmurny / mało PV (`BATTERY_CONTROL_MORNING_CLOUDY=1`) |
+| **04:00** | `./mlops/morning_battery_apply.sh` | bilans między oknami tanio → FC 04–06 gdy luka (PV-first); legacy: pochmurny (`BATTERY_CONTROL_MORNING_CLOUDY=1`) |
+| **12:00** | `./mlops/midday_forecast.sh` (+ opcj. apply) | sync + bilans przed 13–15; apply gdy `BATTERY_CONTROL_PRE_CHEAP=1` |
 | **21:15** | `./mlops/evening_battery_plan.sh` | B2 z bazy (bez sync Fox) + dry-run bez odczytu falownika |
 | **22:00** | `./mlops/evening_battery_apply.sh` | start FC gdy B2 + `BATTERY_CONTROL_ENABLED=1` (inaczej dry-run) |
 | **co 5 min (noc)** | `./mlops/evening_battery_stop.sh` | timer stop FC → SelfUse (`--stop-fc --apply`) |

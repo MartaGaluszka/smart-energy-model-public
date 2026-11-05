@@ -155,10 +155,30 @@ def _morning_pv_weak(advice: BatteryAdvice) -> bool:
     return morning_pv is not None and morning_pv < 8.0
 
 
+def _topup_from_inter_window(advice: BatteryAdvice) -> MorningTopupPlan | None:
+    iw = advice.inter_window
+    if iw is None or not iw.triggered:
+        return None
+    if iw.fc_minutes is None or iw.target_soc_percent is None:
+        return None
+    stop_at = iw.stop_at or planned_morning_stop_at(advice.as_of)
+    return MorningTopupPlan(
+        target_soc=iw.target_soc_percent,
+        fc_minutes=iw.fc_minutes,
+        stop_at=stop_at,
+    )
+
+
 def compute_morning_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
-    """Poranny top-up @~5:00 (G12w tanio do 6:00): słabe PV i SoC < floor → cel target."""
+    """Poranny top-up @~4:00: bilans między oknami lub (legacy) słabe PV + SoC < floor."""
     if advice.context != 'morning':
         return None
+    from src.optimization.inter_window_charge import inter_window_auto_enabled
+
+    if inter_window_auto_enabled():
+        plan = _topup_from_inter_window(advice)
+        if plan is not None:
+            return plan
     if not _morning_pv_weak(advice):
         return None
     soc = advice.snapshot.soc_percent if advice.snapshot else None
@@ -180,6 +200,21 @@ def compute_morning_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
     if stop_at > cheap_end:
         stop_at = cheap_end
     return MorningTopupPlan(target_soc=target, fc_minutes=minutes, stop_at=stop_at)
+
+
+def pre_cheap_apply_enabled() -> bool:
+    return os.getenv('BATTERY_CONTROL_PRE_CHEAP', '0').strip().lower() in ('1', 'true', 'yes')
+
+
+def compute_pre_cheap_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
+    """Apply @~12:00 przed oknem 13–15 — ten sam bilans co poranek."""
+    if advice.context != 'pre_cheap':
+        return None
+    return _topup_from_inter_window(advice)
+
+
+def pre_cheap_apply_trigger(advice: BatteryAdvice) -> bool:
+    return compute_pre_cheap_topup(advice) is not None
 
 
 def morning_cloudy_apply_trigger(advice: BatteryAdvice) -> bool:
@@ -248,8 +283,8 @@ def validate_apply_request(
         pass
     if phase == 'stop':
         return None
-    if evening_only_enforced() and context not in ('evening', 'morning'):
-        return 'BATTERY_CONTROL_EVENING_ONLY=1 — apply tylko evening/morning.'
+    if evening_only_enforced() and context not in ('evening', 'morning', 'pre_cheap'):
+        return 'BATTERY_CONTROL_EVENING_ONLY=1 — apply tylko evening/morning/pre_cheap.'
     if context == 'morning' and not morning_cloudy_apply_enabled():
         return 'BATTERY_CONTROL_MORNING_CLOUDY=0 — poranny apply wyłączony.'
     if count_real_applies_today(as_of=advice.as_of) >= max_applies_per_day():
@@ -266,11 +301,19 @@ def validate_apply_request(
     if phase == 'apply' and context == 'morning':
         if not morning_apply_allowed(advice.as_of):
             return 'Poza oknem tanio przed 6:00 — apply morning pominięte.'
+        iw_ok = bool(advice.inter_window and advice.inter_window.triggered)
+        if not morning_cloudy_apply_enabled() and not iw_ok:
+            return 'BATTERY_CONTROL_MORNING_CLOUDY=0 — poranny apply wyłączony.'
         if not morning_cloudy_apply_trigger(advice):
             return (
-                f'Poranny apply @4:00 pominięty: PV OK lub SoC ≥ {morning_soc_floor():.0f}% '
-                f'(cel top-up {morning_topup_target_soc():.0f}%).'
+                f'Poranny apply @4:00 pominięty: bilans/PV OK lub SoC wystarczający '
+                f'(floor legacy {morning_soc_floor():.0f}%).'
             )
+    if phase == 'apply' and context == 'pre_cheap':
+        if not pre_cheap_apply_enabled():
+            return 'BATTERY_CONTROL_PRE_CHEAP=0 — apply południowy wyłączony.'
+        if not pre_cheap_apply_trigger(advice):
+            return 'Apply 13–15 pominięty — bilans: PV pokrywa lub luka < próg cyklu.'
     return None
 
 
@@ -306,7 +349,7 @@ def save_evening_session(data: dict[str, Any]) -> None:
 
 def record_evening_session_after_apply(advice: BatteryAdvice, plan: ControlPlan, results: list[dict[str, Any]]) -> None:
     """Po udanym start FC zapisz stop_at dla T6.2b (evening lub morning @5)."""
-    if plan.dry_run or plan.context not in ('evening', 'morning'):
+    if plan.dry_run or plan.context not in ('evening', 'morning', 'pre_cheap'):
         return
     applied = sum(1 for r in results if r.get('action') != 'noop' and not r.get('dry_run'))
     if applied <= 0:
@@ -318,6 +361,13 @@ def record_evening_session_after_apply(advice: BatteryAdvice, plan: ControlPlan,
         rule = advice.charge_tonight
         fc_min = rule.fc_minutes if rule else None
         target = rule.target_soc_percent if rule else None
+    elif plan.context == 'pre_cheap':
+        topup = compute_pre_cheap_topup(advice)
+        if not topup:
+            return
+        stop = topup.stop_at
+        fc_min = topup.fc_minutes
+        target = topup.target_soc
     else:
         topup = compute_morning_topup(advice)
         if topup:
@@ -579,9 +629,27 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
             ))
 
     elif advice.context == 'pre_cheap':
-        if not winter or weekend:
+        pre_topup = compute_pre_cheap_topup(advice)
+        if pre_topup and pre_cheap_apply_enabled() and winter and not weekend:
+            fc1, fc2 = g12w_force_charge_windows(enabled=True)
+            soc_txt = f'{soc:.0f}%' if soc is not None else '?'
+            actions.append(ControlAction(
+                'set_force_charge_windows',
+                'Bilans @12:00: okna 22–6 + 13–15 (G12w tanio).',
+                {'period1': fc1, 'period2': fc2},
+            ))
+            actions.append(ControlAction(
+                'set_work_mode',
+                f'ForceCharge: SoC {soc_txt} → ~{pre_topup.target_soc:.0f}% przed 15:00.',
+                {'mode': 'ForceCharge'},
+            ))
+            notes.append(
+                f'Południowy bilans: ΔSoC → {pre_topup.target_soc:.0f}%, '
+                f'~{pre_topup.fc_minutes:.0f} min FC, stop {pre_topup.stop_at.strftime("%H:%M") if pre_topup.stop_at else "?"}'
+            )
+        elif not winter or weekend:
             actions.append(ControlAction('noop', 'Weekend / lato — okno 13–15 nie jest krytyczne.'))
-        elif rec == 'ŁADUJ 13:00–15:00 (G12w TANIO)':
+        elif rec == 'ŁADUJ 13:00–15:00 (G12w TANIO)' or rec == 'ŁADUJ 13:00–15:00 (BILANS)':
             actions.append(ControlAction(
                 'set_force_charge_windows',
                 'Włącz okno południowe 13:00–15:00 + nocne 22:00–6:00.',
@@ -681,9 +749,9 @@ def execute_plan(
         if action.kind == 'set_force_charge_windows':
             # evening/morning apply: okna API (22–01, 04–06) muszą iść mimo harmonogramu
             # trybu pracy — sam ForceCharge bez set_charge nie ładuje z sieci (inc. 03.11 @22).
-            if fox_schedule_on and plan.context not in ('evening', 'morning'):
+            if fox_schedule_on and plan.context not in ('evening', 'morning', 'pre_cheap'):
                 plan.notes.append(
-                    'Harmonogram FoxESS włączony — pomijam set_charge (tylko pre_cheap/peak).'
+                    'Harmonogram FoxESS włączony — pomijam set_charge (tylko peak).'
                 )
                 results.append({
                     'dry_run': dry_run,
@@ -692,9 +760,9 @@ def execute_plan(
                     'reason': 'fox_schedule_enabled',
                 })
                 continue
-            if fox_schedule_on and plan.context in ('evening', 'morning'):
+            if fox_schedule_on and plan.context in ('evening', 'morning', 'pre_cheap'):
                 plan.notes.append(
-                    'Harmonogram trybu pracy włączony — set_charge i tak (B2 / poranny top-up).'
+                    'Harmonogram trybu pracy włączony — set_charge i tak (B2 / bilans tanio).'
                 )
             try:
                 results.append(controller.set_force_charge_windows(

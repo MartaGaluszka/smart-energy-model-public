@@ -54,4 +54,9 @@ run_soft "Sugestie baterii → notifications (T4.20)" \
 run_soft "Bateria — plan sterowania (dry-run)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/foxess_control.py" --context pre_cheap
 
+if "$PYTHON" -c "from src.optimization.battery_control import control_enabled, pre_cheap_apply_enabled; import sys; sys.exit(0 if (control_enabled() and pre_cheap_apply_enabled()) else 3)" 2>/dev/null; then
+  run_soft "Bateria — apply bilans 13–15" \
+    "$PYTHON" "${PROJECT_ROOT}/mlops/foxess_control.py" --context pre_cheap --apply --no-read-state
+fi
+
 echo "=== Midday refresh OK ==="

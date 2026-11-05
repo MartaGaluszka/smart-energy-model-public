@@ -173,7 +173,7 @@ def test_execute_plan_evening_still_set_charge_when_fox_schedule_on(_fox):
 
 
 @patch('src.optimization.battery_control.FoxEssControl')
-def test_execute_plan_pre_cheap_skips_set_charge_when_fox_schedule_on(_fox):
+def test_execute_plan_pre_cheap_set_charge_when_fox_schedule_on(_fox):
     advice = _advice_evening(as_of=datetime(2026, 11, 3, 12, 0), rule=_b2_rule(triggered=False))
     advice.context = 'pre_cheap'
     plan = ControlPlan(
@@ -195,9 +195,11 @@ def test_execute_plan_pre_cheap_skips_set_charge_when_fox_schedule_on(_fox):
     )
     ctrl = _fox.return_value
     ctrl.read_state.return_value = replace(_fox_state('SelfUse'), schedule_enabled=True)
+    ctrl.set_force_charge_windows.return_value = {'dry_run': False, 'action': 'set_force_charge_windows'}
     results = execute_plan(plan, controller=ctrl, dry_run=False)
-    assert not ctrl.set_force_charge_windows.called
-    assert any(r.get('skipped') for r in results)
+    assert ctrl.set_force_charge_windows.called
+    assert not any(r.get('skipped') for r in results)
+    assert any('set_charge i tak' in n for n in plan.notes)
 
 
 @patch('src.optimization.battery_advisor.get_battery_snapshot')

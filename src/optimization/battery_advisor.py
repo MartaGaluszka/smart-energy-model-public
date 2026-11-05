@@ -161,6 +161,7 @@ class BatteryAdvice:
     action: str
     details: list[str]
     charge_tonight: ChargeTonightCloudyRule | None = None
+    inter_window: 'InterWindowChargePlan | None' = None
 
 
 def is_winter_season(d: date | None = None) -> bool:
@@ -2053,6 +2054,55 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
         details=details,
         charge_tonight=charge_tonight,
     )
+    if context in ('morning', 'pre_cheap'):
+        try:
+            from src.optimization.inter_window_charge import compute_inter_window_charge_plan
+
+            day_pv = get_day_pv_forecast_sum(target_day, as_of=as_of)
+            temp_c = get_day_mean_temp_c(target_day)
+            reserve = seasonal_soc_reserve(as_of.date(), season=season)
+            iw = compute_inter_window_charge_plan(
+                context=context,
+                as_of=as_of,
+                soc_percent=soc,
+                reserve_percent=reserve,
+                season=season,
+                temp_c=temp_c,
+                day_pv_kwh=day_pv,
+            )
+            advice.inter_window = iw
+            if iw.horizon_label:
+                details.append(
+                    f'Bilans {iw.horizon_label}: pobór ~{iw.load_kwh:.1f} kWh, '
+                    f'PV→magazyn ~{iw.pv_to_battery_kwh:.1f} kWh, luka ~{iw.deficit_kwh:.1f} kWh'
+                )
+            if iw.triggered and iw.target_soc_percent is not None:
+                details.append(
+                    f'Auto między oknami: doładuj z sieci ~{iw.grid_charge_kwh:.1f} kWh '
+                    f'(cel ~{iw.target_soc_percent:.0f}%, ~{iw.fc_minutes:.0f} min FC)'
+                )
+                if context == 'morning' and rec in ('POCZEKAJ NA PV', 'SOC OK'):
+                    advice.recommendation = 'ŁADUJ Z SIECI (BILANS)'
+                    advice.action = (
+                        f'Prognoza PV nie pokrywa poboru do {iw.horizon_label.split("(")[0].strip()} '
+                        f'— tanio teraz do ~{iw.target_soc_percent:.0f}% '
+                        f'(~{iw.grid_charge_kwh:.1f} kWh z sieci).'
+                    )
+                elif context == 'pre_cheap' and rec == 'SOC OK — POMIŃ FORCE CHARGE':
+                    advice.recommendation = 'ŁADUJ 13:00–15:00 (BILANS)'
+                    advice.action = (
+                        f'SoC wystarczy na cel {target:.0f}%, ale bilans do wieczora wymaga '
+                        f'~{iw.grid_charge_kwh:.1f} kWh z sieci w oknie 13–15.'
+                    )
+            elif iw.skip_reason == 'pv_covers_or_wear' and context == 'morning':
+                if rec == 'ŁADUJ Z SIECI (TANIO)':
+                    advice.recommendation = 'POCZEKAJ NA PV (BILANS)'
+                    advice.action = (
+                        f'PV→magazyn ~{iw.pv_to_battery_kwh:.1f} kWh + bateria pokrywają '
+                        f'pobór (~{iw.load_kwh:.1f} kWh) — bez ładowania z sieci przed 6:00.'
+                    )
+        except Exception:
+            pass
     if resilience is not None:
         _apply_resilience_to_advice(advice, resilience)
         _append_outage_log(resilience, target_day, as_of)
@@ -2089,6 +2139,15 @@ def format_advice(advice: BatteryAdvice) -> str:
         lines.append('')
     for d in advice.details:
         lines.append(f'  • {d}')
+    if advice.inter_window and advice.inter_window.horizon_label:
+        iw = advice.inter_window
+        lines.append('')
+        lines.append('  --- Bilans między oknami tanio ---')
+        lines.append(
+            f'  {iw.horizon_label}: luka {iw.deficit_kwh:.1f} kWh, '
+            f'PV→bat {iw.pv_to_battery_kwh:.1f} kWh'
+            + (f', cel {iw.target_soc_percent:.0f}%' if iw.target_soc_percent else '')
+        )
     lines.append('=' * 60)
     return '\n'.join(lines)
 
