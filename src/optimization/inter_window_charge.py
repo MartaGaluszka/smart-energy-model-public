@@ -1,6 +1,6 @@
 """Plan ładowania między oknami G12w — pobór vs prognoza PV (priorytet magazynu z paneli).
 
-Używany przez ``battery_advisor`` (szczegóły), ``battery_control`` (apply @4:00 / @12:00)
+Używany przez ``battery_advisor`` (szczegóły), ``battery_control`` (apply @4:00 / @13:00 / @22:00)
 oraz sugestie T4.20. Logika: ile energii brakuje do następnej drogiej strefy po odjęciu
 prognozowanego PV trafiającego do baterii; ładuj z sieci tylko w taniej strefie i tylko
 gdy luka przekracza próg opłacalności cyklu.
@@ -270,6 +270,15 @@ def compute_inter_window_charge_plan(
             stop_at = stop
     elif context == 'pre_cheap':
         stop = as_of.replace(hour=15, minute=0, second=0, microsecond=0)
+        max_min = max(0.0, (stop - as_of).total_seconds() / 60.0)
+        minutes = min(minutes, max_min)
+        stop_at = as_of + timedelta(minutes=minutes)
+        if stop_at > stop:
+            stop_at = stop
+    elif context == 'evening':
+        stop = (as_of + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)
+        if as_of.hour < 6:
+            stop = as_of.replace(hour=6, minute=0, second=0, microsecond=0)
         max_min = max(0.0, (stop - as_of).total_seconds() / 60.0)
         minutes = min(minutes, max_min)
         stop_at = as_of + timedelta(minutes=minutes)

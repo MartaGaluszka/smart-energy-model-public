@@ -167,9 +167,10 @@ def test_execute_plan_evening_still_set_charge_when_fox_schedule_on(_fox):
     ctrl.set_work_mode.return_value = {'dry_run': False, 'action': 'set_work_mode'}
     results = execute_plan(plan, controller=ctrl, dry_run=False)
     assert ctrl.set_force_charge_windows.called
+    assert ctrl.set_force_charge_windows.call_args.kwargs.get('force') == 1
     skipped = [r for r in results if r.get('skipped')]
     assert not skipped
-    assert any('set_charge i tak' in n for n in plan.notes)
+    assert any('wyłączam go (force)' in n for n in plan.notes)
 
 
 @patch('src.optimization.battery_control.FoxEssControl')
@@ -198,8 +199,9 @@ def test_execute_plan_pre_cheap_set_charge_when_fox_schedule_on(_fox):
     ctrl.set_force_charge_windows.return_value = {'dry_run': False, 'action': 'set_force_charge_windows'}
     results = execute_plan(plan, controller=ctrl, dry_run=False)
     assert ctrl.set_force_charge_windows.called
+    assert ctrl.set_force_charge_windows.call_args.kwargs.get('force') == 1
     assert not any(r.get('skipped') for r in results)
-    assert any('set_charge i tak' in n for n in plan.notes)
+    assert any('wyłączam go (force)' in n for n in plan.notes)
 
 
 @patch('src.optimization.battery_advisor.get_battery_snapshot')
@@ -222,7 +224,12 @@ def test_advise_evening_uses_b2_rule(_eval, _t, _pv_sum, _pv_out, _snap):
         target_soc_percent=90.0,
         fc_minutes=30.0,
     )
-    advice = advise('evening', as_of=datetime(2026, 11, 3, 21, 15))
+    quiet = MagicMock(triggered=False, horizon_label='', skip_reason='', target_soc_percent=None)
+    with patch(
+        'src.optimization.inter_window_charge.compute_inter_window_charge_plan',
+        return_value=quiet,
+    ):
+        advice = advise('evening', as_of=datetime(2026, 11, 3, 21, 15))
     assert advice.context == 'evening'
     assert advice.charge_tonight is not None
     assert advice.charge_tonight.triggered is True
@@ -249,7 +256,12 @@ def test_advise_evening_pomin_when_b2_not_triggered(_eval, _t, _pv_sum, _pv_out,
         body='',
         skip_reason='Jutro dużo PV',
     )
-    advice = advise('evening', as_of=datetime(2026, 11, 3, 21, 15))
+    quiet = MagicMock(triggered=False, horizon_label='', skip_reason='', target_soc_percent=None)
+    with patch(
+        'src.optimization.inter_window_charge.compute_inter_window_charge_plan',
+        return_value=quiet,
+    ):
+        advice = advise('evening', as_of=datetime(2026, 11, 3, 21, 15))
     assert advice.recommendation == 'POMIŃ NOCNE FC (B2)'
     assert advice.charge_tonight is not None
     assert advice.charge_tonight.triggered is False
@@ -283,7 +295,8 @@ def test_format_advice_and_plan_evening_labels():
 @patch('src.optimization.battery_advisor.get_day_pv_forecast_sum', return_value=11.0)
 @patch('src.optimization.battery_advisor.get_day_mean_temp_c', return_value=2.0)
 @patch('src.optimization.battery_advisor.evaluate_charge_tonight_cloudy')
-def test_plan_and_run_evening_dry_run(_eval, _t, _pv_sum, _pv_out, _snap, _fox):
+@patch('src.optimization.inter_window_charge.compute_inter_window_charge_plan')
+def test_plan_and_run_evening_dry_run(_iw, _eval, _t, _pv_sum, _pv_out, _snap, _fox):
     _snap.return_value = BatterySnapshot(None, 43.0, None, None, None, None)
     _pv_out.return_value = _pv()
     _eval.return_value = ChargeTonightCloudyRule(
@@ -299,6 +312,9 @@ def test_plan_and_run_evening_dry_run(_eval, _t, _pv_sum, _pv_out, _snap, _fox):
         fc_minutes=30.0,
     )
     _fox.return_value.read_state.side_effect = ValueError('no fox in test')
+    _iw.return_value = MagicMock(
+        triggered=False, horizon_label='', skip_reason='', target_soc_percent=None,
+    )
     advice, plan, results = plan_and_run(
         'evening',
         as_of=datetime(2026, 11, 3, 21, 15),
@@ -309,6 +325,27 @@ def test_plan_and_run_evening_dry_run(_eval, _t, _pv_sum, _pv_out, _snap, _fox):
     assert plan.context == 'evening'
     assert results == []
     assert any('FoxESS' in n for n in plan.notes)
+
+
+def test_validate_apply_pre_cheap_only_inside_13_15(monkeypatch):
+    monkeypatch.setattr(
+        'src.optimization.battery_control.count_real_applies_today',
+        lambda **kwargs: 0,
+    )
+    monkeypatch.setattr(
+        'src.data.foxess_api_guard.is_api_paused',
+        lambda: False,
+    )
+    early = _advice_evening(as_of=datetime(2026, 11, 6, 12, 0), rule=None)
+    early = replace(early, context='pre_cheap')
+    reason = validate_apply_request('pre_cheap', early, phase='apply')
+    assert reason is not None
+    assert '13:00' in reason
+
+    at_13 = replace(early, as_of=datetime(2026, 11, 6, 13, 0))
+    reason_13 = validate_apply_request('pre_cheap', at_13, phase='apply')
+    assert reason_13 is not None
+    assert '13:00–15:00 tylko od 13:00' not in reason_13
 
 
 def test_validate_apply_evening_denies_peak_zone():

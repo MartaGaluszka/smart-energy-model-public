@@ -51,12 +51,7 @@ run_soft "Bateria — przed oknem tanio 13:00–15:00" \
 run_soft "Sugestie baterii → notifications (T4.20)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/generate_battery_suggestions.py" --context pre_cheap
 
-run_soft "Bateria — plan sterowania (dry-run)" \
+run_soft "Bateria — plan sterowania (dry-run, decyzja przed 13:00)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/foxess_control.py" --context pre_cheap
 
-if "$PYTHON" -c "from src.optimization.battery_control import control_enabled, pre_cheap_apply_enabled; import sys; sys.exit(0 if (control_enabled() and pre_cheap_apply_enabled()) else 3)" 2>/dev/null; then
-  run_soft "Bateria — apply bilans 13–15" \
-    "$PYTHON" "${PROJECT_ROOT}/mlops/foxess_control.py" --context pre_cheap --apply --no-read-state
-fi
-
-echo "=== Midday refresh OK ==="
+echo "=== Midday refresh OK (apply Fox dopiero o 13:00, tania strefa) ==="

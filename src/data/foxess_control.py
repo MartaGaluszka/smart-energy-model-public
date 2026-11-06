@@ -167,6 +167,7 @@ class FoxEssControl:
         period1: ForceChargeWindow | None = None,
         period2: ForceChargeWindow | None = None,
         dry_run: bool = True,
+        force: int = 0,
     ) -> dict[str, Any]:
         current = self.read_state()
         p1 = period1 or current.force_charge_1
@@ -197,6 +198,7 @@ class FoxEssControl:
             st2=p2.start_hour,
             en2=p2.end_hour,
             enable=1,
+            force=force,
         )
         if result is None:
             raise RuntimeError('FoxESS set_charge() nie powiodło się — sprawdź log / harmonogram.')

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Bilans @~12:00 → ForceCharge 13–15 gdy luka energetyczna (BATTERY_CONTROL_PRE_CHEAP=1).
+# Bilans @13:00 → ForceCharge 13–15 gdy luka energetyczna (BATTERY_CONTROL_PRE_CHEAP=1).
+# O 12:00 jest tylko dry-run (midday_forecast.sh) — prąd do 13:00 jest drogi.
 #
-# launchd: opcjonalnie pl.smart-energy-model.midday-battery-apply (po midday_forecast)
+# launchd: pl.smart-energy-model.midday-battery-apply
 
 set -euo pipefail
 
@@ -13,7 +14,7 @@ mkdir -p "${PROJECT_ROOT}/logs"
 source "${PROJECT_ROOT}/mlops/_venv.sh"
 
 echo ""
-echo "=== Midday battery APPLY (@12:00 bilans 13–15) | $(date '+%Y-%m-%d %H:%M:%S') ==="
+echo "=== Midday battery APPLY (@13:00 bilans 13–15) | $(date '+%Y-%m-%d %H:%M:%S') ==="
 
 if ! "$PYTHON" -c "from src.optimization.battery_control import control_enabled; import sys; sys.exit(0 if control_enabled() else 3)"; then
   echo "ℹ️  BATTERY_CONTROL_ENABLED≠1 — dry-run"

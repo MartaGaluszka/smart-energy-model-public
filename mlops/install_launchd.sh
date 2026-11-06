@@ -22,6 +22,7 @@ LABELS=(
   "pl.smart-energy-model.midday"
   "pl.smart-energy-model.peak"
   "pl.smart-energy-model.morning-battery-apply"
+  "pl.smart-energy-model.midday-battery-apply"
   "pl.smart-energy-model.evening-battery"
   "pl.smart-energy-model.evening-battery-apply"
   "pl.smart-energy-model.evening-battery-stop"
@@ -62,6 +63,7 @@ install_launchd() {
     "${PROJECT_ROOT}/mlops/midday_forecast.sh" \
     "${PROJECT_ROOT}/mlops/peak_arrival.sh" \
     "${PROJECT_ROOT}/mlops/morning_battery_apply.sh" \
+    "${PROJECT_ROOT}/mlops/midday_battery_apply.sh" \
     "${PROJECT_ROOT}/mlops/evening_battery_plan.sh" \
     "${PROJECT_ROOT}/mlops/evening_battery_apply.sh" \
     "${PROJECT_ROOT}/mlops/evening_battery_stop.sh" \
@@ -95,12 +97,13 @@ install_launchd() {
   echo "Harmonogram (prod RF 16 + shadow CS4 + shadow XGB+TS):"
   echo "   05:00 codziennie  → daily_workflow.sh (16 + CS4 + XGB+TS)"
   echo "   10:00 codziennie  → weather_morning_run.sh (po wpisie Accu: MB fetch + Accu×MB×modele → stub)"
-  echo "   12:00 codziennie  → midday_forecast.sh (16 + CS4 + XGB+TS)"
+  echo "   12:00 codziennie  → midday_forecast.sh (prognoza + bilans 15–22, dry-run bez Fox)"
   echo "   16:00 codziennie  → peak_arrival.sh (16 + CS4 + XGB+TS)"
-  echo "   04:00 codziennie  → morning_battery_apply.sh (top-up FC okno Fox 04–06, MORNING_CLOUDY=1)"
+  echo "   04:00 codziennie  → morning_battery_apply.sh (bilans PV vs pobór 6–13, FC tylko gdy luka)"
+  echo "   13:00 codziennie  → midday_battery_apply.sh (FC 13–15 gdy luka i PRE_CHEAP=1)"
   echo "   21:15 codziennie  → evening_battery_plan.sh (B2: sugestie + dry-run foxess_control)"
   echo "   22:00 codziennie  → evening_battery_apply.sh (--apply gdy BATTERY_CONTROL_ENABLED=1)"
-  echo "   co 5 min (noc)    → evening_battery_stop.sh (Fox tylko po stop_at, max 4 próby / 10 min)"
+  echo "   co 5 min (22–6 i 13–15) → evening_battery_stop.sh (Fox tylko po stop_at)"
   echo "   co 10 min         → evening_closeout_dynamic.sh (closeout + catch-up daily/midday/train po śnie/restarcie/DNS; midday w oknie 12:20–15:45)"
   echo "   22:42 codziennie  → evening_closeout.sh (siatka bezpieczeństwa, gdyby dynamiczny nie zadziałał)"
   echo "   23:05 dnia 11.    → fetch_rcem.sh (RCEm PSE za poprzedni miesiąc + korekty; po evening 22:42 — unik SQLite lock)"

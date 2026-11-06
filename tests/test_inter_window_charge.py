@@ -191,3 +191,28 @@ def test_pre_cheap_trigger_follows_inter_window():
 def test_inter_window_auto_enabled_default_on():
     with patch.dict('os.environ', {}, clear=False):
         assert inter_window_auto_enabled() is True
+
+
+def test_evening_charge_stops_before_morning_peak():
+    as_of = datetime(2026, 11, 6, 22, 0, 0)
+    with patch(
+        'src.optimization.inter_window_charge._forecast_pv_kwh',
+        return_value=1.0,
+    ), patch(
+        'src.optimization.inter_window_charge._segment_load_kwh',
+        return_value=8.0,
+    ):
+        iw = compute_inter_window_charge_plan(
+            context='evening',
+            as_of=as_of,
+            soc_percent=40.0,
+            reserve_percent=40.0,
+            season='winter',
+            temp_c=3.0,
+            day_pv_kwh=6.0,
+        )
+    assert iw.triggered is True
+    assert iw.stop_at is not None
+    assert iw.fc_minutes is not None
+    assert iw.stop_at <= datetime(2026, 11, 7, 6, 0, 0)
+    assert iw.grid_charge_kwh is not None and iw.grid_charge_kwh >= 2.0

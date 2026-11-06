@@ -2054,12 +2054,15 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
         details=details,
         charge_tonight=charge_tonight,
     )
-    if context in ('morning', 'pre_cheap'):
+    if context in ('morning', 'pre_cheap', 'evening'):
         try:
             from src.optimization.inter_window_charge import compute_inter_window_charge_plan
 
-            day_pv = get_day_pv_forecast_sum(target_day, as_of=as_of)
-            temp_c = get_day_mean_temp_c(target_day)
+            iw_day = target_day
+            if context == 'evening':
+                iw_day = (as_of.date() + timedelta(days=1)).isoformat()
+            day_pv = get_day_pv_forecast_sum(iw_day, as_of=as_of)
+            temp_c = get_day_mean_temp_c(iw_day)
             reserve = seasonal_soc_reserve(as_of.date(), season=season)
             iw = compute_inter_window_charge_plan(
                 context=context,
@@ -2093,6 +2096,28 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
                     advice.action = (
                         f'SoC wystarczy na cel {target:.0f}%, ale bilans do wieczora wymaga '
                         f'~{iw.grid_charge_kwh:.1f} kWh z sieci w oknie 13–15.'
+                    )
+                elif context == 'evening' and advice.charge_tonight is not None:
+                    rule = advice.charge_tonight
+                    rule.triggered = True
+                    rule.target_soc_percent = float(iw.target_soc_percent)
+                    rule.fc_minutes = float(iw.fc_minutes or 0.0)
+                    rule.charge_kwh = iw.grid_charge_kwh
+                    rule.recommendation = 'ŁADUJ OD 22:00 (BILANS)'
+                    advice.recommendation = rule.recommendation
+                    advice.action = (
+                        f'Bilans jutro 6–13: doładuj z sieci ~{iw.grid_charge_kwh:.1f} kWh '
+                        f'(cel ~{iw.target_soc_percent:.0f}%, ~{iw.fc_minutes:.0f} min od 22:00).'
+                    )
+            elif iw.skip_reason == 'pv_covers_or_wear' and context == 'evening' and advice.charge_tonight is not None:
+                rule = advice.charge_tonight
+                if rule.triggered:
+                    rule.triggered = False
+                    rule.skip_reason = 'bilans: PV i SoC pokrywają pobór'
+                    advice.recommendation = 'POMIŃ NOCNE FC (BILANS)'
+                    advice.action = (
+                        f'PV→magazyn ~{iw.pv_to_battery_kwh:.1f} kWh + SoC pokrywają '
+                        f'pobór jutro rano (~{iw.load_kwh:.1f} kWh) — bez ładowania o 22:00.'
                     )
             elif iw.skip_reason == 'pv_covers_or_wear' and context == 'morning':
                 if rec == 'ŁADUJ Z SIECI (TANIO)':

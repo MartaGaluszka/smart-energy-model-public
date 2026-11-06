@@ -207,7 +207,7 @@ def pre_cheap_apply_enabled() -> bool:
 
 
 def compute_pre_cheap_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
-    """Apply @~12:00 przed oknem 13–15 — ten sam bilans co poranek."""
+    """Apply od 13:00 w oknie 13–15 — ten sam bilans co poranek."""
     if advice.context != 'pre_cheap':
         return None
     return _topup_from_inter_window(advice)
@@ -310,6 +310,12 @@ def validate_apply_request(
                 f'(floor legacy {morning_soc_floor():.0f}%).'
             )
     if phase == 'apply' and context == 'pre_cheap':
+        hour = advice.as_of.hour
+        if hour < 13 or hour >= 15:
+            return (
+                'Apply 13:00–15:00 tylko od 13:00 — o 12:00 prąd jest jeszcze drogi, '
+                'zostaje sam bilans (dry-run).'
+            )
         if not pre_cheap_apply_enabled():
             return 'BATTERY_CONTROL_PRE_CHEAP=0 — apply południowy wyłączony.'
         if not pre_cheap_apply_trigger(advice):
@@ -631,12 +637,11 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
     elif advice.context == 'pre_cheap':
         pre_topup = compute_pre_cheap_topup(advice)
         if pre_topup and pre_cheap_apply_enabled() and winter and not weekend:
-            fc1, fc2 = g12w_force_charge_windows(enabled=True)
             soc_txt = f'{soc:.0f}%' if soc is not None else '?'
             actions.append(ControlAction(
                 'set_force_charge_windows',
-                'Bilans @12:00: okna 22–6 + 13–15 (G12w tanio).',
-                {'period1': fc1, 'period2': fc2},
+                'Bilans @13:00: okno 13–15 (doładuj teraz) + noc 22–6.',
+                {'period1': night, 'period2': midday},
             ))
             actions.append(ControlAction(
                 'set_work_mode',
@@ -760,15 +765,20 @@ def execute_plan(
                     'reason': 'fox_schedule_enabled',
                 })
                 continue
+            charge_force = 0
             if fox_schedule_on and plan.context in ('evening', 'morning', 'pre_cheap'):
+                # Fox odrzuca set_charge przy włączonym harmonogramie (errno w logu 05.11 22:00).
+                # force=1 najpierw wyłącza flagę harmonogramu, potem zapisuje okna FC.
+                charge_force = 0 if dry_run else 1
                 plan.notes.append(
-                    'Harmonogram trybu pracy włączony — set_charge i tak (B2 / bilans tanio).'
+                    'Harmonogram FoxESS włączony — wyłączam go (force) i ustawiam okna ForceCharge.'
                 )
             try:
                 results.append(controller.set_force_charge_windows(
                     period1=action.params.get('period1'),
                     period2=action.params.get('period2'),
                     dry_run=dry_run,
+                    force=charge_force,
                 ))
             except RuntimeError as exc:
                 plan.notes.append(f'⚠️ set_charge: {exc}')

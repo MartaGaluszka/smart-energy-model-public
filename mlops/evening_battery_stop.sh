@@ -14,7 +14,11 @@ mkdir -p "${PROJECT_ROOT}/logs"
 source "${PROJECT_ROOT}/mlops/_venv.sh"
 
 HOUR="$((10#$(date '+%H')))"
-if [[ "${HOUR}" -lt 22 && "${HOUR}" -ge 6 ]]; then
+# Noc 22:00–06:00 oraz okno 13:00–15:00 (stop po zaplanowanych minutach).
+if [[ "${HOUR}" -ge 6 && "${HOUR}" -lt 13 ]]; then
+  exit 0
+fi
+if [[ "${HOUR}" -ge 16 && "${HOUR}" -lt 22 ]]; then
   exit 0
 fi
 
