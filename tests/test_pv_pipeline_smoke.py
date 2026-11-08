@@ -230,6 +230,56 @@ def test_operational_adjust() -> None:
     assert abs(o['outlook_kwh'] - o['raw_kwh']) < 1e-6
     print(f'  ✓ hybrid outlook midday → {o["outlook_mode"]} ({o["outlook_kwh"]:.1f} kWh)')
 
+    # 08.11: archiwum ściemniło minione godziny poniżej FoxESS — outlook = hybryda
+    bright = pd.DataFrame([
+        {'day': '2026-11-08', 'hour': h,
+         'predicted_kwh': 2.3 if h < 12 else 1.2,
+         'predicted_kwh_raw': 1.7 if h < 12 else 1.2,
+         'prediction_source': 'foxess_actual' if h < 12 else 'model'}
+        for h in range(7, 17)
+    ])
+    b = day_outlook_totals(bright, adjust_applied=False)
+    assert b['outlook_mode'] == 'hybrid_path'
+    assert abs(b['outlook_kwh'] - b['hybrid_path_kwh']) < 1e-6
+    assert b['hybrid_path_kwh'] > b['raw_kwh']
+    print(f'  ✓ hybrid outlook above raw → {b["outlook_mode"]} ({b["outlook_kwh"]:.1f} kWh)')
+
+    def _noon_row(hour, fox, raw, cloud, rad, source):
+        return {
+            'day': '2026-11-01', 'hour': hour,
+            'predicted_kwh': fox, 'predicted_kwh_raw': raw,
+            'prediction_source': source,
+            'cloud_cover_pct': cloud, 'radiation_wm2': rad,
+        }
+
+    # 30.10 / 01.11: Fox dużo poniżej modelu, po 12 nadal pochmurno i słabo
+    dark = pd.DataFrame(
+        [_noon_row(h, 0.8, 1.6, 90, 80, 'foxess_actual') for h in range(8, 12)]
+        + [_noon_row(h, 1.0, 1.0, 80, 120, 'model') for h in range(12, 16)]
+    )
+    d = day_outlook_totals(dark, adjust_applied=False)
+    assert d['outlook_mode'] == 'hybrid_cloudy'
+    assert abs(d['outlook_kwh'] - d['hybrid_path_kwh']) < 1e-6
+    print(f'  ✓ cloudy noon step-down → {d["outlook_mode"]} ({d["outlook_kwh"]:.1f} kWh)')
+
+    # 05.11: Fox blisko modelu, po 12 jasno — zostaw raw
+    bright_noon = pd.DataFrame(
+        [_noon_row(h, 2.4, 2.6, 20, 170, 'foxess_actual') for h in range(8, 12)]
+        + [_noon_row(h, 1.5, 1.5, 12, 240, 'model') for h in range(12, 16)]
+    )
+    bn = day_outlook_totals(bright_noon, adjust_applied=False)
+    assert bn['outlook_mode'] == 'model_raw'
+    print(f'  ✓ bright noon stays raw → {bn["outlook_mode"]} ({bn["outlook_kwh"]:.1f} kWh)')
+
+    # 16.07: niski stosunek rano, ale promieniowanie po 12 wciąż letnie — zostaw raw
+    summer = pd.DataFrame(
+        [_noon_row(h, 1.0, 2.0, 60, 200, 'foxess_actual') for h in range(8, 12)]
+        + [_noon_row(h, 2.0, 2.0, 64, 290, 'model') for h in range(12, 16)]
+    )
+    s = day_outlook_totals(summer, adjust_applied=False)
+    assert s['outlook_mode'] == 'model_raw'
+    print(f'  ✓ summer high radiation stays raw → {s["outlook_mode"]} ({s["outlook_kwh"]:.1f} kWh)')
+
 
 def main() -> None:
     import argparse

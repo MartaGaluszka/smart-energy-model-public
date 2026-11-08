@@ -81,7 +81,7 @@ class ForecastValidationDailyRow(BaseModel):
     run_label: str
     forecast_run_at: str | None = None
     predicted_total_kwh: float
-    # model_raw | hybrid_path | adjusted — skąd wzięta suma dnia (outlook hybrydy)
+    # model_raw | hybrid_path | hybrid_cloudy | adjusted — skąd wzięta suma dnia
     outlook_mode: str | None = None
     # Wypełnione DOPIERO gdy dzień jest zamknięty (patrz `ForecastValidationResponse.is_complete`)
     # — przeszły dzień, lub dziś po zachodzie słońca + margines (wieczorna synchronizacja, T1.17).

@@ -259,7 +259,7 @@ export interface ForecastValidationDailyRow {
   run_label: string;
   forecast_run_at: string | null;
   predicted_total_kwh: number;
-  /** model_raw | hybrid_path | adjusted — skąd suma dnia (outlook) */
+  /** model_raw | hybrid_path | hybrid_cloudy | adjusted — skąd suma dnia (outlook) */
   outlook_mode?: string | null;
   /** Wypełnione dopiero gdy ForecastValidationResponse.is_complete=true (dzień zamknięty,
    *  czyli po wieczornej synchronizacji) — dopóki dzień trwa, to i error_* są null. */
