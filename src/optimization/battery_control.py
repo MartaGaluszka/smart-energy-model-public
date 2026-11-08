@@ -145,12 +145,38 @@ class MorningTopupPlan:
     stop_at: datetime
 
 
+def _collapsed_day_pv_kwh() -> float:
+    """Poniżej tego PV dzień jest załamany (mgła, śnieg, gęste chmury) — dobij nawet przy jasnym Accu."""
+    return _env_float('BATTERY_MORNING_COLLAPSED_PV_KWH', 8.0)
+
+
+def _accu_regime_for_day(target_day: str) -> str | None:
+    try:
+        from src.weather.forecast_routing import resolve_forecast_display
+
+        routing = resolve_forecast_display(target_day)
+    except Exception:
+        return None
+    return routing.regime
+
+
 def _morning_pv_weak(advice: BatteryAdvice) -> bool:
+    """Czy o 4:00 dobić z sieci. Tylko przed słabym dniem, nie przed słonecznym.
+
+    Słoneczna niedziela (Accu jasny, produkcja od ~7:00) ma zostać z miejscem w
+    baterii. Pochmurno, śnieg i załamany PV (jak sobotnia mgła) dalej dobijają.
+    """
     from src.optimization.battery_advisor import get_day_pv_forecast_sum
 
     today_pv = get_day_pv_forecast_sum(advice.target_day, as_of=advice.as_of)
-    if today_pv is not None and today_pv < morning_cloudy_pv_kwh_threshold():
+    if today_pv is not None and today_pv >= morning_cloudy_pv_kwh_threshold():
+        return False
+    if today_pv is not None and today_pv < _collapsed_day_pv_kwh():
         return True
+    if _accu_regime_for_day(advice.target_day) == 'jasny':
+        return False
+    if today_pv is not None:
+        return today_pv < morning_cloudy_pv_kwh_threshold()
     morning_pv = advice.pv.morning_forecast_kwh if advice.pv else None
     return morning_pv is not None and morning_pv < 8.0
 
@@ -217,9 +243,22 @@ def pre_cheap_apply_trigger(advice: BatteryAdvice) -> bool:
     return compute_pre_cheap_topup(advice) is not None
 
 
+def _night_should_release_windows(advice: BatteryAdvice) -> bool:
+    """Jutro duży dach: nie zostawiaj harmonogramu, który i tak dobije baterię do 100%."""
+    rule = advice.charge_tonight
+    if rule is None or rule.triggered:
+        return False
+    pv = rule.tomorrow_pv_kwh
+    return pv is not None and pv >= morning_cloudy_pv_kwh_threshold()
+
+
 def morning_cloudy_apply_trigger(advice: BatteryAdvice) -> bool:
-    """Apply launchd ~4:00 — patrz ``compute_morning_topup``."""
-    return compute_morning_topup(advice) is not None
+    """Apply @4:00: dobicie przed słabym dniem albo zgaszenie okien przed słonecznym."""
+    if compute_morning_topup(advice) is not None:
+        return True
+    if advice.context != 'morning' or advice.as_of.hour >= 6 or advice.season != 'winter':
+        return False
+    return not _morning_pv_weak(advice)
 
 
 def planned_morning_stop_at(as_of: datetime) -> datetime:
@@ -297,6 +336,8 @@ def validate_apply_request(
             return 'Strefa G12w szczytowa — apply B2 tylko w taniej strefie (22:00–6:00 / weekend).'
         rule = advice.charge_tonight
         if not rule or not rule.triggered:
+            if _night_should_release_windows(advice):
+                return None
             return 'Reguła B2 bez triggera — apply pominięte (POMIŃ).'
     if phase == 'apply' and context == 'morning':
         if not morning_apply_allowed(advice.as_of):
@@ -561,6 +602,21 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
                 f'~{topup.fc_minutes:.0f} min FC, stop {topup.stop_at.strftime("%H:%M")} '
                 f'(30 min ≈ +50 pp).'
             )
+        elif advice.as_of.hour < 6 and not _morning_pv_weak(advice):
+            actions.append(ControlAction(
+                'set_work_mode',
+                'Słoneczny dzień — bez doładowania o 4:00, miejsce na produkcję od ~7:00.',
+                {'mode': 'SelfUse'},
+            ))
+            actions.append(ControlAction(
+                'set_force_charge_windows',
+                'Wyłącz okna ForceCharge: duży dach, nie pchać baterii do 100% przed wschodem.',
+                {'period1': _disabled_window(), 'period2': _disabled_window()},
+            ))
+            notes.append(
+                'O 4:00 bez FC — dzień nie jest pochmurny. 22:00 zostaje buforem na awarię, '
+                'nie pełnieniem pod eksport.'
+            )
         elif rec == 'ŁADUJ Z SIECI (TANIO)':
             actions.append(ControlAction(
                 'set_force_charge_windows',
@@ -602,7 +658,18 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
     elif advice.context == 'evening':
         rule = advice.charge_tonight
         if rule and rule.triggered:
-            fc1, fc2 = g12w_force_charge_windows(enabled=True)
+            sunny_night = (
+                rule.tomorrow_pv_kwh is not None
+                and rule.tomorrow_pv_kwh >= morning_cloudy_pv_kwh_threshold()
+            )
+            if sunny_night:
+                # Tylko 22–01. Okno 04–06 zostaje na drugie ładowanie, jeśli rano dzień jest słaby.
+                fc1 = ForceChargeWindow(enabled=True, start_hour=22.0, end_hour=1.0)
+                fc2 = _disabled_window()
+                window_label = 'B2 @22:00: tylko okno 22–01 (duży dach — 4:00 bez drugiego ładowania).'
+            else:
+                fc1, fc2 = g12w_force_charge_windows(enabled=True)
+                window_label = 'B2 @22:00: Fox okna 22–01 + 04–06 (słaby dzień, drugie ładowanie rano).'
             soc_txt = f'{soc:.0f}%' if soc is not None else '?'
             target_txt = (
                 f'{rule.target_soc_percent:.0f}%'
@@ -611,7 +678,7 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
             )
             actions.append(ControlAction(
                 'set_force_charge_windows',
-                'B2 @22:00: Fox okna 22–01 + 04–06 (G12w tanio).',
+                window_label,
                 {'period1': fc1, 'period2': fc2},
             ))
             if is_cheap_zone(advice.as_of):
@@ -628,6 +695,20 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
                 notes.append(
                     f'Zaplanowany stop FC po ~{rule.fc_minutes:.0f} min (timer T6.2b).'
                 )
+        elif _night_should_release_windows(advice):
+            actions.append(ControlAction(
+                'set_work_mode',
+                'Jutro duży dach — 22:00 zostaje buforem, bez pełnienia do 100%.',
+                {'mode': 'SelfUse'},
+            ))
+            actions.append(ControlAction(
+                'set_force_charge_windows',
+                'Zgaś harmonogram ForceCharge: słoneczne jutro nie ma iść w eksport.',
+                {'period1': _disabled_window(), 'period2': _disabled_window()},
+            ))
+            notes.append(
+                '22:00 bez FC — jutrzejsze PV pokryje dzień. Pełna bateria zostaje na pochmurno i śnieg.'
+            )
         else:
             actions.append(ControlAction(
                 'noop',

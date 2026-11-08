@@ -453,23 +453,32 @@ def estimate_peak_gap_kwh(t_mean_c: float, tomorrow_pv_kwh: float) -> float:
     return estimate_expensive_load_kwh(t_mean_c) - frac * max(0.0, tomorrow_pv_kwh)
 
 
+def sunny_night_soc() -> float:
+    """Pierwsze ładowanie nocy (22:00) przy dużym dachu — bufor awarii, nie pełna bateria."""
+    return float(os.getenv('BATTERY_SUNNY_NIGHT_SOC', '70'))
+
+
 def winter_night_target_soc(
     t_mean_c: float | None,
     tomorrow_pv_kwh: float,
 ) -> float | None:
-    """Docelowy SoC po FC 22–6 zimą (§C). None = nie pełnić (zostaw rezerwę / dach)."""
+    """Cel SoC na 22:00 — pierwsze z dwóch ładowań nocy.
+
+    Duży dach (PV ≥ próg): ~70%, żeby rano zostało miejsce na produkcję.
+    Słaby dzień / śnieg: 95% przy zimnie, 80–90% gdy jest cieplej albo brak T.
+    Drugie ładowanie jest o 4:00 i tylko gdy dzień nadal jest słaby.
+    """
     skip_pv = _b2_pv_skip_kwh()
     mild_weak = _b2_mild_weak_pv_kwh()
+    headroom = sunny_night_soc()
     if t_mean_c is None:
-        return 90.0 if tomorrow_pv_kwh < skip_pv else None
-    if t_mean_c < 0:
-        return 95.0
+        return 90.0 if tomorrow_pv_kwh < skip_pv else headroom
     if t_mean_c < 5:
-        return 95.0 if tomorrow_pv_kwh < skip_pv else None
+        return 95.0 if tomorrow_pv_kwh < skip_pv else headroom
     if tomorrow_pv_kwh < mild_weak:
         return 80.0
     if tomorrow_pv_kwh >= skip_pv:
-        return None
+        return headroom
     return 80.0
 
 
@@ -798,7 +807,9 @@ def evaluate_charge_tonight_cloudy(
         return _empty()
     if laundry_skip:
         return _empty(skip_reason='laundry_sunny')
-    if today_off and not morning_buffer_candidate:
+    # Zima: dwa ładowania także w weekend (niedziela → poniedziałek).
+    # Lato i jesień zostają przy pominięciu doby wolnej.
+    if today_off and not morning_buffer_candidate and not winter_b2:
         return _empty()
 
     # --- Lato / wiosna: krótki FC (nie pełnić baterii) ---
@@ -968,11 +979,21 @@ def evaluate_charge_tonight_cloudy(
         target = min(100.0, soc_percent + delta_soc)
         energy_kwh = delta_soc / 100.0 * cap
     below_reserve = soc_percent < reserve
+    # 70% przy dużym dachu to bufor awarii, nie arbitraż taryfy. Drobny brak (<15 pp) odpada.
+    sunny_headroom = abs(target - sunny_night_soc()) < 0.05
+    min_delta = float(os.getenv('BATTERY_FC_MIN_DELTA_SOC', '15'))
+    if sunny_headroom and not frost and not below_reserve and delta_soc < min_delta:
+        return _empty(
+            skip_reason='wear',
+            target_soc_percent=target,
+            fc_minutes=minutes,
+            estimated_gap_kwh=gap,
+        )
     if not _charge_worth_vs_wear(
         energy_kwh=energy_kwh,
         delta_soc=delta_soc,
         gap_kwh=gap,
-        frost=frost,
+        frost=frost or sunny_headroom,
         below_reserve=below_reserve,
     ):
         return _empty(

@@ -6,14 +6,14 @@ Metryka: **|APE| %** = `|actual − prognoza| / actual × 100`. Pogoda: średnie
 
 | Typ dnia (cloud) | n | MAPE raw 5:00 | MAPE raw 12:00 | Dni |
 |---|---:|---:|---:|---|
-| słoneczny / mało chmur | 24 | 10.4% | 12.5% | 20.07, 30.07, 31.07, 04.08, 05.08, 06.08, 09.08, 12.08, 13.08, 14.08, 15.08, 27.08, 08.09, 09.09, 28.09, 29.09, 30.09, 02.10, 03.10, 05.10, 16.10, 17.10, 23.10, 27.10 |
+| słoneczny / mało chmur | 25 | 10.4% | 12.5% | 20.07, 30.07, 31.07, 04.08, 05.08, 06.08, 09.08, 12.08, 13.08, 14.08, 15.08, 27.08, 08.09, 09.09, 28.09, 29.09, 30.09, 02.10, 03.10, 05.10, 16.10, 17.10, 23.10, 27.10, 05.11 |
 | mieszany | 33 | 16.8% | 16.7% | 16.07, 17.07, 25.07, 26.07, 28.07, 29.07, 03.08, 08.08, 10.08, 16.08, 20.08, 22.08, 23.08, 24.08, 28.08, 29.08, 30.08, 01.09, 02.09, 06.09, 15.09, 16.09, 19.09, 26.09, 27.09, 04.10, 06.10, 07.10, 12.10, 13.10, 18.10, 21.10, 28.10 |
-| pochmurny / deszczowy | 52 | 44.9% | 41.7% | 14.07, 15.07, 18.07, 19.07, 21.07, 22.07, 23.07, 24.07, 27.07, 01.08, 02.08, 07.08, 11.08, 17.08, 18.08, 19.08, 21.08, 25.08, 26.08, 31.08, 03.09, 04.09, 05.09, 07.09, 10.09, 11.09, 12.09, 13.09, 14.09, 17.09, 18.09, 20.09, 21.09, 22.09, 23.09, 24.09, 25.09, 01.10, 08.10, 09.10, 10.10, 11.10, 14.10, 15.10, 19.10, 20.10, 22.10, 24.10, 25.10, 26.10, 29.10, 30.10 |
+| pochmurny / deszczowy | 58 | 55.5% | 51.6% | 14.07, 15.07, 18.07, 19.07, 21.07, 22.07, 23.07, 24.07, 27.07, 01.08, 02.08, 07.08, 11.08, 17.08, 18.08, 19.08, 21.08, 25.08, 26.08, 31.08, 03.09, 04.09, 05.09, 07.09, 10.09, 11.09, 12.09, 13.09, 14.09, 17.09, 18.09, 20.09, 21.09, 22.09, 23.09, 24.09, 25.09, 01.10, 08.10, 09.10, 10.10, 11.10, 14.10, 15.10, 19.10, 20.10, 22.10, 24.10, 25.10, 26.10, 29.10, 30.10, 31.10, 01.11, 02.11, 03.11, 04.11, 06.11 |
 
 - **Najtrafniejszy raw 5:00:** 08.10 (0.4% · pochmurny / deszczowy, cloud~79%, actual 18.8 kWh), 30.07 (0.6% · słoneczny / mało chmur, cloud~30%, actual 33.5 kWh), 03.08 (0.7% · mieszany, cloud~47%, actual 33.5 kWh)
-- **Najgorszy raw 5:00:** 22.10 (406.0% · pochmurny / deszczowy, cloud~100%, actual 1.0 kWh), 29.10 (253.2% · pochmurny / deszczowy, cloud~96%, actual 2.2 kWh), 25.08 (149.8% · pochmurny / deszczowy, cloud~100%, actual 4.5 kWh)
-- **Najgorszy raw 12:00:** 22.10 (380.0% · pochmurny / deszczowy, actual 1.0 kWh), 29.10 (192.3% · pochmurny / deszczowy, actual 2.2 kWh), 11.09 (174.8% · pochmurny / deszczowy, actual 3.1 kWh)
-- **Rekord |APE| (cała seria 14.07–30.10):** **22.10** raw 12:00 **380.0%** (Fox **1.0** kWh vs prognoza midday **4.8** kWh) — wyżej niż dotychczasowy outlier **25.08** (152,7% midday). Accu reżim **CS4** OK; miss = poziom kWh, nie klasyfikacja.
+- **Najgorszy raw 5:00:** 22.10 (406.0% · pochmurny / deszczowy, cloud~100%, actual 1.0 kWh), 03.11 (286.7% · pochmurny / deszczowy, cloud~97%, actual 1.2 kWh), 29.10 (253.2% · pochmurny / deszczowy, cloud~96%, actual 2.2 kWh)
+- **Najgorszy raw 12:00:** 22.10 (380.0% · pochmurny / deszczowy, actual 1.0 kWh), 03.11 (270.8% · pochmurny / deszczowy, actual 1.2 kWh), 02.11 (226.0% · pochmurny / deszczowy, actual 1.5 kWh)
+- **Rekord |APE| (cała seria 14.07–06.11):** **22.10** raw 12:00 **380.0%** (Fox **1.0** kWh vs prognoza midday **4.8** kWh) — wyżej niż dotychczasowy outlier **25.08** (152,7% midday). Accu reżim **CS4** OK; miss = poziom kWh, nie klasyfikacja.
 
 - **Wzorzec:** na dniach **jasnych / wysokiej produkcji** raw bywa lekko **za niski** (NWP za chmurny vs Accu) — błąd umiarkowany w %, duży w kWh. Na dniach **słabych / burzowych** raw często **zawyża** — wtedy |APE| % eksploduje przy niskim Fox (**11.09** rekord **174,8%**; wcześniej klasa **25.08** ~153%). Od **02.09** primary to **ENS (ICON+UKMO)** — ten sam RF16, inna pogoda.
 
@@ -35,16 +35,17 @@ Raw 5:00 vs Fox, tygodnie pn–nd (od 03.08, min. 5 dni). **WAPE** = Σ|pred−F
 | 05.10–11.10 | 7 | 22.1 | 12.2% | -10.0% | -12.9% (n=4) | 28% | 19.1% (n=7) | -18.7% | **WATCH** · WAPE OK · bias WATCH · dzień WATCH |
 | 12.10–18.10 | 7 | 17.5 | 35.9% | +6.4% | -22.5% (n=3) | 135% | 35.0% (n=7) | -14.6% | **ALARM** · WAPE ALARM · bias OK · dzień ALARM |
 | 19.10–25.10 | 6 | 10.7 | 34.6% | +14.6% | -13.2% (n=2) | 406% | 32.4% (n=6) | +6.2% | **ALARM** · WAPE ALARM · bias ALARM · dzień ALARM |
-| 26.10–01.11 | 3 | 8.5 | 48.4% | +48.4% | — | 253% | 41.5% (n=3) | +41.5% | **info (n<5)** |
+| 26.10–01.11 | 5 | 7.6 | 47.8% | +47.8% | — | 253% | 43.2% (n=5) | +43.2% | **ALARM** · WAPE ALARM · bias ALARM · dzień ALARM |
+| 02.11–08.11 | 5 | 6.6 | 48.5% | +33.3% | -11.4% (n=1) | 287% | 55.8% (n=5) | +39.5% | **ALARM** · WAPE ALARM · bias ALARM · dzień ALARM |
 
 #### ENS vs dual ICON — korekta o miks pogody
 
-Era ENS ma więcej dni pochmurnych (**54%** vs **32%** w erze dual), a na pochmurnych |APE| % jest zawyżone przez niski Fox — dlatego porównuj **te same typy dni** (różnica MAPE raw 5:00, ENS − dual): słoneczny / mało chmur: wyższy o 6.3 pp w erze ENS; mieszany: wyższy o 11.6 pp w erze ENS; pochmurny / deszczowy: wyższy o 27.9 pp w erze ENS. Mała próba (n w komórkach) — to obserwacja, nie wniosek.
+Era ENS ma więcej dni pochmurnych (**58%** vs **32%** w erze dual), a na pochmurnych |APE| % jest zawyżone przez niski Fox — dlatego porównuj **te same typy dni** (różnica MAPE raw 5:00, ENS − dual): słoneczny / mało chmur: wyższy o 6.1 pp w erze ENS; mieszany: wyższy o 11.6 pp w erze ENS; pochmurny / deszczowy: wyższy o 43.1 pp w erze ENS. Mała próba (n w komórkach) — to obserwacja, nie wniosek.
 
 | Era | słoneczny / mało chmur (n · MAPE 5:00) | mieszany (n · MAPE 5:00) | pochmurny / deszczowy (n · MAPE 5:00) | udział dni pochmurnych |
 |---|---:|---:|---:|---:|
 | dual ICON 27.07–01.09 | 11 · 7.3% | 14 · 12.1% | 12 · 27.4% | 32% |
-| ENS od 02.09 | 12 · 13.5% | 15 · 23.7% | 32 · 55.3% | 54% |
+| ENS od 02.09 | 13 · 13.3% | 15 · 23.7% | 38 · 70.5% | 58% |
 
 #### Kiedy hybryda dnia pomaga, a kiedy szkodzi
 
@@ -52,7 +53,7 @@ Porównanie **midday (12:00)**: hybryda = FoxESS na minione godziny + RF na resz
 
 - **Hybryda pomaga (12:00):** 18.07 (↓14.1 pp, pochmurny / deszczowy); 21.07 (↓18.9 pp, pochmurny / deszczowy); 23.07 (↓10.8 pp, pochmurny / deszczowy); 24.07 (↓55.0 pp, pochmurny / deszczowy)
 - **Hybryda szkodzi (12:00):** 20.07 (↑13.2 pp, słoneczny / mało chmur); 22.07 (↑11.2 pp, pochmurny / deszczowy); 25.07 (↑16.7 pp, mieszany); 28.07 (↑11.3 pp, mieszany); 29.07 (↑13.4 pp, mieszany)
-- **Remis / szum (<1 pp):** 14.07, 15.07, 16.07, 17.07, 19.07, 26.07, 27.07, 30.07, 31.07, 01.08, 02.08, 03.08, 04.08, 05.08, 06.08, 07.08, 08.08, 09.08, 10.08, 11.08, 12.08, 13.08, 14.08, 15.08, 16.08, 17.08, 18.08, 19.08, 20.08, 21.08, 22.08, 23.08, 24.08, 25.08, 26.08, 27.08, 28.08, 29.08, 30.08, 31.08, 01.09, 02.09, 03.09, 04.09, 05.09, 06.09, 07.09, 08.09, 09.09, 10.09, 11.09, 12.09, 13.09, 14.09, 15.09, 16.09, 17.09, 18.09, 19.09, 20.09, 21.09, 22.09, 23.09, 24.09, 25.09, 26.09, 27.09, 28.09, 29.09, 30.09, 01.10, 02.10, 03.10, 04.10, 05.10, 07.10, 08.10, 09.10, 10.10, 11.10, 12.10, 13.10, 14.10, 15.10, 16.10, 17.10, 18.10, 19.10, 20.10, 21.10, 22.10, 23.10, 24.10, 28.10, 29.10, 30.10
+- **Remis / szum (<1 pp):** 14.07, 15.07, 16.07, 17.07, 19.07, 26.07, 27.07, 30.07, 31.07, 01.08, 02.08, 03.08, 04.08, 05.08, 06.08, 07.08, 08.08, 09.08, 10.08, 11.08, 12.08, 13.08, 14.08, 15.08, 16.08, 17.08, 18.08, 19.08, 20.08, 21.08, 22.08, 23.08, 24.08, 25.08, 26.08, 27.08, 28.08, 29.08, 30.08, 31.08, 01.09, 02.09, 03.09, 04.09, 05.09, 06.09, 07.09, 08.09, 09.09, 10.09, 11.09, 12.09, 13.09, 14.09, 15.09, 16.09, 17.09, 18.09, 19.09, 20.09, 21.09, 22.09, 23.09, 24.09, 25.09, 26.09, 27.09, 28.09, 29.09, 30.09, 01.10, 02.10, 03.10, 04.10, 05.10, 07.10, 08.10, 09.10, 10.10, 11.10, 12.10, 13.10, 14.10, 15.10, 16.10, 17.10, 18.10, 19.10, 20.10, 21.10, 22.10, 23.10, 24.10, 28.10, 29.10, 30.10, 31.10, 01.11, 02.11, 03.11, 04.11, 05.11, 06.11
 
 - **O 5:00:** hybryda ≈ raw (pomaga 1 dni / szkodzi 1) — przed wschodem prawie nie ma FoxESS do podmiany.
 
@@ -71,18 +72,18 @@ Podział według **zmian logiki / targetu / cech** (nie każdy niedzielny odświ
 | 14.07–18.07 | przed targetem PVE (skala mieszana; GPS/ICON 17.07) | 5 | 22.8% | 20.6% |
 | 19.07–26.07 | po PVE 18.07 ~16:32 — przed dual 26.07 | 8 | 26.5% | 21.7% |
 | 27.07–01.09 | era dual ICON primary (po 26.07; weekly = odświeżenie wag) | 37 | 15.6% | 15.8% |
-| 02.09–30.10 | era ENS primary (ICON+UKMO; gate 01.09, daily od 02.09) | 59 | 37.7% | 37.2% |
-| 19.07–30.10 | **era PVE łącznie** (bez 14–18) | 104 | **28.4%** | **28.1%** |
+| 02.09–06.11 | era ENS primary (ICON+UKMO; gate 01.09, daily od 02.09) | 66 | 47.4% | 46.1% |
+| 19.07–06.11 | **era PVE łącznie** (bez 14–18) | 111 | **34.6%** | **33.8%** |
 
-_Zakres całość: 14.07–30.10 (109 closeoutów) · MAPE raw 5:00 = **28.2%** · MAPE raw 12:00 = **27.7%**._
+_Zakres całość: 14.07–06.11 (116 closeoutów) · MAPE raw 5:00 = **34.1%** · MAPE raw 12:00 = **33.2%**._
 
-#### Notatka odświeżenia 31.10.2026
+#### Notatka odświeżenia 07.11.2026
 
-- Zakres closeoutów: **14.07–30.10** (n=109). PNG + ten plik wygenerowane **31.10**.
+- Zakres closeoutów: **14.07–06.11** (n=116). PNG + ten plik wygenerowane **07.11**.
 - Linie na wykresie: **ICON** od **18.07** (wdrożenie 17.07 wieczór) · **kalibracja dual** od **26.07** · **ENS primary** od **02.09**.
-- **ENS primary** od **02.09** (gate 01.09, pierwszy daily 5:00) — n=59 closeoutów · MAPE raw **37.7% / 37.2%**.
+- **ENS primary** od **02.09** (gate 01.09, pierwszy daily 5:00) — n=66 closeoutów · MAPE raw **47.4% / 46.1%**.
 - Era dual ICON **27.07–01.09** (n=37): MAPE raw **15.6% / 15.8%**.
-- Ostatnie closeouty (actual · |APE| raw 5:00): 23.10 **26.1** (raw 5:00 12.8%), 24.10 **6.2** (raw 5:00 41.8%), 25.10, 26.10, 27.10, 28.10 **18.4** (raw 5:00 16.0%), 29.10 **2.2** (raw 5:00 253.2%), 30.10 **5.0** (raw 5:00 77.6%).
+- Ostatnie closeouty (actual · |APE| raw 5:00): 30.10 **5.0** (raw 5:00 77.6%), 31.10 **9.7** (raw 5:00 28.2%), 01.11 **2.6** (raw 5:00 115.4%), 02.11 **1.5** (raw 5:00 242.0%), 03.11 **1.2** (raw 5:00 286.7%), 04.11 **4.6** (raw 5:00 63.7%), 05.11 **22.0** (raw 5:00 11.4%), 06.11 **3.5** (raw 5:00 97.7%).
 
 #### Jak czytać PNG
 

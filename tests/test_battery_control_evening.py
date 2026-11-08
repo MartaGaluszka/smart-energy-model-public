@@ -85,13 +85,13 @@ def test_build_plan_evening_skip_is_noop():
     rule = ChargeTonightCloudyRule(
         triggered=False,
         soc_percent=70.0,
-        tomorrow_pv_kwh=15.0,
+        tomorrow_pv_kwh=8.0,
         soc_below=40.0,
         weak_pv_below=12.0,
         recommendation='',
         title='',
         body='',
-        skip_reason='Jutro dużo PV',
+        skip_reason='słabe PV, SoC już nad rezerwą',
     )
     plan = build_plan(_advice_evening(as_of=datetime(2026, 11, 3, 21, 15), rule=rule))
     assert plan.context == 'evening'
@@ -451,9 +451,55 @@ def test_morning_apply_allowed_before_six_only():
     assert morning_apply_allowed(datetime(2026, 11, 3, 6, 0)) is False
 
 
-def test_morning_cloudy_trigger_skips_when_pv_high():
+def test_morning_sunny_accu_skips_borderline_pv():
+    """Niedziela: Accu jasny i PV ~12 kWh — o 4:00 nie dobijać, miejsce na dach od 7:00."""
     advice = _advice_morning(
-        as_of=datetime(2026, 11, 3, 5, 0),
+        as_of=datetime(2026, 11, 8, 4, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=6.0,
+    )
+    advice.snapshot = BatterySnapshot(None, 50.0, None, None, None, None)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=11.5,
+    ), patch(
+        'src.optimization.battery_control._accu_regime_for_day',
+        return_value='jasny',
+    ):
+        assert compute_morning_topup(advice) is None
+        plan = build_plan(advice)
+    kinds = [a.kind for a in plan.actions]
+    assert 'set_work_mode' in kinds
+    assert any(a.params.get('mode') == 'SelfUse' for a in plan.actions if a.kind == 'set_work_mode')
+    assert not any(
+        a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode'
+    )
+    windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
+    assert windows.params['period2'].enabled is False
+
+
+def test_morning_collapsed_pv_tops_up_even_if_accu_was_sunny():
+    """Sobotnia mgła: PV załamane poniżej 8 kWh — dobij, choć wczorajszy Accu był jasny."""
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 7, 4, 0),
+        morning_pv=2.0,
+    )
+    advice.snapshot = BatterySnapshot(None, 50.0, None, None, None, None)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=6.5,
+    ), patch(
+        'src.optimization.battery_control._accu_regime_for_day',
+        return_value='jasny',
+    ):
+        topup = compute_morning_topup(advice)
+    assert topup is not None
+    assert topup.target_soc == morning_topup_target_soc()
+
+
+def test_morning_sunny_apply_releases_windows_without_force_charge():
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 3, 4, 0),
         recommendation='SOC OK',
         morning_pv=15.0,
     )
@@ -461,7 +507,12 @@ def test_morning_cloudy_trigger_skips_when_pv_high():
         'src.optimization.battery_advisor.get_day_pv_forecast_sum',
         return_value=20.0,
     ):
-        assert morning_cloudy_apply_trigger(advice) is False
+        assert morning_cloudy_apply_trigger(advice) is True
+        plan = build_plan(advice)
+    assert any(a.params.get('mode') == 'SelfUse' for a in plan.actions if a.kind == 'set_work_mode')
+    assert not any(
+        a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode'
+    )
 
 
 def test_morning_cloudy_trigger_on_rezerwa_when_soc_low():
@@ -560,6 +611,39 @@ def test_launchd_morning_battery_apply_runs_at_0400():
     ).read_text(encoding='utf-8')
     assert '<integer>4</integer>' in plist
     assert '<key>Hour</key>' in plist
+
+
+def test_evening_sunny_first_charge_keeps_only_2201_window():
+    """Duży dach: 22:00 ładuje do ~70% samym oknem 22–01. 04–06 zostaje na drugie ładowanie."""
+    rule = ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=50.0,
+        tomorrow_pv_kwh=18.6,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='',
+        body='',
+        target_soc_percent=70.0,
+        fc_minutes=12.0,
+    )
+    plan = build_plan(_advice_evening(as_of=datetime(2026, 11, 8, 22, 2), rule=rule))
+    windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
+    assert windows.params['period1'].enabled is True
+    assert windows.params['period1'].start_hour == 22.0
+    assert windows.params['period2'].enabled is False
+    assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
+
+
+def test_evening_sunny_tomorrow_releases_force_charge_windows():
+    rule = _b2_rule(triggered=False)
+    rule = replace(rule, tomorrow_pv_kwh=18.6, skip_reason='covered')
+    advice = _advice_evening(as_of=datetime(2026, 11, 8, 22, 5), rule=rule)
+    plan = build_plan(advice)
+    windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
+    assert windows.params['period1'].enabled is False
+    assert windows.params['period2'].enabled is False
+    assert validate_apply_request('evening', advice, phase='apply') is None
 
 
 def test_validate_apply_denies_when_b2_not_triggered(monkeypatch):

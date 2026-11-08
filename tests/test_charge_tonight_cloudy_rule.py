@@ -20,13 +20,14 @@ def test_thirty_min_is_fifty_percent():
 
 
 def test_winter_target_table():
-    assert winter_night_target_soc(-4.0, 20.0) == 95.0
+    assert winter_night_target_soc(-4.0, 6.0) == 95.0
+    assert winter_night_target_soc(-4.0, 20.0) == 70.0
     assert winter_night_target_soc(2.0, 11.0) == 95.0
-    assert winter_night_target_soc(2.0, 14.0) is None
+    assert winter_night_target_soc(2.0, 14.0) == 70.0
     assert winter_night_target_soc(8.0, 6.0) == 80.0
-    assert winter_night_target_soc(8.0, 15.0) is None
+    assert winter_night_target_soc(8.0, 15.0) == 70.0
     assert winter_night_target_soc(None, 11.0) == 90.0
-    assert winter_night_target_soc(None, 14.0) is None
+    assert winter_night_target_soc(None, 14.0) == 70.0
 
 
 def test_triggers_on_low_soc_and_weak_tomorrow():
@@ -42,7 +43,8 @@ def test_triggers_on_low_soc_and_weak_tomorrow():
     assert '30 min' in rule.body
 
 
-def test_frost_charges_even_if_tomorrow_sunny():
+def test_frost_sunny_charges_only_to_headroom():
+    """Mróz i duży dach: pierwsze ładowanie o 22:00 do ~70%, nie do 95%."""
     rule = evaluate_charge_tonight_cloudy(
         soc_percent=55.0,
         tomorrow_pv_kwh=20.0,
@@ -50,20 +52,64 @@ def test_frost_charges_even_if_tomorrow_sunny():
         as_of=datetime(2026, 1, 14, 17, 0),  # środa
     )
     assert rule.triggered is True
+    assert rule.target_soc_percent == 70.0
+
+
+def test_sunny_already_above_headroom_skips():
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=80.0,
+        tomorrow_pv_kwh=20.0,
+        tomorrow_temp_c=-4.0,
+        as_of=datetime(2026, 1, 14, 17, 0),
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'full'
+
+
+def test_sunny_tiny_gap_skips_wear():
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=66.0,
+        tomorrow_pv_kwh=18.0,
+        tomorrow_temp_c=2.0,
+        as_of=datetime(2026, 1, 14, 17, 0),
+    )
+    assert rule.triggered is False
+    assert rule.skip_reason == 'wear'
+
+
+def test_winter_sunday_night_still_charges_to_headroom():
+    """Niedziela → poniedziałek: zima nie pomija doby wolnej."""
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=50.0,
+        tomorrow_pv_kwh=18.6,
+        tomorrow_temp_c=-1.0,
+        as_of=datetime(2026, 11, 8, 21, 0),
+    )
+    assert rule.triggered is True
+    assert rule.target_soc_percent == 70.0
+
+
+def test_frost_weak_pv_still_fills():
+    rule = evaluate_charge_tonight_cloudy(
+        soc_percent=55.0,
+        tomorrow_pv_kwh=6.0,
+        tomorrow_temp_c=-6.0,
+        as_of=datetime(2026, 1, 14, 17, 0),
+    )
+    assert rule.triggered is True
     assert rule.target_soc_percent == 95.0
-    assert rule.fc_minutes == fc_minutes_for_delta_soc(40.0)
 
 
-def test_mild_sunny_skips_fill():
-    """T ≥ 5°C i PV ≥ 12 kWh — dach pokrywa szczyt, nie pełnić."""
+def test_mild_sunny_charges_to_headroom():
+    """T ≥ 5°C i PV ≥ 12 kWh — pierwsze ładowanie do ~70%, nie do 95%."""
     rule = evaluate_charge_tonight_cloudy(
         soc_percent=43.0,
         tomorrow_pv_kwh=15.0,
         tomorrow_temp_c=8.0,
         as_of=datetime(2026, 1, 14, 17, 0),
     )
-    assert rule.triggered is False
-    assert rule.skip_reason == 'covered'
+    assert rule.triggered is True
+    assert rule.target_soc_percent == 70.0
 
 
 def test_wear_skip_when_little_missing():
