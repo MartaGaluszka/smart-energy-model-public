@@ -87,8 +87,12 @@ def main() -> int:
         hold = f'{r.get("l30_hold_start", "?")}→{r.get("l30_hold_end", "?")}'
         shuf_s = f'{float(shuf):.3f}' if pd.notna(shuf) else '—'
         l30_s = f'{float(l30):.3f}' if pd.notna(l30) else '—'
-        c20 = r.get('chrono20_test_mae') if 'chrono20_test_mae' in r.index else None
-        c20_s = f'  chrono20 {float(c20):.3f}' if pd.notna(c20) else ''
+        c20 = r.get('chrono90_test_mae') if 'chrono90_test_mae' in r.index else None
+        c20_s = f'  chrono90 {float(c20):.3f}' if pd.notna(c20) else ''
+        c_wape = r.get('chrono90_wape') if 'chrono90_wape' in r.index else None
+        c_bias = r.get('chrono90_bias') if 'chrono90_bias' in r.index else None
+        if pd.notna(c20) and pd.notna(c_wape) and pd.notna(c_bias):
+            c20_s += f' (WAPE {float(c_wape) * 100:.0f}%, bias {float(c_bias):+.2f})'
         print(
             f'{fs:12s} {shuf_s:>9s} {l30_s:>9s} {soft["status"]:>6s} '
             f'{sg:>9s} {delta_s:>8s}  {hold}{c20_s}'

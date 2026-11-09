@@ -59,8 +59,8 @@ from src.models.pv_hourly_predictor import (
 )
 from src.models.weekly_dual_metrics import (
     append_dual_history,
-    chronological_fraction_masks,
     chronological_l30_masks,
+    evaluate_chrono90_safe,
     evaluate_holdout_pipeline,
     load_prev_shuffle_mae,
     print_dual_report,
@@ -405,16 +405,12 @@ def run_tuning(
         chrono_te,
     )
     soft = soft_gate_l30(l30.get('test_mae'))
-    c20_tr, c20_te, c20_start, c20_end = chronological_fraction_masks(
-        frame['day'], train_end, fraction=0.2,
-    )
-    chrono20 = evaluate_holdout_pipeline(
+    chrono90, c90_start, c90_end = evaluate_chrono90_safe(
         best['pipeline'],
         frame,
         list(feature_columns),
         TARGET_COLUMN,
-        c20_tr,
-        c20_te,
+        train_end,
     )
     prev_shuf = load_prev_shuffle_mae(feature_key)
     shuf_gate = shuffle_gate_vs_prev(best['test_mae'], prev_shuf)
@@ -427,9 +423,9 @@ def run_tuning(
         hold_end=hold_end,
         soft=soft,
         shuffle_gate=shuf_gate,
-        chrono20=chrono20,
-        chrono20_start=c20_start,
-        chrono20_end=c20_end,
+        chrono90=chrono90,
+        chrono90_start=c90_start,
+        chrono90_end=c90_end,
     )
 
     print('\n[5] Cross-validation wybranego modelu...')
@@ -489,10 +485,12 @@ def run_tuning(
                 'l30_daily_mae': l30.get('daily_mae'),
                 'l30_hold_start': hold_start,
                 'l30_hold_end': hold_end,
-                'chrono20_test_mae': chrono20.get('test_mae'),
-                'chrono20_daily_mae': chrono20.get('daily_mae'),
-                'chrono20_hold_start': c20_start,
-                'chrono20_hold_end': c20_end,
+                'chrono90_test_mae': chrono90.get('test_mae'),
+                'chrono90_daily_mae': chrono90.get('daily_mae'),
+                'chrono90_wape': chrono90.get('wape'),
+                'chrono90_bias': chrono90.get('bias'),
+                'chrono90_hold_start': c90_start,
+                'chrono90_hold_end': c90_end,
                 'soft_gate_l30': soft,
                 'shuffle_gate': shuf_gate,
             },
@@ -526,11 +524,13 @@ def run_tuning(
         'l30_hold_start': hold_start,
         'l30_hold_end': hold_end,
         'l30_n_test_days': l30.get('n_test_days'),
-        'chrono20_test_mae': chrono20.get('test_mae'),
-        'chrono20_daily_mae': chrono20.get('daily_mae'),
-        'chrono20_hold_start': c20_start,
-        'chrono20_hold_end': c20_end,
-        'chrono20_n_test_days': chrono20.get('n_test_days'),
+        'chrono90_test_mae': chrono90.get('test_mae'),
+        'chrono90_daily_mae': chrono90.get('daily_mae'),
+        'chrono90_wape': chrono90.get('wape'),
+        'chrono90_bias': chrono90.get('bias'),
+        'chrono90_hold_start': c90_start,
+        'chrono90_hold_end': c90_end,
+        'chrono90_n_test_days': chrono90.get('n_test_days'),
         'soft_gate_l30': soft['status'],
         'soft_gate_hard_reject': soft['hard_reject'],
         'shuffle_gate': shuf_gate['status'],
@@ -556,10 +556,12 @@ def run_tuning(
         'l30_daily_mae': l30.get('daily_mae'),
         'l30_hold_start': hold_start,
         'l30_hold_end': hold_end,
-        'chrono20_test_mae': chrono20.get('test_mae'),
-        'chrono20_daily_mae': chrono20.get('daily_mae'),
-        'chrono20_hold_start': c20_start,
-        'chrono20_hold_end': c20_end,
+        'chrono90_test_mae': chrono90.get('test_mae'),
+        'chrono90_daily_mae': chrono90.get('daily_mae'),
+        'chrono90_wape': chrono90.get('wape'),
+        'chrono90_bias': chrono90.get('bias'),
+        'chrono90_hold_start': c90_start,
+        'chrono90_hold_end': c90_end,
         'soft_gate_l30': soft['status'],
         'shuffle_gate': shuf_gate['status'],
         'shuffle_gate_delta': shuf_gate.get('delta'),
@@ -621,8 +623,10 @@ def run_tuning(
         'daily_r2': best['daily_r2'],
         'l30_test_mae': l30.get('test_mae'),
         'l30_daily_mae': l30.get('daily_mae'),
-        'chrono20_test_mae': chrono20.get('test_mae'),
-        'chrono20_daily_mae': chrono20.get('daily_mae'),
+        'chrono90_test_mae': chrono90.get('test_mae'),
+        'chrono90_daily_mae': chrono90.get('daily_mae'),
+        'chrono90_wape': chrono90.get('wape'),
+        'chrono90_bias': chrono90.get('bias'),
         'soft_gate_l30': soft['status'],
         'shuffle_gate': shuf_gate['status'],
         'verdict': verdict,

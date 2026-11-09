@@ -18,6 +18,8 @@ from sklearn.base import clone
 from sklearn.metrics import mean_absolute_error, r2_score
 
 DEFAULT_HOLD_DAYS = 30
+# Chrono holdout (raport, nie gate): stałe 90 dni — porównywalne tydzień do tygodnia
+CHRONO90_HOLD_DAYS = 90
 # Soft gate X 2026: typowy rząd L30 jesień — nie REJECT
 SOFT_GATE_L30_LOW = 0.75
 SOFT_GATE_L30_HIGH = 1.0
@@ -186,6 +188,8 @@ def evaluate_holdout_pipeline(
             'daily_mae': None,
             'daily_r2': None,
             'test_r2': None,
+            'wape': None,
+            'bias': None,
             'n_train': int(train_mask.sum()),
             'n_test': int(test_mask.sum()),
             'n_test_days': 0,
@@ -215,6 +219,14 @@ def evaluate_holdout_pipeline(
     daily_mae = float(mean_absolute_error(g['y'], g['p'])) if len(g) else float('nan')
     daily_r2 = float(r2_score(g['y'], g['p'])) if len(g) > 1 else float('nan')
 
+    y_arr = np.asarray(y_te, dtype=float)
+    p_arr = np.asarray(pred_te, dtype=float)
+    y_sum = float(np.nansum(y_arr))
+    # WAPE: suma |błąd| / suma produkcji — porównywalne między sezonami (w odróżnieniu od MAE)
+    wape = float(np.nansum(np.abs(p_arr - y_arr)) / y_sum) if y_sum > 0 else None
+    # bias: średnie (pred − real) w kWh/h; ujemny = model zaniża produkcję
+    bias = float(np.nanmean(p_arr - y_arr)) if len(y_arr) else None
+
     return {
         'test_mae': mae_te,
         'train_mae': mae_tr,
@@ -222,10 +234,60 @@ def evaluate_holdout_pipeline(
         'daily_mae': daily_mae,
         'daily_r2': daily_r2,
         'test_r2': r2_te,
+        'wape': wape,
+        'bias': bias,
         'n_train': len(y_tr),
         'n_test': len(y_te),
         'n_test_days': int(days_te.nunique()),
     }
+
+
+def _empty_holdout_result() -> dict[str, float | int | None]:
+    return {
+        'test_mae': None,
+        'train_mae': None,
+        'gap': None,
+        'daily_mae': None,
+        'daily_r2': None,
+        'test_r2': None,
+        'wape': None,
+        'bias': None,
+        'n_train': 0,
+        'n_test': 0,
+        'n_test_days': 0,
+    }
+
+
+def evaluate_chrono90_safe(
+    pipeline,
+    frame: pd.DataFrame,
+    feature_columns: list[str],
+    target_column: str,
+    train_end: str,
+    *,
+    hold_days: int = CHRONO90_HOLD_DAYS,
+) -> tuple[dict[str, float | int | None], str, str]:
+    """Chrono 90 dni (raport, nie gate) — nigdy nie przerywa treningu produkcyjnego.
+
+    Stałe okno ``hold_days`` (nie ułamek danych), żeby tydzień do tygodnia był porównywalny.
+    Przy dowolnym wyjątku (NaN w danych, puste maski, błąd fit) loguje ostrzeżenie
+    i zwraca pusty wynik (``test_mae=None``), jak przy „za mało dni”.
+    Zwraca ``(wynik, hold_start, hold_end)``.
+    """
+    try:
+        tr_mask, te_mask, start, end = chronological_l30_masks(
+            frame['day'], train_end, hold_days=hold_days,
+        )
+        result = evaluate_holdout_pipeline(
+            pipeline, frame, feature_columns, target_column, tr_mask, te_mask,
+        )
+        return result, start, end
+    except Exception as exc:  # noqa: BLE001 — raport informacyjny, nie może blokować prod
+        print(
+            f'⚠️  Chrono {hold_days}d pominięty (raport, nie gate): '
+            f'{type(exc).__name__}: {exc}',
+        )
+        return _empty_holdout_result(), '', ''
 
 
 def print_dual_report(
@@ -238,9 +300,9 @@ def print_dual_report(
     hold_end: str,
     soft: dict[str, Any],
     shuffle_gate: dict[str, Any] | None = None,
-    chrono20: dict[str, Any] | None = None,
-    chrono20_start: str = '',
-    chrono20_end: str = '',
+    chrono90: dict[str, Any] | None = None,
+    chrono90_start: str = '',
+    chrono90_end: str = '',
 ) -> None:
     """Wypisz blok dual report do logów weekly."""
     print('')
@@ -266,22 +328,32 @@ def print_dual_report(
             print(f'  L30 gap (te−tr):   {float(gap):+.3f} kWh/h')
     print(f'  Soft gate L30:     {soft["status"]}  (hard_reject={soft["hard_reject"]})')
     print(f'                     {soft["message"]}')
-    if chrono20 is not None:
-        c_mae = chrono20.get('test_mae')
-        c_daily = chrono20.get('daily_mae')
+    if chrono90 is not None:
+        c_mae = chrono90.get('test_mae')
+        c_daily = chrono90.get('daily_mae')
         if c_mae is None:
-            print('  Chrono 20% MAE:     — (za mało dni)')
+            print('  Chrono 90d MAE:     — (za mało dni / pominięty)')
         else:
+            daily_s = f'{float(c_daily):.2f}' if c_daily is not None else '—'
             print(
-                f'  Chrono 20% MAE:     {float(c_mae):.3f} kWh/h'
-                f'  |  Daily: {float(c_daily):.2f} kWh/d'
-                f'  |  dni test: {chrono20.get("n_test_days")}'
-                f'   [{chrono20_start} → {chrono20_end}]  [raport, nie gate]'
+                f'  Chrono 90d MAE:     {float(c_mae):.3f} kWh/h'
+                f'  |  Daily: {daily_s} kWh/d'
+                f'  |  dni test: {chrono90.get("n_test_days")}'
+                f'   [{chrono90_start} → {chrono90_end}]  [raport, nie gate]'
             )
+            c_wape = chrono90.get('wape')
+            c_bias = chrono90.get('bias')
+            wape_s = f'{float(c_wape) * 100:.1f}%' if c_wape is not None else '—'
+            if c_bias is None:
+                bias_s = '—'
+            else:
+                direction = 'zaniża' if float(c_bias) < 0 else 'zawyża'
+                bias_s = f'{float(c_bias):+.3f} kWh/h ({direction})'
+            print(f'  Chrono 90d WAPE:    {wape_s}  |  bias: {bias_s}')
     if shuffle_gate is not None:
         print(f'  Shuffle gate:      {shuffle_gate["status"]}')
         print(f'                     {shuffle_gate["message"]}')
-    print('  Prod .joblib:      expanding full window (L30 i chrono 20% tylko raport)')
+    print('  Prod .joblib:      expanding full window (L30 i chrono 90d tylko raport)')
     print('=' * 72)
 
 

@@ -64,7 +64,7 @@ def test_chronological_fraction_respects_min_test_days():
     assert int(tr.sum()) == 15
 
 
-def test_print_dual_report_shows_chrono20_block(capsys):
+def test_print_dual_report_shows_chrono90_block(capsys):
     from src.models.weekly_dual_metrics import print_dual_report
 
     base = dict(
@@ -78,18 +78,20 @@ def test_print_dual_report_shows_chrono20_block(capsys):
     )
     print_dual_report(
         **base,
-        chrono20={'test_mae': 0.71, 'daily_mae': 3.2, 'n_test_days': 20},
-        chrono20_start='2026-10-17',
-        chrono20_end='2026-11-05',
+        chrono90={'test_mae': 0.71, 'daily_mae': 3.2, 'n_test_days': 90, 'wape': 0.43, 'bias': -0.21},
+        chrono90_start='2026-10-17',
+        chrono90_end='2026-11-05',
     )
     out = capsys.readouterr().out
-    assert 'Chrono 20% MAE' in out
+    assert 'Chrono 90d MAE' in out
     assert '0.710' in out
     assert '2026-10-17 → 2026-11-05' in out
     assert 'raport, nie gate' in out
+    assert 'WAPE:    43.0%' in out
+    assert '-0.210' in out and 'zaniża' in out
 
 
-def test_print_dual_report_chrono20_too_few_days(capsys):
+def test_print_dual_report_chrono90_too_few_days(capsys):
     from src.models.weekly_dual_metrics import print_dual_report
 
     print_dual_report(
@@ -100,9 +102,95 @@ def test_print_dual_report_chrono20_too_few_days(capsys):
         hold_start='2026-10-01',
         hold_end='2026-10-30',
         soft=soft_gate_l30(0.8),
-        chrono20={'test_mae': None},
+        chrono90={'test_mae': None},
     )
     assert 'za mało dni' in capsys.readouterr().out
+
+
+def _chrono_frame(n_days: int = 40, nan_target: bool = False) -> pd.DataFrame:
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    days = pd.date_range('2026-09-01', periods=n_days).strftime('%Y-%m-%d')
+    frame = pd.DataFrame({
+        'day': np.repeat(days, 3),
+        'x': rng.normal(size=n_days * 3),
+    })
+    frame['y'] = frame['x'] * 2 + rng.normal(scale=0.1, size=len(frame))
+    if nan_target:
+        frame.loc[frame.index[-3:], 'y'] = np.nan
+    return frame
+
+
+def test_evaluate_chrono90_safe_ok():
+    from sklearn.linear_model import LinearRegression
+
+    from src.models.weekly_dual_metrics import evaluate_chrono90_safe
+
+    frame = _chrono_frame()
+    res, start, end = evaluate_chrono90_safe(
+        LinearRegression(), frame, ['x'], 'y', '2026-10-10', hold_days=10,
+    )
+    assert res['test_mae'] is not None
+    assert start and end
+
+
+def test_evaluate_holdout_wape_and_bias_values():
+    from sklearn.base import BaseEstimator, RegressorMixin
+
+    from src.models.weekly_dual_metrics import evaluate_holdout_pipeline
+
+    class _Const(BaseEstimator, RegressorMixin):
+        def fit(self, X, y):
+            return self
+
+        def predict(self, X):
+            return [1.0] * len(X)  # zawsze 1.0, real = 2.0 → zaniża o 1.0
+
+    frame = pd.DataFrame({
+        'day': ['2026-01-01'] * 4 + ['2026-01-02'] * 4,
+        'x': range(8),
+        'y': [2.0] * 8,
+    })
+    tr = pd.Series([True] * 4 + [False] * 4)
+    te = ~tr
+    res = evaluate_holdout_pipeline(_Const(), frame, ['x'], 'y', tr, te)
+    assert abs(res['bias'] - (-1.0)) < 1e-9
+    assert abs(res['wape'] - 0.5) < 1e-9
+
+
+def test_evaluate_chrono90_safe_default_window_too_short_returns_empty():
+    from sklearn.linear_model import LinearRegression
+
+    from src.models.weekly_dual_metrics import CHRONO90_HOLD_DAYS, evaluate_chrono90_safe
+
+    assert CHRONO90_HOLD_DAYS == 90
+    # 40 dni danych < 90 → brak train → pusty wynik, bez wyjątku
+    res, _, _ = evaluate_chrono90_safe(
+        LinearRegression(), _chrono_frame(), ['x'], 'y', '2026-10-10',
+    )
+    assert res['test_mae'] is None and res['wape'] is None and res['bias'] is None
+
+
+def test_evaluate_chrono90_safe_swallows_errors(capsys):
+    from sklearn.linear_model import LinearRegression
+
+    from src.models.weekly_dual_metrics import evaluate_chrono90_safe
+
+    # NaN w targecie w train → LinearRegression rzuca ValueError przy fit
+    frame = _chrono_frame()
+    frame.loc[frame.index[:3], 'y'] = float('nan')
+    res, start, end = evaluate_chrono90_safe(
+        LinearRegression(), frame, ['x'], 'y', '2026-10-10', hold_days=10,
+    )
+    assert res['test_mae'] is None
+    assert (start, end) == ('', '')
+    assert 'Chrono 10d pominięty' in capsys.readouterr().out
+    # brak kolumny 'day' też nie może wywalić treningu
+    res2, _, _ = evaluate_chrono90_safe(
+        LinearRegression(), frame.drop(columns='day'), ['x'], 'y', '2026-10-10',
+    )
+    assert res2['test_mae'] is None
 
 
 def test_soft_gate_l30_never_hard_reject():
