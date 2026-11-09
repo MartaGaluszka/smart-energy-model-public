@@ -50,6 +50,7 @@ from src.models.pv_hourly_predictor import (
 )
 from src.models.weekly_dual_metrics import (
     append_dual_history,
+    chronological_fraction_masks,
     chronological_l30_masks,
     evaluate_holdout_pipeline,
     load_prev_shuffle_mae,
@@ -143,6 +144,17 @@ def main() -> None:
         chrono_te,
     )
     soft = soft_gate_l30(l30.get('test_mae'))
+    c20_tr, c20_te, c20_start, c20_end = chronological_fraction_masks(
+        frame['day'], train_end, fraction=0.2,
+    )
+    chrono20 = evaluate_holdout_pipeline(
+        _xgb_pipe(),
+        frame,
+        FEATURE_COLUMNS,
+        TARGET_COLUMN,
+        c20_tr,
+        c20_te,
+    )
     prev_shuf = load_prev_shuffle_mae(FEATURE_SET)
     shuf_gate = shuffle_gate_vs_prev(te['mae'], prev_shuf)
     print_dual_report(
@@ -154,6 +166,9 @@ def main() -> None:
         hold_end=hold_end,
         soft=soft,
         shuffle_gate=shuf_gate,
+        chrono20=chrono20,
+        chrono20_start=c20_start,
+        chrono20_end=c20_end,
     )
 
     # Refit na całym oknie treningowym (produkcyjny shadow)
@@ -189,6 +204,10 @@ def main() -> None:
         'l30_daily_mae': l30.get('daily_mae'),
         'l30_hold_start': hold_start,
         'l30_hold_end': hold_end,
+        'chrono20_test_mae': chrono20.get('test_mae'),
+        'chrono20_daily_mae': chrono20.get('daily_mae'),
+        'chrono20_hold_start': c20_start,
+        'chrono20_hold_end': c20_end,
         'soft_gate_l30': soft['status'],
         'shuffle_gate': shuf_gate['status'],
         'shuffle_gate_delta': shuf_gate.get('delta'),
@@ -219,6 +238,10 @@ def main() -> None:
             'l30_daily_mae': l30.get('daily_mae'),
             'l30_hold_start': hold_start,
             'l30_hold_end': hold_end,
+            'chrono20_test_mae': chrono20.get('test_mae'),
+            'chrono20_daily_mae': chrono20.get('daily_mae'),
+            'chrono20_hold_start': c20_start,
+            'chrono20_hold_end': c20_end,
             'soft_gate_l30': soft,
             'shuffle_gate': shuf_gate,
         },

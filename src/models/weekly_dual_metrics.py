@@ -37,6 +37,38 @@ def chronological_l30_bounds(
     return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
 
 
+def chronological_fraction_masks(
+    day_series: pd.Series,
+    train_end: str,
+    *,
+    fraction: float = 0.2,
+    min_test_days: int = 14,
+) -> tuple[pd.Series, pd.Series, str, str]:
+    """Ostatnie ``fraction`` unikalnych dni do ``train_end`` jako test (raport, nie gate).
+
+    Train = dni ≤ train_end poza tym blokiem. Dni po train_end nie wchodzą do żadnej maski.
+    """
+    days = pd.to_datetime(day_series.astype(str))
+    end = pd.Timestamp(train_end).normalize()
+    unique = sorted({d.normalize() for d in days if pd.notna(d) and d.normalize() <= end})
+    empty = pd.Series(False, index=day_series.index)
+    if len(unique) < min_test_days + 1:
+        return empty, empty.copy(), '', ''
+    n_test = max(min_test_days, int(round(len(unique) * fraction)))
+    n_test = min(n_test, len(unique) - 1)
+    hold = unique[-n_test:]
+    hold_set = set(hold)
+    norm = days.dt.normalize()
+    test_mask = norm.isin(hold_set)
+    train_mask = (norm <= end) & ~test_mask
+    return (
+        train_mask,
+        test_mask,
+        hold[0].strftime('%Y-%m-%d'),
+        hold[-1].strftime('%Y-%m-%d'),
+    )
+
+
 def chronological_l30_masks(
     day_series: pd.Series,
     train_end: str,
@@ -206,6 +238,9 @@ def print_dual_report(
     hold_end: str,
     soft: dict[str, Any],
     shuffle_gate: dict[str, Any] | None = None,
+    chrono20: dict[str, Any] | None = None,
+    chrono20_start: str = '',
+    chrono20_end: str = '',
 ) -> None:
     """Wypisz blok dual report do logów weekly."""
     print('')
@@ -231,10 +266,22 @@ def print_dual_report(
             print(f'  L30 gap (te−tr):   {float(gap):+.3f} kWh/h')
     print(f'  Soft gate L30:     {soft["status"]}  (hard_reject={soft["hard_reject"]})')
     print(f'                     {soft["message"]}')
+    if chrono20 is not None:
+        c_mae = chrono20.get('test_mae')
+        c_daily = chrono20.get('daily_mae')
+        if c_mae is None:
+            print('  Chrono 20% MAE:     — (za mało dni)')
+        else:
+            print(
+                f'  Chrono 20% MAE:     {float(c_mae):.3f} kWh/h'
+                f'  |  Daily: {float(c_daily):.2f} kWh/d'
+                f'  |  dni test: {chrono20.get("n_test_days")}'
+                f'   [{chrono20_start} → {chrono20_end}]  [raport, nie gate]'
+            )
     if shuffle_gate is not None:
         print(f'  Shuffle gate:      {shuffle_gate["status"]}')
         print(f'                     {shuffle_gate["message"]}')
-    print('  Prod .joblib:      expanding full window → train_end (L30 tylko raport)')
+    print('  Prod .joblib:      expanding full window (L30 i chrono 20% tylko raport)')
     print('=' * 72)
 
 
