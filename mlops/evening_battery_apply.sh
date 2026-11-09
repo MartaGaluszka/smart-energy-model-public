@@ -15,6 +15,11 @@ source "${PROJECT_ROOT}/mlops/_venv.sh"
 echo ""
 echo "=== Evening battery APPLY (22:00) | $(date '+%Y-%m-%d %H:%M:%S') ==="
 
+# Świeży SoC tuż przed decyzją B2 (nieświeży SoC = brak ForceCharge, case 09.11.2026).
+# Jedno wąskie pobranie (dziś); pauza API / błąd nie przerywa skryptu.
+"$PYTHON" "${PROJECT_ROOT}/mlops/refresh_battery_soc.py" --max-age-min 10 \
+  || echo "⚠️  refresh SoC nieudany — decyzja z bazy"
+
 if ! "$PYTHON" -c "from src.optimization.battery_control import control_enabled; import sys; sys.exit(0 if control_enabled() else 3)"; then
   echo "ℹ️  BATTERY_CONTROL_ENABLED≠1 — tylko dry-run (bezpieczny domyślny tryb)"
   "$PYTHON" "${PROJECT_ROOT}/mlops/foxess_control.py" --context evening

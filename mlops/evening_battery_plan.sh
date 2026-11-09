@@ -27,7 +27,10 @@ run_soft() {
 
 echo ""
 echo "=== Evening battery plan (~21:15) | $(date '+%Y-%m-%d %H:%M:%S') ==="
-echo "ℹ️  Bez sync Fox (limit ~1440 zapytań/dobę) — SoC i pogoda z bazy."
+echo "ℹ️  Jedno wąskie odświeżenie SoC z Fox (dziś, 1 dzień) tuż przed decyzją; reszta z bazy."
+# Nieświeży SoC = brak ForceCharge (case 09.11.2026: 57% z 18:50 vs ~14% o 22:00).
+"$PYTHON" "${PROJECT_ROOT}/mlops/refresh_battery_soc.py" --max-age-min 10 \
+  || echo "⚠️  refresh SoC nieudany — decyzja z bazy"
 
 run_soft "Bateria — plan B2 (advisor evening)" \
   "$PYTHON" "${PROJECT_ROOT}/mlops/battery_advisor_report.py" --context evening
