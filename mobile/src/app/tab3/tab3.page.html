@@ -45,6 +45,12 @@
       </ion-button>
     </div>
 
+    <!-- Stały skrót do Rytmu domu — widoczny zawsze, nie tylko gdy jest sekcja AGD. -->
+    <a class="se-forecast-rhythm-link" routerLink="/tabs/household" data-testid="forecast-rhythm-link">
+      <ion-icon name="home-outline" aria-hidden="true"></ion-icon>
+      Rytm domu
+    </a>
+
     <div
       class="se-regime-banner"
       *ngIf="state.displayModel === 'cs4' && state.regime === 'pochmurny'"

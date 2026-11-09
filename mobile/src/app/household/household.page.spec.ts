@@ -1,12 +1,25 @@
-import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CUSTOM_ELEMENTS_SCHEMA, Component, ContentChild, Input, TemplateRef } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular';
 import { of, throwError } from 'rxjs';
 import { ApiService, HouseholdEventDto } from '../services/api.service';
 import { shiftIsoDate, todayIsoLocal } from '../utils/date-utils';
 import { HouseholdPage } from './household.page';
-import { applyMeasuredFloorHeat, bestApplianceWindow, buildDayEnergyBudget, customTypeDef, dayAdvisorLine, flexibleDayLine, morningHeatLine, tintForEstimatedKwh } from './household.types';
+import { applyMeasuredFloorHeat, bestApplianceWindow, buildDayEnergyBudget, customTypeDef, dayAdvisorLine, eventProgress, flexibleDayLine, morningHeatLine, splitDayProgress, tintForEstimatedKwh } from './household.types';
+
+/** `ion-modal` bez Ionic Core: pokazuje szablon dopiero, gdy `isOpen` — jak w apce. */
+@Component({
+  selector: 'ion-modal',
+  template: '<ng-container *ngIf="isOpen && body"><ng-container *ngTemplateOutlet="body"></ng-container></ng-container>',
+  standalone: false,
+})
+class IonModalStubComponent {
+  @Input() isOpen = false;
+  @ContentChild(TemplateRef) body?: TemplateRef<unknown>;
+}
 
 describe('HouseholdPage (Rytm domu)', () => {
   let fixture: ComponentFixture<HouseholdPage>;
@@ -32,6 +45,7 @@ describe('HouseholdPage (Rytm domu)', () => {
       'createHouseholdCustomType',
       'deleteHouseholdCustomType',
       'deleteHouseholdEvent',
+      'updateHouseholdEventTimes',
       'getForecastHourly',
       'getFoxOverview',
       'getBatterySettings',
@@ -77,7 +91,8 @@ describe('HouseholdPage (Rytm domu)', () => {
     );
 
     await TestBed.configureTestingModule({
-      declarations: [HouseholdPage],
+      imports: [CommonModule, FormsModule],
+      declarations: [HouseholdPage, IonModalStubComponent],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
       providers: [
         { provide: ApiService, useValue: api },
@@ -122,7 +137,11 @@ describe('HouseholdPage (Rytm domu)', () => {
     expect(component.focusBudget?.pvKwh).toBe(27.5);
     expect(component.focusBudget?.pvSource).toBe('actual');
     expect(component.focusBudget?.socPercent).toBe(79);
-    expect(component.focusBudget?.verdict).toBe('ok');
+    // Dziś pranie jeszcze nie ruszyło: werdykt liczy tylko to, co zostało (bateria powyżej rezerwy).
+    expect(component.focusBudget?.hasProgress).toBe(true);
+    expect(component.focusBudget?.doneKwh).toBe(0);
+    expect(component.focusBudget?.remainingKwh).toBe(1.5);
+    expect(component.focusBudget?.verdict).toBe('tight');
     expect(api.getForecastHourly).toHaveBeenCalledWith(todayIsoLocal());
 
     const el = fixture.nativeElement as HTMLElement;
@@ -311,14 +330,14 @@ describe('HouseholdPage (Rytm domu)', () => {
       nightHeatKwh: 3.1,
       now: evening,
     });
-    expect(enough).toContain('Bilans nocny na plus');
+    expect(enough).toContain('wystarczy do rana');
     const short = morningHeatLine({
       socPercent: 40,
       capacityKwh: 10.36,
       nightHeatKwh: 3.1,
       now: evening,
     });
-    expect(short).toContain('Brakuje');
+    expect(short).toContain('pójdzie z sieci');
     expect(morningHeatLine({ socPercent: 90, capacityKwh: 10.36, nightHeatKwh: 0, now: evening })).toBeNull();
   });
 
@@ -379,4 +398,271 @@ describe('HouseholdPage (Rytm domu)', () => {
     expect(component.error).toContain('Nie udało się');
     expect(component.days.length).toBe(7);
   }));
+  describe('początek i czas programu AGD', () => {
+    const now = new Date(2026, 10, 9, 13, 37);
+    const day = '2026-11-09';
+
+    it('eventProgress: skończone, trwa, jeszcze nie i planowane', () => {
+      const done = eventProgress({ event_date: day, start_time: '10:47', duration_min: 138 }, now);
+      expect(done.state).toBe('done');
+      expect(done.caption).toBe('10:47–13:05');
+
+      const running = eventProgress({ event_date: day, start_time: '13:32', duration_min: 127 }, now);
+      expect(running.state).toBe('running');
+      expect(running.endLabel).toBe('15:39');
+      expect(running.caption).toBe('trwa do 15:39');
+
+      expect(eventProgress({ event_date: day, start_time: '10:11' }, now).state).toBe('done');
+      expect(eventProgress({ event_date: day }, now)).toEqual(
+        jasmine.objectContaining({ state: 'pending', caption: 'jeszcze nie' }),
+      );
+      const planned = eventProgress({ event_date: day, planned_time: '18:00' }, now);
+      expect(planned.state).toBe('planned');
+      expect(planned.caption).toBe('plan 18:00');
+    });
+
+    it('eventProgress: start wpisany na później to jeszcze plan; wcześniejsze dni zrobione, kolejne czekają', () => {
+      expect(eventProgress({ event_date: day, start_time: '15:00' }, now).state).toBe('planned');
+      expect(eventProgress({ event_date: '2026-11-08' }, now).state).toBe('done');
+      expect(eventProgress({ event_date: '2026-11-10' }, now).state).toBe('pending');
+      expect(eventProgress({ event_date: '2026-11-10', planned_time: '09:30' }, now).caption).toBe('plan 09:30');
+    });
+
+    it('splitDayProgress dzieli dzień na zrobione, trwa i do zrobienia', () => {
+      const split = splitDayProgress(
+        [
+          { event_date: day, event_type: 'zmywarka', start_time: '10:47', duration_min: 138 },
+          { event_date: day, event_type: 'suszarka', start_time: '13:32', duration_min: 127 },
+          { event_date: day, event_type: 'pranie' },
+        ],
+        now,
+      );
+      expect(split).toEqual({ done: ['zmywarka'], running: ['suszarka'], todo: ['pranie'] });
+    });
+
+    it('budżet dnia: komunikat mówi, co już pobrało prąd, a co jeszcze nie', () => {
+      const budget = buildDayEnergyBudget({
+        eventTypes: ['zmywarka', 'pranie'],
+        pvKwh: 20,
+        socPercent: 60,
+        capacityKwh: 10,
+        reservePercent: 20,
+        progress: { done: ['zmywarka'], todo: ['pranie'], remainingPvKwh: 6 },
+      });
+      expect(budget.hasProgress).toBe(true);
+      expect(budget.doneKwh).toBe(1.2);
+      expect(budget.remainingKwh).toBe(1.5);
+      expect(budget.summaryLine).toContain('Zrobione: zmywarka.');
+      expect(budget.summaryLine).toContain('Zostaje: pranie (ok. 1,5 kWh), starczy słońca.');
+      expect(budget.verdict).toBe('ok');
+    });
+
+    it('budżet dnia: gdy wszystko zrobione, nic już nie czeka na prąd', () => {
+      const budget = buildDayEnergyBudget({
+        eventTypes: ['zmywarka'],
+        pvKwh: 3,
+        socPercent: 30,
+        capacityKwh: 10,
+        progress: { done: ['zmywarka'], todo: [], remainingPvKwh: 0 },
+      });
+      expect(budget.remainingKwh).toBe(0);
+      expect(budget.verdict).toBe('ok');
+      expect(budget.summaryLine).toContain('Nic już nie czeka na prąd.');
+      expect(budget.summaryLine).not.toContain('Zostaje');
+    });
+
+    it('budżet dnia: brak słońca i baterii na to, co zostało, to „short”', () => {
+      const budget = buildDayEnergyBudget({
+        eventTypes: ['pranie', 'suszarka'],
+        pvKwh: 10,
+        socPercent: 20,
+        capacityKwh: 10,
+        reservePercent: 20,
+        progress: { done: [], todo: ['pranie', 'suszarka'], remainingPvKwh: 0.5 },
+      });
+      expect(budget.verdict).toBe('short');
+      expect(budget.summaryLine).toContain('Do wieczora brakuje');
+      expect(budget.summaryLine).toContain('część warto przesunąć');
+    });
+
+    it('Mac mini, MacBook i podłogówka bez godzin pracują w tle i nie są „do zrobienia”', () => {
+      const now = new Date(2026, 10, 9, 13, 37);
+      for (const type of ['mac_mini', 'macbook', 'podlogowka']) {
+        const progress = eventProgress({ event_date: '2026-11-09', event_type: type }, now);
+        expect(progress.state).toBe('background');
+        expect(progress.caption).toBe('pracuje w tle');
+      }
+      // Własne godziny mają pierwszeństwo.
+      expect(
+        eventProgress({ event_date: '2026-11-09', event_type: 'macbook', start_time: '09:00', duration_min: 60 }, now).state,
+      ).toBe('done');
+      const split = splitDayProgress(
+        [
+          { event_date: '2026-11-09', event_type: 'mac_mini' },
+          { event_date: '2026-11-09', event_type: 'pranie' },
+        ],
+        now,
+      );
+      expect(split.todo).toEqual(['pranie']);
+      expect(split.running).toEqual(['mac_mini']);
+    });
+
+    it('budżet dnia: urządzenia w tle liczą się jako zużyte, nie jako „zostało”', () => {
+      const budget = buildDayEnergyBudget({
+        eventTypes: ['mac_mini', 'macbook', 'pranie'],
+        pvKwh: 10,
+        socPercent: 60,
+        capacityKwh: 10,
+        reservePercent: 20,
+        progress: { done: ['mac_mini', 'macbook'], todo: ['pranie'], remainingPvKwh: 5 },
+      });
+      expect(budget.remainingKwh).toBe(1.5);
+      expect(budget.doneKwh).toBe(1.32);
+      expect(budget.summaryLine).toContain('W tle: komputery.');
+      expect(budget.summaryLine).not.toContain('Zrobione');
+      expect(budget.summaryLine).toContain('Zostaje: pranie');
+    });
+
+    it('„Już zużyte” to pomiar z falownika, „Jeszcze w planie” to szacunek z ikon', () => {
+      const budget = buildDayEnergyBudget({
+        eventTypes: ['zmywarka', 'pranie'],
+        pvKwh: 21.1,
+        pvSource: 'actual',
+        socPercent: 71,
+        capacityKwh: 10,
+        reservePercent: 20,
+        loadKwh: 19.9,
+        progress: { done: ['zmywarka'], todo: ['pranie'], remainingPvKwh: 3 },
+      });
+      expect(budget.doneKwh).toBe(19.9);
+      expect(budget.remainingKwh).toBe(1.5);
+    });
+
+    it('harmonogram: gdy słońca nie starcza, a bateria pomaga; gdy komputery i podłogówka w tle', () => {
+      const tight = buildDayEnergyBudget({
+        eventTypes: ['kolacja', 'mac_mini', 'macbook', 'podlogowka', 'obiad'],
+        pvKwh: 20,
+        socPercent: 71,
+        capacityKwh: 10.36,
+        reservePercent: 20,
+        progress: { done: ['obiad', 'mac_mini', 'macbook', 'podlogowka'], todo: ['kolacja'], remainingPvKwh: 0.5 },
+      });
+      expect(tight.verdict).toBe('tight');
+      expect(tight.summaryLine).toBe(
+        'Zrobione: obiad. Zostaje: kolacja (ok. 1,4 kWh), starczy słońca i baterii. W tle: komputery i podłogówka.',
+      );
+    });
+
+    it('bohater pokazuje stan ikony: zrobione z godzinami, jeszcze nie', fakeAsync(() => {
+      api.getHouseholdEvents.and.returnValue(
+        of([
+          { id: 1, event_date: todayIsoLocal(), event_type: 'zmywarka', impact: 'up', note: null, start_time: '00:00', duration_min: 1 },
+          { id: 2, event_date: todayIsoLocal(), event_type: 'pranie', impact: 'up', note: null },
+        ]),
+      );
+      fixture.detectChanges();
+      tick();
+      fixture.detectChanges();
+      const chips = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="rhythm-chip"]'),
+      );
+      expect(chips.map((c) => c.getAttribute('data-state'))).toEqual(['done', 'pending']);
+      expect(chips[0].textContent).toContain('00:00–00:01');
+      expect(chips[1].textContent).toContain('jeszcze nie');
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="rhythm-schedule"]')?.textContent)
+        .toContain('Zrobione: zmywarka.');
+    }));
+
+    it('skrót do Prognozy jest zawsze, także gdy nie ma okna na AGD', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+      component.focusWindow = null;
+      fixture.detectChanges();
+      const link = (fixture.nativeElement as HTMLElement).querySelector(
+        '[data-testid="rhythm-forecast-link"]',
+      ) as HTMLButtonElement | null;
+      expect(link).not.toBeNull();
+      spyOn(component, 'openForecast');
+      link!.click();
+      expect(component.openForecast).toHaveBeenCalled();
+    }));
+
+    it('saveTimes wysyła start i program, a stan ikony się odświeża', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+      const ev = component.focusDay!.events[0];
+      api.updateHouseholdEventTimes.and.returnValue(
+        of({ ...ev, start_time: '10:00', duration_min: 135, planned_time: null }),
+      );
+      component.openTimes(ev);
+      component.timeStart = '10:00';
+      component.timeHours = '2';
+      component.timeMinutes = '15';
+      expect(component.timeEndPreview).toContain('koniec ok. 12:15');
+      component.saveTimes();
+      tick();
+      expect(api.updateHouseholdEventTimes).toHaveBeenCalledWith(ev.id, {
+        start_time: '10:00',
+        duration_min: 135,
+        planned_time: null,
+      });
+      expect(component.timeEvent).toBeNull();
+      expect(component.events.find((e) => e.id === ev.id)?.start_time).toBe('10:00');
+    }));
+
+    it('koniec z zegara wylicza program (też przez północ)', () => {
+      const pick = (v: string) => new CustomEvent('ionChange', { detail: { value: v } });
+      component.timeStart = '13:32';
+      component.onClockPicked('end', pick('15:39'));
+      expect(component.programLabel).toBe('2 godz. 7 min');
+      expect(component.timeEnd).toBe('15:39');
+      component.timeStart = '23:30';
+      component.onClockPicked('end', pick('00:20'));
+      expect(component.programLabel).toBe('50 min');
+      component.timeStart = '';
+      component.onClockPicked('end', pick('10:00'));
+      expect(component.timeError).toContain('początek');
+    });
+
+    it('program z koła ustawia czas bez końca (czajnik 3 min od 16:35)', () => {
+      const pick = (v: string) => new CustomEvent('ionChange', { detail: { value: v } });
+      component.timeStart = '16:35';
+      component.onClockPicked('program', pick('00:03'));
+      expect(component.programLabel).toBe('3 min');
+      expect(component.timeEnd).toBe('16:38');
+      component.onClockPicked('program', pick('00:00'));
+      expect(component.timeError).toContain('co najmniej');
+    });
+
+    it('saveTimes zapisuje samą planowaną godzinę, gdy start jeszcze nie padł', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+      const ev = component.focusDay!.events[0];
+      api.updateHouseholdEventTimes.and.returnValue(of({ ...ev, planned_time: '18:00' }));
+      component.openTimes(ev);
+      component.timePlanned = '18:00';
+      component.saveTimes();
+      tick();
+      expect(api.updateHouseholdEventTimes).toHaveBeenCalledWith(ev.id, {
+        start_time: null,
+        duration_min: null,
+        planned_time: '18:00',
+      });
+    }));
+
+    it('saveTimes odrzuca złą godzinę i zły czas programu bez wołania API', fakeAsync(() => {
+      fixture.detectChanges();
+      tick();
+      const ev = component.focusDay!.events[0];
+      component.openTimes(ev);
+      component.timeStart = '25:99';
+      component.saveTimes();
+      expect(component.timeError).toContain('Początek');
+      component.timeStart = '10:00';
+      component.timeMinutes = '75';
+      component.saveTimes();
+      expect(component.timeError).toContain('Czas programu');
+      expect(api.updateHouseholdEventTimes).not.toHaveBeenCalled();
+    }));
+  });
 });

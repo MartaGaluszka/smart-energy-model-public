@@ -338,3 +338,23 @@
   font-size: 13px;
   color: var(--text-muted);
 }
+
+.se-forecast-rhythm-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--solar) 45%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--solar) 12%, var(--surface, #fff));
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--solar-pressed);
+  text-decoration: none;
+
+  ion-icon {
+    font-size: 16px;
+  }
+}

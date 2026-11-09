@@ -201,6 +201,18 @@ export interface HouseholdEventDto {
   event_type: string;
   impact: string;
   note: string | null;
+  /** HH:MM — kiedy AGD ruszyło. Brak = jeszcze nie zrobione. */
+  start_time?: string | null;
+  /** Długość programu w minutach. */
+  duration_min?: number | null;
+  /** HH:MM — kiedy planujesz to zrobić (gdy jeszcze nie ruszyło). */
+  planned_time?: string | null;
+}
+
+export interface HouseholdEventTimesPatch {
+  start_time?: string | null;
+  duration_min?: number | null;
+  planned_time?: string | null;
 }
 
 export interface HourlyForecastResponse {
@@ -532,9 +544,18 @@ export class ApiService {
     event_type: string;
     impact?: string;
     note?: string;
-  }): Observable<HouseholdEventDto> {
+  } & HouseholdEventTimesPatch): Observable<HouseholdEventDto> {
     return this.authed((token) =>
       this.http.post<HouseholdEventDto>(`${this.baseUrl}/api/v1/household/events`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+  }
+
+  /** Początek, czas programu albo planowana godzina. Wysłane pola się zmieniają, null czyści. */
+  updateHouseholdEventTimes(id: number, body: HouseholdEventTimesPatch): Observable<HouseholdEventDto> {
+    return this.authed((token) =>
+      this.http.patch<HouseholdEventDto>(`${this.baseUrl}/api/v1/household/events/${id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }),
     );

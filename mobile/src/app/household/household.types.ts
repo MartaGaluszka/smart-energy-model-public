@@ -334,6 +334,23 @@ export interface DayEnergyBudget {
   summaryLine: string;
   /** Czy bateria powyżej 10% pokryje nocne grzanie i tło domu do 8:00. */
   morningLine: string | null;
+  /** Dziś: ile z planu już poszło z prądu (zrobione + trwa). Tylko gdy podano `progress`. */
+  doneKwh?: number;
+  /** Dziś: ile jeszcze zostało do zrobienia. */
+  remainingKwh?: number;
+  /** Dziś: „Już zrobione … Jeszcze przed Tobą …”. */
+  progressLine?: string | null;
+  hasProgress?: boolean;
+}
+
+/** Podział dzisiejszych ikon na te, które już pobrały prąd, i te, które jeszcze czekają. */
+export interface DayProgressInput {
+  /** Zrobione albo właśnie trwają. */
+  done: string[];
+  /** Jeszcze nie ruszyły (bez godziny albo z planowaną godziną). */
+  todo: string[];
+  /** Prognoza PV od teraz do wieczora, kWh. */
+  remainingPvKwh?: number | null;
 }
 
 export function fmtKwh(n: number): string {
@@ -427,8 +444,7 @@ export function usableBatteryKwh(
   return Math.round(((usablePct / 100) * cap) * 100) / 100;
 }
 
-/** Czy plan ikon mieści się w prognozie dnia i energii z baterii powyżej rezerwy. */
-export function buildDayEnergyBudget(input: {
+type PlanBudgetInput = {
   eventTypes: string[];
   pvKwh?: number | null;
   pvSource?: PvBudgetSource;
@@ -441,7 +457,119 @@ export function buildDayEnergyBudget(input: {
   /** Cykle bufora od północy do 10:00 — wzorzec „takiej nocy” do rana. */
   nightHeatKwh?: number | null;
   now?: Date;
-}): DayEnergyBudget {
+  /** Dziś: ile kWh dom już zużył według falownika (Fox). Zastępuje szacunek z ikon w „Już zużyte”. */
+  loadKwh?: number | null;
+  /** Dziś: co już zrobione, a co jeszcze przed Tobą. Bez tego budżet liczy cały plan jak dla przyszłych dni. */
+  progress?: DayProgressInput;
+};
+
+/** Czy plan ikon mieści się w prognozie dnia i energii z baterii powyżej rezerwy. */
+export function buildDayEnergyBudget(input: PlanBudgetInput): DayEnergyBudget {
+  const base = buildPlanBudget(input);
+  if (!input.progress || base.planKwh <= 0) return base;
+  return applyDayProgress(base, input, input.progress);
+}
+
+const NO_ENERGY_TYPES = new Set(['wyjazd', 'ferie']);
+
+/** Pracują cały dzień w tle: nie mają „startu”, więc nigdy nie są „do zrobienia”. */
+export const BACKGROUND_EVENT_TYPES: ReadonlySet<string> = new Set(['mac_mini', 'macbook', 'podlogowka']);
+
+export function isBackgroundType(type: string | null | undefined): boolean {
+  if (!type) return false;
+  return BACKGROUND_EVENT_TYPES.has(eventTypeDef(type)?.value ?? type);
+}
+
+function progressNames(types: string[], extra: ReadonlyArray<HouseholdEventTypeDef>): string {
+  const counts = new Map<string, number>();
+  for (const type of types) {
+    const def = defForEvent(type, extra);
+    if (def && NO_ENERGY_TYPES.has(def.value)) continue;
+    const label = (def?.shortLabel ?? def?.label ?? type).toLowerCase();
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([label, n]) => (n > 1 ? `${label} ×${n}` : label)).join(', ');
+}
+
+/** „komputery i podłogówka” — Mac mini i MacBook razem, jako jedno słowo. */
+function backgroundPhrase(types: string[], extra: ReadonlyArray<HouseholdEventTypeDef>): string {
+  const values = types.map((type) => defForEvent(type, extra)?.value ?? type);
+  const computers = values.filter((value) => value === 'mac_mini' || value === 'macbook').length;
+  const phrases: string[] = [];
+  if (computers) phrases.push(computers > 1 ? 'komputery' : 'komputer');
+  if (values.includes('podlogowka')) phrases.push('podłogówka');
+  return phrases.join(' i ');
+}
+
+/**
+ * Dziś: „Już zużyte” to odczyt z falownika, reszta dnia to szacunek z ikon.
+ * Budżet liczony od tego, co zostało; to, co już pobrało prąd, tylko opisujemy.
+ */
+function applyDayProgress(
+  base: DayEnergyBudget,
+  input: PlanBudgetInput,
+  progress: DayProgressInput,
+): DayEnergyBudget {
+  const extra = input.extraTypes ?? [];
+  const isBg = (type: string) => isBackgroundType(defForEvent(type, extra)?.value ?? type);
+  // Mac mini, MacBook i podłogówka pracują w tle cały dzień — nigdy nie są „do zrobienia”.
+  const todo = progress.todo.filter((type) => !isBg(type));
+  const remainingKwh = sumPlannedEventKwh(todo, extra);
+  const loadKwh =
+    input.loadKwh != null && Number.isFinite(input.loadKwh) && input.loadKwh >= 0
+      ? Math.round(input.loadKwh * 10) / 10
+      : null;
+  const doneKwh = loadKwh ?? Math.round(Math.max(0, base.planKwh - remainingKwh) * 100) / 100;
+
+  // Harmonogram: zrobione, co zostaje, czy starczy prądu, co pracuje w tle.
+  const doneNames = progressNames(progress.done.filter((type) => !isBg(type)), extra);
+  const todoNames = progressNames(todo, extra);
+  const bgPhrase = backgroundPhrase(progress.done.filter(isBg), extra);
+
+  const restPv =
+    progress.remainingPvKwh != null && Number.isFinite(progress.remainingPvKwh)
+      ? Math.max(0, Math.round(progress.remainingPvKwh * 10) / 10)
+      : null;
+  const battery = base.batteryUsableKwh;
+  const cover = Math.round(((restPv ?? 0) + battery) * 100) / 100;
+
+  const sentences: string[] = [];
+  if (doneNames) sentences.push(`Zrobione: ${doneNames}.`);
+  let verdict: DayBudgetVerdict;
+  if (remainingKwh <= 0) {
+    verdict = 'ok';
+    sentences.push(doneNames ? 'Nic już nie czeka na prąd.' : 'Nic nie czeka na prąd.');
+  } else {
+    const left = `Zostaje: ${todoNames} (ok. ${fmtKwh(remainingKwh)} kWh)`;
+    if (restPv != null && remainingKwh <= restPv) {
+      verdict = 'ok';
+      sentences.push(`${left}, starczy słońca.`);
+    } else if (restPv == null && battery <= 0) {
+      verdict = 'tight';
+      sentences.push(`${left}. Brak danych o prognozie i baterii.`);
+    } else if (remainingKwh <= cover) {
+      verdict = 'tight';
+      sentences.push(`${left}, starczy słońca i baterii.`);
+    } else {
+      verdict = 'short';
+      const gap = Math.round((remainingKwh - cover) * 100) / 100;
+      sentences.push(`${left}. Do wieczora brakuje ok. ${fmtKwh(gap)} kWh, część warto przesunąć.`);
+    }
+  }
+  if (bgPhrase) sentences.push(`W tle: ${bgPhrase}.`);
+
+  return {
+    ...base,
+    verdict,
+    summaryLine: sentences.join(' '),
+    doneKwh,
+    remainingKwh,
+    progressLine: null,
+    hasProgress: true,
+  };
+}
+
+function buildPlanBudget(input: PlanBudgetInput): DayEnergyBudget {
   const morningLine = morningHeatLine({
     socPercent: input.socPercent ?? null,
     capacityKwh:
@@ -552,9 +680,9 @@ export function morningHeatLine(input: {
   ) / 10;
   const left = Math.round((have - need) * 10) / 10;
   if (left >= 0) {
-    return 'Bilans nocny na plus: energia w baterii wystarczy na pokrycie ogrzewania i pracy domu do rana.';
+    return 'Energii w baterii wystarczy do rana: grzanie i dom w tle są pokryte.';
   }
-  return `Do rana potrzeba ok. ${fmtKwh(need)} kWh: grzanie jak ostatnia noc ${fmtKwh(night)} kWh i dom w tle ${fmtKwh(background)} kWh. Powyżej 10% jest ok. ${fmtKwh(have)} kWh. Brakuje ok. ${fmtKwh(-left)} kWh — potem grzanie idzie z sieci.`;
+  return `Do rana potrzeba ok. ${fmtKwh(need)} kWh, głównie na ogrzewanie. W baterii jest mniej, więc ok. ${fmtKwh(-left)} kWh pójdzie z sieci.`;
 }
 
 /** Sprzęty, które mogą poczekać na lepsze słońce. Posiłki i podłogówka tu nie wchodzą. */
@@ -639,6 +767,8 @@ export function flexibleDayLine(
 export function bestApplianceWindow(
   eventTypes: readonly string[],
   hours: ReadonlyArray<{ hour: number; predictedKwh: number }>,
+  /** Najwcześniejsza godzina startu okna (dziś: pełna godzina po „teraz”). */
+  fromHour = 7,
 ): ApplianceWindow | null {
   const planned = eventTypes
     .map((type) => PV_PLAN[eventTypeDef(type)?.value ?? type])
@@ -655,7 +785,7 @@ export function bestApplianceWindow(
   }
   let bestStart = -1;
   let bestScore = 0;
-  for (let start = 7; start <= 20 - spanHours; start += 1) {
+  for (let start = Math.max(7, fromHour); start <= 20 - spanHours; start += 1) {
     let score = 0;
     for (let hour = start; hour < start + spanHours; hour += 1) {
       score += byHour.get(hour) ?? 0;
@@ -672,4 +802,114 @@ export function bestApplianceWindow(
     names: joinPhrases(phrases),
     span: `${clock(bestStart)} – ${clock(end)}`,
   };
+}
+
+/* —— Początek i czas programu AGD —— */
+
+export type EventProgressState = 'done' | 'running' | 'planned' | 'pending' | 'background';
+
+export interface EventTimes {
+  event_date: string;
+  /** Typ ikony — dla Mac mini / MacBooka / podłogówki bez godzin status to „w tle”. */
+  event_type?: string;
+  start_time?: string | null;
+  duration_min?: number | null;
+  planned_time?: string | null;
+}
+
+export interface EventProgress {
+  state: EventProgressState;
+  /** HH:MM, gdy ruszyło (albo ma ruszyć o podanej godzinie). */
+  startLabel: string | null;
+  /** HH:MM końca programu, gdy znamy start i czas. */
+  endLabel: string | null;
+  plannedLabel: string | null;
+  /** Krótki opis pod nazwą ikony. */
+  caption: string;
+}
+
+/** „13:32” → minuty od północy. Zły format → null. */
+export function parseClock(value: string | null | undefined): number | null {
+  const match = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec((value ?? '').trim());
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+export function fmtClock(minutes: number): string {
+  const wrapped = ((Math.round(minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(wrapped / 60)).padStart(2, '0')}:${String(wrapped % 60).padStart(2, '0')}`;
+}
+
+/** 138 → „2 h 18 min”. */
+export function fmtDuration(minutes: number): string {
+  const total = Math.max(0, Math.round(minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h && m) return `${h} h ${m} min`;
+  return h ? `${h} h` : `${m} min`;
+}
+
+function isoOfLocal(now: Date): string {
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${m}-${d}`;
+}
+
+/**
+ * Czy dana czynność już pobrała prąd. Wcześniejsze dni = zrobione, kolejne = przed Tobą.
+ * Dziś rozstrzyga start_time i czas programu; bez startu czynność dopiero czeka.
+ */
+export function eventProgress(event: EventTimes, now: Date = new Date()): EventProgress {
+  const today = isoOfLocal(now);
+  const startMin = parseClock(event.start_time);
+  const duration = event.duration_min != null && event.duration_min > 0 ? event.duration_min : null;
+  const plannedMin = parseClock(event.planned_time);
+  const startLabel = startMin != null ? fmtClock(startMin) : null;
+  const endLabel = startMin != null && duration != null ? fmtClock(startMin + duration) : null;
+  const plannedLabel = plannedMin != null ? fmtClock(plannedMin) : null;
+  const done = (caption: string): EventProgress => ({ state: 'done', startLabel, endLabel, plannedLabel, caption });
+
+  // Praca w tle bez własnych godzin: zawsze „pracuje w tle”, także w innych dniach.
+  if (isBackgroundType(event.event_type) && startMin == null && plannedMin == null) {
+    return { state: 'background', startLabel, endLabel, plannedLabel, caption: 'pracuje w tle' };
+  }
+
+  if (event.event_date < today) {
+    return done(startLabel ? (endLabel ? `${startLabel}–${endLabel}` : `od ${startLabel}`) : 'zrobione');
+  }
+
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  if (event.event_date === today && startMin != null && startMin <= nowMin) {
+    if (duration != null && nowMin < startMin + duration) {
+      return {
+        state: 'running',
+        startLabel,
+        endLabel,
+        plannedLabel,
+        caption: `trwa do ${endLabel}`,
+      };
+    }
+    return done(endLabel ? `${startLabel}–${endLabel}` : `od ${startLabel}`);
+  }
+
+  // Start wpisany na później (dziś albo kolejny dzień) = to samo, co planowana godzina.
+  const when = startLabel ?? plannedLabel;
+  if (when) {
+    return { state: 'planned', startLabel, endLabel, plannedLabel, caption: `plan ${when}` };
+  }
+  return { state: 'pending', startLabel, endLabel, plannedLabel, caption: 'jeszcze nie' };
+}
+
+/** Dla dzisiejszych wpisów: co już pobrało prąd (zrobione + trwa), a co jeszcze nie. */
+export function splitDayProgress(
+  events: ReadonlyArray<EventTimes & { event_type: string }>,
+  now: Date = new Date(),
+): { done: string[]; running: string[]; todo: string[] } {
+  const out = { done: [] as string[], running: [] as string[], todo: [] as string[] };
+  for (const event of events) {
+    const { state } = eventProgress(event, now);
+    if (state === 'done') out.done.push(event.event_type);
+    else if (state === 'running' || state === 'background') out.running.push(event.event_type);
+    else out.todo.push(event.event_type);
+  }
+  return out;
 }

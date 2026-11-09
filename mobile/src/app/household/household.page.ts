@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { AlertController, ToastController, ViewWillEnter } from '@ionic/angular';
+import { AlertController, ToastController, ViewWillEnter, ViewWillLeave } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
   addOutline,
@@ -9,15 +9,18 @@ import {
   basketOutline,
   calendarOutline,
   carOutline,
+  checkmarkCircleOutline,
   chevronDownOutline,
   copyOutline,
   constructOutline,
   flashOutline,
   homeOutline,
+  trendingUpOutline,
   laptopOutline,
   leafOutline,
   sunnyOutline,
   thermometerOutline,
+  timeOutline,
   trashOutline,
   waterOutline,
 } from 'ionicons/icons';
@@ -26,6 +29,8 @@ import { catchError, map } from 'rxjs/operators';
 import {
   ApiService,
   BatterySettingsResponse,
+  HouseholdEventTimesPatch,
+  HourlyForecastResponse,
   BatterySuggestionResponse,
   FoxOverviewResponse,
   FloorHeatDayDto,
@@ -50,9 +55,15 @@ import {
   customTypeDef,
   dayAdvisorLine,
   estimateInsightPln,
+  eventProgress,
+  EventProgress,
   eventTypeDef,
+  fmtClock,
+  fmtDuration,
   fmtKwh,
   isStackableEventType,
+  parseClock,
+  splitDayProgress,
 } from './household.types';
 
 /** Jak ROI / Symulator — `ion-datetime` oddaje ISO z czasem. */
@@ -79,7 +90,7 @@ export interface DayBucket {
   styleUrls: ['./household.page.scss'],
   standalone: false,
 })
-export class HouseholdPage implements OnInit, ViewWillEnter {
+export class HouseholdPage implements OnInit, OnDestroy, ViewWillEnter, ViewWillLeave {
   readonly typeCatalog = HOUSEHOLD_EVENT_TYPES;
   readonly customIconChoices = HOUSEHOLD_CUSTOM_ICON_CHOICES;
   /** Tyle znaków mieści się w jednej linii kafelka w siatce 3 kolumn. */
@@ -125,6 +136,26 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   /** kWh cykli od północy do 10:00 — ile grzanie zjadło takiej nocy. */
   private nightHeatByDay: Record<string, number> = {};
   private budgetSub?: Subscription;
+  /** Ostatnie odpowiedzi API do budżetu — żeby przeliczać „zrobione / zostało” co minutę bez nowych zapytań. */
+  private budgetCache: {
+    forecast: HourlyForecastResponse | null;
+    fox: FoxOverviewResponse | null;
+    settings: BatterySettingsResponse | null;
+    suggestion: BatterySuggestionResponse | null;
+  } | null = null;
+  /** „Teraz” do statusów ikon. Odświeżane co minutę. */
+  now = new Date();
+  private clockTimer?: ReturnType<typeof setInterval>;
+  private progressCache = new Map<number, EventProgress>();
+
+  /** Arkusz „Czas”: początek, program i planowana godzina jednego wpisu. */
+  timeEvent: HouseholdEventDto | null = null;
+  timeStart = '';
+  timeHours = '';
+  timeMinutes = '';
+  timePlanned = '';
+  timeError: string | null = null;
+  timeSaving = false;
 
   constructor(
     private readonly api: ApiService,
@@ -142,11 +173,14 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
       airplaneOutline,
       sunnyOutline,
       chevronDownOutline,
+      checkmarkCircleOutline,
+      timeOutline,
       carOutline,
       copyOutline,
       flashOutline,
       constructOutline,
       homeOutline,
+      trendingUpOutline,
       waterOutline,
       laptopOutline,
       leafOutline,
@@ -166,7 +200,35 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
   }
 
   ionViewWillEnter(): void {
+    this.now = new Date();
+    this.startClock();
     this.reload();
+  }
+
+  ionViewWillLeave(): void {
+    this.stopClock();
+  }
+
+  ngOnDestroy(): void {
+    this.stopClock();
+    this.budgetSub?.unsubscribe();
+  }
+
+  /** Co minutę: ikona, która właśnie się skończyła, przechodzi w „zrobione”, a komunikat się przelicza. */
+  private startClock(): void {
+    this.stopClock();
+    this.clockTimer = setInterval(() => {
+      this.now = new Date();
+      this.progressCache.clear();
+      this.applyFocusBudget();
+    }, 60_000);
+  }
+
+  private stopClock(): void {
+    if (this.clockTimer != null) {
+      clearInterval(this.clockTimer);
+      this.clockTimer = undefined;
+    }
   }
 
   selectDay(dayIso: string): void {
@@ -193,6 +255,8 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
         this.customDefs = rows.filter((row) => !row.archived).map((row) => customTypeDef(row));
         this.archivedDefs = rows.filter((row) => row.archived).map((row) => customTypeDef(row));
         this.events = events ?? [];
+        this.now = new Date();
+        this.progressCache.clear();
         this.floorHeatByDay = {};
         this.nightHeatByDay = {};
         for (const row of floorHeat ?? []) {
@@ -223,10 +287,10 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
       this.flexLine = null;
       return;
     }
-    const types = day.events.map((e) => e.event_type);
     this.budgetLoading = true;
     this.focusWindow = null;
     this.flexLine = null;
+    this.budgetCache = null;
     this.budgetSub?.unsubscribe();
     const limited = <T>(source: Observable<T>) =>
       source.pipe(timeout({ first: 8000 }), catchError(() => of(null as T | null)));
@@ -237,35 +301,266 @@ export class HouseholdPage implements OnInit, ViewWillEnter {
       settings: limited(this.api.getBatterySettings()),
       suggestion: limited(this.api.getBatterySuggestion()),
     }).subscribe(({ forecast, fox, settings, suggestion }) => {
-      const forecastPv =
-        forecast?.total_kwh != null
-          ? forecast.total_kwh
-          : forecast?.hours?.length
-            ? forecast.hours.reduce((s, h) => s + (h.predicted_kwh || 0), 0)
-            : null;
-      const foxRow = fox as FoxOverviewResponse | null;
-      const settingsRow = settings as BatterySettingsResponse | null;
-      const suggestionRow = suggestion as BatterySuggestionResponse | null;
-      const actualPv = foxRow?.has_data ? foxRow.pv_kwh : null;
-      this.focusBudget = buildDayEnergyBudget({
-        eventTypes: types,
-        pvKwh: useActual ? actualPv : forecastPv,
-        pvSource: useActual ? 'actual' : 'forecast',
-        socPercent: foxRow?.soc_percent ?? suggestionRow?.soc_now_percent ?? null,
-        capacityKwh: settingsRow?.battery_capacity_kwh ?? null,
-        reservePercent: settingsRow?.soc_reserve_percent ?? suggestionRow?.soc_reserve_percent ?? 20,
-        extraTypes: this.allCustomDefs(),
-        floorHeatKwh: this.floorHeatByDay[day.dayIso] ?? null,
-        nightHeatKwh: day.isToday ? this.nightHeatByDay[day.dayIso] ?? null : null,
-      });
-      this.focusWindow = bestApplianceWindow(
-        types,
-        (forecast?.hours ?? []).map((row) => ({ hour: row.hour, predictedKwh: row.predicted_kwh })),
-      );
-      const roofKwh = useActual ? actualPv : forecastPv;
-      this.flexLine = flexibleDayLine(types, roofKwh);
+      this.budgetCache = {
+        forecast: (forecast as HourlyForecastResponse | null) ?? null,
+        fox: (fox as FoxOverviewResponse | null) ?? null,
+        settings: (settings as BatterySettingsResponse | null) ?? null,
+        suggestion: (suggestion as BatterySuggestionResponse | null) ?? null,
+      };
+      this.now = new Date();
+      this.progressCache.clear();
+      this.applyFocusBudget();
       this.budgetLoading = false;
     });
+  }
+
+  /** Składa budżet z ostatnich odpowiedzi API. Dziś dzieli plan na „zrobione” i „zostało”. */
+  private applyFocusBudget(): void {
+    const day = this.focusDay;
+    const cache = this.budgetCache;
+    if (!day || !cache) return;
+    const { forecast, fox: foxRow, settings: settingsRow, suggestion: suggestionRow } = cache;
+    const useActual = day.isToday;
+    const types = day.events.map((e) => e.event_type);
+    const forecastPv =
+      forecast?.total_kwh != null
+        ? forecast.total_kwh
+        : forecast?.hours?.length
+          ? forecast.hours.reduce((s, h) => s + (h.predicted_kwh || 0), 0)
+          : null;
+    const actualPv = foxRow?.has_data ? foxRow.pv_kwh : null;
+    const hours = (forecast?.hours ?? []).map((row) => ({ hour: row.hour, predictedKwh: row.predicted_kwh }));
+
+    // Dziś: czynności, które już pobrały prąd, nie liczą się do tego, co zostało.
+    const split = day.isToday ? splitDayProgress(day.events, this.now) : null;
+    const todoTypes = split ? split.todo : types;
+    const nowHour = this.now.getHours() + this.now.getMinutes() / 60;
+    const remainingPv =
+      split && hours.length
+        ? Math.round(
+            hours.reduce((sum, row) => {
+              if (!Number.isFinite(row.predictedKwh) || row.hour + 1 <= nowHour) return sum;
+              const left = row.hour < nowHour ? row.hour + 1 - nowHour : 1;
+              return sum + row.predictedKwh * left;
+            }, 0) * 10,
+          ) / 10
+        : null;
+
+    this.focusBudget = buildDayEnergyBudget({
+      eventTypes: types,
+      pvKwh: useActual ? actualPv : forecastPv,
+      pvSource: useActual ? 'actual' : 'forecast',
+      socPercent: foxRow?.soc_percent ?? suggestionRow?.soc_now_percent ?? null,
+      capacityKwh: settingsRow?.battery_capacity_kwh ?? null,
+      reservePercent: settingsRow?.soc_reserve_percent ?? suggestionRow?.soc_reserve_percent ?? 20,
+      extraTypes: this.allCustomDefs(),
+      floorHeatKwh: this.floorHeatByDay[day.dayIso] ?? null,
+      nightHeatKwh: day.isToday ? this.nightHeatByDay[day.dayIso] ?? null : null,
+      now: this.now,
+      loadKwh: useActual ? foxRow?.load_kwh ?? null : null,
+      progress: split
+        ? { done: [...split.done, ...split.running], todo: split.todo, remainingPvKwh: remainingPv }
+        : undefined,
+    });
+    this.focusWindow = bestApplianceWindow(
+      todoTypes,
+      hours,
+      split ? Math.ceil(nowHour) : undefined,
+    );
+    const roofKwh = useActual ? actualPv : forecastPv;
+    this.flexLine = flexibleDayLine(todoTypes, roofKwh);
+  }
+
+  /** Status jednej ikony dziś / w innym dniu — pod nazwą w bohaterze. */
+  progressOf(ev: HouseholdEventDto): EventProgress {
+    // Ten sam obiekt do następnej zmiany „teraz” albo danych — szablon nie widzi go jako nowego przy każdym sprawdzeniu.
+    let cached = this.progressCache.get(ev.id);
+    if (!cached) {
+      cached = eventProgress(ev, this.now);
+      this.progressCache.set(ev.id, cached);
+    }
+    return cached;
+  }
+
+  /* —— Arkusz „Czas”: początek, program, planowana godzina —— */
+
+  openTimes(ev: HouseholdEventDto): void {
+    this.timeEvent = ev;
+    this.timeStart = ev.start_time ?? '';
+    const dur = ev.duration_min ?? null;
+    this.timeHours = dur != null ? String(Math.floor(dur / 60)) : '';
+    this.timeMinutes = dur != null ? String(dur % 60) : '';
+    this.timePlanned = ev.planned_time ?? '';
+    this.timeError = null;
+    this.timeSaving = false;
+  }
+
+  closeTimes(): void {
+    this.timeEvent = null;
+    this.timeError = null;
+    this.timeSaving = false;
+  }
+
+  /** „Włączone teraz” — start na aktualną godzinę. */
+  startNow(): void {
+    const now = new Date();
+    this.timeStart = fmtClock(now.getHours() * 60 + now.getMinutes());
+    this.timePlanned = '';
+  }
+
+  /** Wartość dla ion-datetime (tylko godzina); pusta → bieżąca godzina. */
+  clockPickerValue(hhmm: string): string {
+    if (parseClock(hhmm) != null) return hhmm.trim();
+    const now = new Date();
+    return fmtClock(now.getHours() * 60 + now.getMinutes());
+  }
+
+  /** Wybór z koła godzin (ion-datetime) → „HH:MM”. */
+  onClockPicked(which: 'start' | 'end' | 'program' | 'planned', ev: Event): void {
+    const raw = String((ev as CustomEvent<{ value?: string | string[] | null }>).detail?.value ?? '');
+    const match = /(\d{2}):(\d{2})/.exec(raw.includes('T') ? raw.split('T')[1] : raw);
+    if (!match) return;
+    const hhmm = `${match[1]}:${match[2]}`;
+    if (which === 'start') {
+      this.timeStart = hhmm;
+      this.timePlanned = '';
+    } else if (which === 'end') {
+      this.setEndTime(hhmm);
+    } else if (which === 'program') {
+      this.setProgram(hhmm);
+    } else {
+      this.timePlanned = hhmm;
+    }
+  }
+
+  /** Koniec = start + program (null, gdy brakuje któregoś). */
+  get timeEnd(): string {
+    const start = parseClock(this.timeStart);
+    const dur = this.formDurationMin();
+    if (start == null || dur == null || Number.isNaN(dur)) return '';
+    return fmtClock(start + dur);
+  }
+
+  /** „2 godz. 7 min” — program liczony z początku i końca. */
+  get programLabel(): string {
+    const dur = this.formDurationMin();
+    if (dur == null || Number.isNaN(dur)) return '';
+    const h = Math.floor(dur / 60);
+    const m = dur % 60;
+    if (h && m) return `${h} godz. ${m} min`;
+    return h ? `${h} godz.` : `${m} min`;
+  }
+
+  /** Wartość koła „Program”: czas trwania jako GG:MM (domyślnie 00:05). */
+  programPickerValue(): string {
+    const dur = this.formDurationMin();
+    return fmtClock(dur != null && !Number.isNaN(dur) && dur < 1440 ? dur : 5);
+  }
+
+  /** Program ustawiony bezpośrednio (np. czajnik 00:03). */
+  private setProgram(hhmm: string): void {
+    const total = parseClock(hhmm);
+    if (total == null || total === 0) {
+      this.timeError = 'Program musi trwać co najmniej 1 minutę.';
+      return;
+    }
+    this.timeError = null;
+    this.timeHours = String(Math.floor(total / 60));
+    this.timeMinutes = String(total % 60);
+  }
+
+  /** Wybrany koniec → program (przez północ też działa). */
+  private setEndTime(hhmm: string): void {
+    const start = parseClock(this.timeStart);
+    const end = parseClock(hhmm);
+    if (start == null || end == null) {
+      this.timeError = 'Najpierw ustaw początek.';
+      return;
+    }
+    const dur = (end - start + 1440) % 1440;
+    if (dur === 0) {
+      this.timeError = 'Koniec musi być później niż początek.';
+      return;
+    }
+    this.timeError = null;
+    this.timeHours = String(Math.floor(dur / 60));
+    this.timeMinutes = String(dur % 60);
+  }
+
+  /** Program z formularza w minutach; null gdy puste. NaN gdy zły zapis. */
+  private formDurationMin(): number | null {
+    const h = this.timeHours.trim();
+    const m = this.timeMinutes.trim();
+    if (!h && !m) return null;
+    const hours = h ? Number(h) : 0;
+    const minutes = m ? Number(m) : 0;
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || minutes < 0 || minutes > 59) {
+      return Number.NaN;
+    }
+    const total = hours * 60 + minutes;
+    return total > 0 && total <= 24 * 60 ? total : Number.NaN;
+  }
+
+  /** Podgląd pod polami: „Koniec ok. 13:05”. */
+  get timeEndPreview(): string | null {
+    const start = parseClock(this.timeStart);
+    const dur = this.formDurationMin();
+    if (start == null || dur == null || Number.isNaN(dur)) return null;
+    return `Program ${fmtDuration(dur)}, koniec ok. ${fmtClock(start + dur)}.`;
+  }
+
+  saveTimes(): void {
+    const ev = this.timeEvent;
+    if (!ev || this.timeSaving) return;
+    const start = this.timeStart.trim();
+    const planned = this.timePlanned.trim();
+    if (start && parseClock(start) == null) {
+      this.timeError = 'Początek wpisz jako godzinę, np. 13:32.';
+      return;
+    }
+    if (planned && parseClock(planned) == null) {
+      this.timeError = 'Planowaną godzinę wpisz np. 18:00.';
+      return;
+    }
+    const duration = this.formDurationMin();
+    if (duration != null && Number.isNaN(duration)) {
+      this.timeError = 'Czas programu: pełne godziny i minuty (0–59), łącznie do 24 h.';
+      return;
+    }
+    const body: HouseholdEventTimesPatch = {
+      start_time: start || null,
+      duration_min: duration,
+      // Gdy ikona już ruszyła, planowana godzina nie jest potrzebna.
+      planned_time: start ? null : planned || null,
+    };
+    this.timeSaving = true;
+    this.timeError = null;
+    this.api
+      .updateHouseholdEventTimes(ev.id, body)
+      .pipe(timeout(15000))
+      .subscribe({
+        next: (row) => {
+          this.timeSaving = false;
+          this.timeEvent = null;
+          this.events = this.events.map((item) => (item.id === row.id ? row : item));
+          this.progressCache.clear();
+          this.days = this.buildDays(todayIsoLocal(), this.horizonDays, this.events);
+          this.now = new Date();
+          this.applyFocusBudget();
+          void this.presentToast(start ? 'Zapisano godziny' : 'Zapisano plan godziny');
+        },
+        error: (err: unknown) => {
+          this.timeSaving = false;
+          this.timeError = this.describeSaveError(err);
+        },
+      });
+  }
+
+  clearTimes(): void {
+    this.timeStart = '';
+    this.timeHours = '';
+    this.timeMinutes = '';
+    this.timePlanned = '';
   }
 
   openForecast(): void {

@@ -108,6 +108,8 @@
 
 .se-rhythm-hero__kicker {
   display: inline-block;
+  position: relative;
+  top: -6px;
   margin-bottom: 2px;
   font-size: 11px;
   font-weight: 600;
@@ -173,15 +175,37 @@
     margin: 8px 2px 0;
     font-size: 12px;
     line-height: 1.35;
-    font-weight: 600;
+    font-weight: 400;
     color: var(--text);
   }
+}
+
+/* Pogrubiony jest tylko komunikat o nocy. */
+.se-rhythm-budget__night {
+  font-weight: 700 !important;
 }
 
 .se-rhythm-budget__metrics {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
+}
+
+.se-rhythm-budget__metrics--four {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+
+  .se-rhythm-kpi strong {
+    font-size: 15px;
+  }
+
+  .se-rhythm-kpi span {
+    font-size: 10px;
+  }
+}
+
+.se-rhythm-kpi--todo strong {
+  color: var(--solar-pressed);
 }
 
 .se-rhythm-kpi {
@@ -233,6 +257,30 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.se-rhythm-hero__link {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--solar) 45%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--solar) 12%, var(--surface, #fff));
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--solar-pressed);
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 16px;
+  }
 }
 
 .se-rhythm-hero__cta {
@@ -392,6 +440,64 @@
 
 .se-household-chip__label {
   min-width: 0;
+}
+
+.se-household-chip__main {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.se-household-chip__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.se-household-chip__time {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.se-household-chip .se-household-chip__state {
+  font-size: 15px;
+}
+
+/* Zrobione: spokojnie, z ptaszkiem. Trwa: wyraźnie. Jeszcze nie: przerywana obwódka. */
+.se-household-chip[data-state='done'] {
+  background: color-mix(in srgb, var(--moss) 8%, var(--surface));
+  .se-household-chip__state { color: var(--moss); }
+}
+
+.se-household-chip[data-state='background'] {
+  background: color-mix(in srgb, var(--text-muted) 8%, var(--surface));
+}
+
+.se-household-chip[data-state='running'] {
+  border-width: 2px;
+  padding: 5px 7px 5px 9px;
+  .se-household-chip__state { color: var(--solar-pressed); }
+}
+
+.se-household-chip[data-state='planned'],
+.se-household-chip[data-state='pending'] {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-muted);
+  .se-household-chip__state { color: var(--text-muted); }
 }
 
 .se-household-chip__del {
@@ -776,4 +882,124 @@
   color: var(--cost);
   font-size: 13px;
   margin: 8px 4px;
+}
+
+
+/* —— Arkusz „Czas”: pola, a zaraz pod nimi Zapisz i Wyczyść —— */
+.se-household-times {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 28px;
+  padding-bottom: 16px;
+
+  .se-household-custom__field {
+    margin: 0;
+  }
+}
+
+.se-household-times__title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.se-household-times__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  gap: 10px;
+}
+
+.se-household-times__grow {
+  min-width: 0;
+}
+
+/* Pole godziny: przycisk w stylu pól + koło godzin w motywie Solar Graphite */
+.se-household-times__clock {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+
+  &.is-empty {
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  &:active:not(:disabled) {
+    border-color: var(--solar);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.se-household-times__clock--wide {
+  width: 100%;
+}
+
+.se-household-times__duration {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.se-household-times__preview {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.se-household-times__hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.se-household-times__now {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.se-household-times__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+
+  .se-btn-primary {
+    margin: 0;
+  }
+}
+
+.se-household-times__clear {
+  align-self: center;
+  margin: 0;
 }

@@ -57,7 +57,6 @@
           <span class="se-rhythm-hero__kicker" *ngIf="!hero.isToday">{{ hero.weekday }}</span>
           <h2 class="font-serif se-rhythm-hero__date">{{ hero.label }}</h2>
         </div>
-        <p class="se-rhythm-hero__advice" *ngIf="focusBudget?.morningLine">{{ focusBudget?.morningLine }}</p>
 
         <div
           class="se-rhythm-budget"
@@ -65,11 +64,23 @@
           data-testid="rhythm-budget"
           [attr.data-verdict]="budget.verdict"
         >
-          <div class="se-rhythm-budget__metrics">
-            <div class="se-rhythm-kpi">
-              <strong>~{{ formatKwh(budget.planKwh) }}<small> kWh</small></strong>
-              <span>Ikony</span>
-            </div>
+          <div class="se-rhythm-budget__metrics" [class.se-rhythm-budget__metrics--four]="budget.hasProgress">
+            <ng-container *ngIf="budget.hasProgress; else planKpi">
+              <div class="se-rhythm-kpi" data-testid="kpi-done">
+                <strong>~{{ formatKwh(budget.doneKwh) }}<small> kWh</small></strong>
+                <span>Już zużyte</span>
+              </div>
+              <div class="se-rhythm-kpi se-rhythm-kpi--todo" data-testid="kpi-remaining">
+                <strong>~{{ formatKwh(budget.remainingKwh) }}<small> kWh</small></strong>
+                <span>Jeszcze w planie</span>
+              </div>
+            </ng-container>
+            <ng-template #planKpi>
+              <div class="se-rhythm-kpi">
+                <strong>~{{ formatKwh(budget.planKwh) }}<small> kWh</small></strong>
+                <span>Ikony</span>
+              </div>
+            </ng-template>
             <div class="se-rhythm-kpi se-rhythm-kpi--solar">
               <strong>{{ budget.pvKwh != null ? formatKwh(budget.pvKwh) : '—' }}<small *ngIf="budget.pvKwh != null"> kWh</small></strong>
               <span>{{ budget.pvSource === 'actual' ? 'Produkcja' : 'Prognoza' }}</span>
@@ -80,33 +91,58 @@
               <span>Bateria</span>
             </div>
           </div>
-          <p *ngIf="budget.planKwh > 0">{{ budget.summaryLine }}</p>
+          <p *ngIf="budget.planKwh > 0" data-testid="rhythm-schedule">{{ budget.summaryLine }}</p>
+          <p class="se-rhythm-budget__night" *ngIf="budget.morningLine" data-testid="rhythm-night">{{ budget.morningLine }}</p>
           <p class="se-rhythm-budget__wait" *ngIf="budgetLoading">Sprawdzam prognozę…</p>
         </div>
 
         <div class="se-rhythm-hero__events" *ngIf="hero.events.length">
-          <div
-            class="se-household-chip"
-            *ngFor="let ev of hero.events"
-            [attr.data-tint]="typeTint(ev.event_type)"
-          >
-            <ion-icon
-              *ngIf="iconSrc(typeIcon(ev.event_type)); else chipIon"
-              [src]="iconSrc(typeIcon(ev.event_type))!"
-            ></ion-icon>
-            <ng-template #chipIon>
-              <ion-icon [name]="typeIcon(ev.event_type)"></ion-icon>
-            </ng-template>
-            <span class="se-household-chip__label">{{ chipLabel(ev, hero.events) }}</span>
-            <button
-              type="button"
-              class="se-household-chip__del"
-              (click)="confirmDelete(ev)"
-              aria-label="Usuń"
+          <ng-container *ngFor="let ev of hero.events">
+            <div
+              class="se-household-chip"
+              *ngIf="progressOf(ev) as prog"
+              [attr.data-tint]="typeTint(ev.event_type)"
+              [attr.data-state]="prog.state"
+              data-testid="rhythm-chip"
             >
-              <ion-icon name="trash-outline"></ion-icon>
-            </button>
-          </div>
+              <button
+                type="button"
+                class="se-household-chip__main"
+                (click)="openTimes(ev)"
+                [attr.aria-label]="'Godziny: ' + chipLabel(ev, hero.events)"
+              >
+                <ion-icon
+                  *ngIf="iconSrc(typeIcon(ev.event_type)); else chipIon"
+                  [src]="iconSrc(typeIcon(ev.event_type))!"
+                ></ion-icon>
+                <ng-template #chipIon>
+                  <ion-icon [name]="typeIcon(ev.event_type)"></ion-icon>
+                </ng-template>
+                <span class="se-household-chip__text">
+                  <span class="se-household-chip__label">{{ chipLabel(ev, hero.events) }}</span>
+                  <small class="se-household-chip__time">{{ prog.caption }}</small>
+                </span>
+                <ion-icon
+                  class="se-household-chip__state"
+                  *ngIf="prog.state === 'done'"
+                  name="checkmark-circle-outline"
+                ></ion-icon>
+                <ion-icon
+                  class="se-household-chip__state"
+                  *ngIf="prog.state === 'running' || prog.state === 'planned'"
+                  name="time-outline"
+                ></ion-icon>
+              </button>
+              <button
+                type="button"
+                class="se-household-chip__del"
+                (click)="confirmDelete(ev)"
+                aria-label="Usuń"
+              >
+                <ion-icon name="trash-outline"></ion-icon>
+              </button>
+            </div>
+          </ng-container>
         </div>
 
         <p class="se-rhythm-bridge" *ngIf="focusWindow as opening">
@@ -114,6 +150,12 @@
           (<button type="button" class="se-rhythm-bridge__go" (click)="openForecast()">zobacz w Prognozie</button>).
         </p>
         <p class="se-rhythm-flex" *ngIf="flexLine">{{ flexLine }}</p>
+
+        <!-- Stały skrót do Prognozy — nie znika, gdy nie ma już okna na AGD (np. wszystko zrobione). -->
+        <button type="button" class="se-rhythm-hero__link" (click)="openForecast()" data-testid="rhythm-forecast-link">
+          <ion-icon name="trending-up-outline" aria-hidden="true"></ion-icon>
+          Zobacz Prognozę
+        </button>
 
         <button type="button" class="se-rhythm-hero__cta" (click)="openAdd(hero.dayIso)">
           {{ hero.events.length ? 'Zmień plan' : 'Zaplanuj ten dzień' }}
@@ -291,6 +333,132 @@
         </ion-button>
       </ion-toolbar>
     </ion-footer>
+  </ng-template>
+</ion-modal>
+
+<!-- Godziny jednej ikony: początek, program, planowana godzina. Zapisz i Wyczyść tuż pod polami. -->
+<ion-modal
+  class="se-household-times-modal"
+  [isOpen]="!!timeEvent"
+  [initialBreakpoint]="0.64"
+  [breakpoints]="[0, 0.64, 0.92]"
+  (didDismiss)="closeTimes()"
+>
+  <ng-template>
+    <ion-content class="se-household-modal">
+      <div class="se-page se-household-times" *ngIf="timeEvent as target" data-testid="times-sheet">
+        <h3 class="font-serif se-household-times__title">{{ typeLabel(target.event_type) }} · godziny</h3>
+
+        <div class="se-household-times__row">
+          <div class="se-household-custom__field se-household-times__grow">
+            <span>Zaczęło się o</span>
+            <button type="button" id="se-time-start-btn" class="se-household-times__clock" [class.is-empty]="!timeStart" data-testid="time-start">
+              {{ timeStart || '--:--' }}
+            </button>
+          </div>
+          <button type="button" class="se-household-times__now" (click)="startNow()">Teraz</button>
+        </div>
+        <ion-popover #startPop class="se-time-popover" trigger="se-time-start-btn" [keepContentsMounted]="true">
+          <ng-template>
+            <ion-datetime
+              presentation="time"
+              hourCycle="h23"
+              locale="pl-PL"
+              color="success"
+              [showDefaultButtons]="true"
+              doneText="OK"
+              cancelText="Anuluj"
+              [value]="clockPickerValue(timeStart)"
+              (ionChange)="onClockPicked('start', $event); startPop.dismiss()"
+              (ionCancel)="startPop.dismiss()"
+            ></ion-datetime>
+          </ng-template>
+        </ion-popover>
+
+        <div class="se-household-times__duration">
+          <div class="se-household-custom__field">
+            <span>Skończyło się o</span>
+            <button type="button" id="se-time-end-btn" class="se-household-times__clock" [class.is-empty]="!timeEnd" [disabled]="!timeStart" data-testid="time-end">
+              {{ timeEnd || '--:--' }}
+            </button>
+          </div>
+          <div class="se-household-custom__field">
+            <span>Program (godz. : min)</span>
+            <button type="button" id="se-time-program-btn" class="se-household-times__clock" [class.is-empty]="!programLabel" data-testid="time-program">
+              {{ programLabel || '--' }}
+            </button>
+          </div>
+        </div>
+        <ion-popover #programPop class="se-time-popover" trigger="se-time-program-btn" [keepContentsMounted]="true">
+          <ng-template>
+            <ion-datetime
+              presentation="time"
+              hourCycle="h23"
+              locale="pl-PL"
+              color="success"
+              [showDefaultButtons]="true"
+              doneText="OK"
+              cancelText="Anuluj"
+              [value]="programPickerValue()"
+              (ionChange)="onClockPicked('program', $event); programPop.dismiss()"
+              (ionCancel)="programPop.dismiss()"
+            ></ion-datetime>
+          </ng-template>
+        </ion-popover>
+        <ion-popover #endPop class="se-time-popover" trigger="se-time-end-btn" [keepContentsMounted]="true">
+          <ng-template>
+            <ion-datetime
+              presentation="time"
+              hourCycle="h23"
+              locale="pl-PL"
+              color="success"
+              [showDefaultButtons]="true"
+              doneText="OK"
+              cancelText="Anuluj"
+              [value]="clockPickerValue(timeEnd)"
+              (ionChange)="onClockPicked('end', $event); endPop.dismiss()"
+              (ionCancel)="endPop.dismiss()"
+            ></ion-datetime>
+          </ng-template>
+        </ion-popover>
+
+        <div class="se-household-custom__field">
+          <span>Jeszcze nie ruszyło? Planowana godzina</span>
+          <button type="button" id="se-time-planned-btn" class="se-household-times__clock se-household-times__clock--wide" [class.is-empty]="!timePlanned" [disabled]="!!timeStart" data-testid="time-planned">
+            {{ timePlanned || '--:--' }}
+          </button>
+        </div>
+        <ion-popover #plannedPop class="se-time-popover" trigger="se-time-planned-btn" [keepContentsMounted]="true">
+          <ng-template>
+            <ion-datetime
+              presentation="time"
+              hourCycle="h23"
+              locale="pl-PL"
+              color="success"
+              [showDefaultButtons]="true"
+              doneText="OK"
+              cancelText="Anuluj"
+              [value]="clockPickerValue(timePlanned)"
+              (ionChange)="onClockPicked('planned', $event); plannedPop.dismiss()"
+              (ionCancel)="plannedPop.dismiss()"
+            ></ion-datetime>
+          </ng-template>
+        </ion-popover>
+        <p class="se-household-times__hint">Bez godziny startu ikona liczy się jako „jeszcze nie”. Uzupełnisz ją później.</p>
+
+        <p class="se-chart-error" *ngIf="timeError" data-testid="times-error">{{ timeError }}</p>
+
+        <div class="se-household-times__actions">
+          <ion-button expand="block" class="se-btn-primary" [disabled]="timeSaving" (click)="saveTimes()" data-testid="times-save">
+            <ion-spinner *ngIf="timeSaving" name="crescent" slot="start"></ion-spinner>
+            {{ timeSaving ? 'Zapisuję…' : 'Zapisz' }}
+          </ion-button>
+          <button type="button" class="se-household-custom__back se-household-times__clear" (click)="clearTimes()" data-testid="times-clear">
+            Wyczyść godziny
+          </button>
+        </div>
+      </div>
+    </ion-content>
   </ng-template>
 </ion-modal>
 
