@@ -80,6 +80,7 @@ class ChargeTonightCloudyRule:
     tomorrow_temp_c: float | None = None
     estimated_gap_kwh: float | None = None
     skip_reason: str = ''
+    plan_extra_kwh: float | None = None
 
 
 @dataclass
@@ -631,6 +632,7 @@ def _morning_buffer_short_fc(
     breakfast_tomorrow: bool = True,
     floor_heating: bool = False,
     floor_heating_kwh: float | None = None,
+    plan_extra_kwh: float = 0.0,
 ) -> ChargeTonightCloudyRule:
     """Jesień/zima: SoC < 30% przed 22:00 gdy jutro robocze — nie polegaj tylko na minSoc Fox 10%."""
     breakfast = _morning_buffer_breakfast_kwh() if breakfast_tomorrow else 0.0
@@ -646,12 +648,18 @@ def _morning_buffer_short_fc(
     else:
         heat = _morning_buffer_heat_kwh()
         heat_label = 'bufor ciepła'
-    morning_loads = breakfast + boiler + heat + towel
+    plan_extra = max(0.0, float(plan_extra_kwh or 0.0))
+    morning_loads = breakfast + boiler + heat + towel + plan_extra
     # Dłuższy FC gdy podłogówka zimą zjada więcej niż 1 cykl (~0,58 kWh).
     base_min = _morning_buffer_fc_minutes()
     if floor_heating and heat > _morning_buffer_heat_kwh() + 0.05:
         extra = (heat / max(0.01, _morning_buffer_heat_kwh()) - 1.0) * 8.0
         base_min = base_min + max(0.0, extra)
+    if plan_extra > 0:
+        # Plan dnia z aplikacji (AGD przed PV / obiad): dodatkowe minuty pod te kWh.
+        cap_plan = _b2_capacity_kwh(capacity_kwh)
+        if cap_plan > 0:
+            base_min = base_min + fc_minutes_for_delta_soc(plan_extra / cap_plan * 100.0)
     minutes = _cap_fc_minutes(base_min, fc_max_minutes)
     delta = _delta_soc_for_minutes(minutes)
     target = min(100.0, soc_percent + delta)
@@ -666,6 +674,8 @@ def _morning_buffer_short_fc(
         names.append('śniadanie')
     names.append('bojler')
     names.append('bufor' if heat_label == 'bufor ciepła' else heat_label)
+    if plan_extra > 0:
+        names.append('plan dnia')
     if towel_heater:
         names.append('grzejnik')
     loads_txt = ', '.join(names)
@@ -699,7 +709,34 @@ def _morning_buffer_short_fc(
     )
 
 
-def evaluate_charge_tonight_cloudy(
+def plan_target_max_soc() -> float:
+    """Sufit celu SoC@22 po doliczeniu planu dnia z aplikacji (oszczędzanie baterii)."""
+    return float(os.getenv('BATTERY_PLAN_TARGET_MAX_SOC', '95'))
+
+
+def _raise_target_for_plan(target: float, plan_extra_kwh: float, capacity_kwh: float | None) -> float:
+    """Cel SoC@22 + kWh zaplanowanych w aplikacji (do sufitu), nigdy w dół."""
+    if plan_extra_kwh <= 0:
+        return target
+    cap = _b2_capacity_kwh(capacity_kwh)
+    if cap <= 0:
+        return target
+    raised = target + plan_extra_kwh / cap * 100.0
+    return round(max(target, min(raised, plan_target_max_soc())), 1)
+
+
+def evaluate_charge_tonight_cloudy(*, plan_note: str = '', **kwargs) -> ChargeTonightCloudyRule:
+    """Reguła nocnego ładowania + plan dnia z aplikacji (``plan_extra_kwh``, ``plan_note``)."""
+    rule = _evaluate_charge_tonight_cloudy(**kwargs)
+    extra = float(kwargs.get('plan_extra_kwh') or 0.0)
+    if extra > 0:
+        rule.plan_extra_kwh = round(extra, 2)
+        if rule.triggered and plan_note:
+            rule.body = f'{rule.body} {plan_note}'
+    return rule
+
+
+def _evaluate_charge_tonight_cloudy(
     *,
     soc_percent: float | None,
     tomorrow_pv_kwh: float | None,
@@ -717,6 +754,7 @@ def evaluate_charge_tonight_cloudy(
     travel_mild_buffer: bool = False,
     floor_heating: bool = False,
     floor_heating_kwh: float | None = None,
+    plan_extra_kwh: float = 0.0,
 ) -> ChargeTonightCloudyRule:
     """Czysta reguła produktowa (bez I/O) — advise-only.
 
@@ -780,17 +818,21 @@ def evaluate_charge_tonight_cloudy(
         if floor_heating_kwh is not None
         else (estimate_floor_heating_night_kwh(tomorrow_temp_c) if floor_heating else 0.0)
     )
+    plan_extra = max(0.0, float(plan_extra_kwh or 0.0))
+    # Podłogówka albo plan dnia z aplikacji → próg SoC@22 z budżetu nocy, nie stałe 30%.
+    use_budget_gate = floor_heating or plan_extra > 0
     night_budget_for_floor = 0.0
-    if floor_heating:
+    if use_budget_gate:
         night_budget_for_floor = (
             (_morning_buffer_breakfast_kwh() if breakfast_tomorrow else 0.0)
             + _morning_buffer_boiler_kwh()
-            + floor_kwh_est
+            + (floor_kwh_est if floor_heating else _morning_buffer_heat_kwh())
             + (_morning_buffer_towel_heater_kwh() if towel_heater else 0.0)
+            + plan_extra
         )
     floor_soc_gate = (
         suggested_soc_at_22_for_night_kwh(night_budget_for_floor, capacity_kwh=capacity_kwh)
-        if floor_heating
+        if use_budget_gate
         else _morning_buffer_soc_floor()
     )
     morning_buffer_candidate = (
@@ -798,7 +840,7 @@ def evaluate_charge_tonight_cloudy(
         and tomorrow_workday
         and not travel_mild_buffer
         and soc_percent is not None
-        and soc_percent < (floor_soc_gate if floor_heating else _morning_buffer_soc_floor())
+        and soc_percent < (floor_soc_gate if use_budget_gate else _morning_buffer_soc_floor())
     )
     # Apply B2 o 22:00 musi przejść; blok dopiero po 22:59.
     if as_of.hour >= 23:
@@ -856,6 +898,8 @@ def evaluate_charge_tonight_cloudy(
         if tomorrow_pv_kwh is None:
             return _empty()
         target = autumn_night_target_soc(tomorrow_pv_kwh)
+        if target is not None:
+            target = _raise_target_for_plan(target, plan_extra, capacity_kwh)
         gap = estimate_autumn_peak_gap_kwh(tomorrow_pv_kwh)
         reserve = soc_below
         if target is None:
@@ -875,6 +919,7 @@ def evaluate_charge_tonight_cloudy(
                     breakfast_tomorrow=breakfast_tomorrow,
                     floor_heating=floor_heating,
                     floor_heating_kwh=floor_kwh_est if floor_heating else None,
+                    plan_extra_kwh=plan_extra,
                 )
             if soc_percent < reserve:
                 target = reserve
@@ -934,6 +979,9 @@ def evaluate_charge_tonight_cloudy(
         return _empty()
     pv_for_target = 0.0 if tomorrow_pv_kwh is None else tomorrow_pv_kwh
     target = winter_night_target_soc(tomorrow_temp_c, pv_for_target)
+    base_target = target  # bez planu dnia — do rozpoznania „bufor 70% przy dużym dachu”
+    if target is not None:
+        target = _raise_target_for_plan(target, plan_extra, capacity_kwh)
     gap = (
         estimate_peak_gap_kwh(tomorrow_temp_c, pv_for_target)
         if tomorrow_temp_c is not None
@@ -956,6 +1004,7 @@ def evaluate_charge_tonight_cloudy(
                 breakfast_tomorrow=breakfast_tomorrow,
                 floor_heating=floor_heating,
                 floor_heating_kwh=floor_kwh_est if floor_heating else None,
+                plan_extra_kwh=plan_extra,
             )
         if soc_percent < reserve:
             target = reserve
@@ -980,7 +1029,7 @@ def evaluate_charge_tonight_cloudy(
         energy_kwh = delta_soc / 100.0 * cap
     below_reserve = soc_percent < reserve
     # 70% przy dużym dachu to bufor awarii, nie arbitraż taryfy. Drobny brak (<15 pp) odpada.
-    sunny_headroom = abs(target - sunny_night_soc()) < 0.05
+    sunny_headroom = base_target is not None and abs(base_target - sunny_night_soc()) < 0.05
     min_delta = float(os.getenv('BATTERY_FC_MIN_DELTA_SOC', '15'))
     if sunny_headroom and not frost and not below_reserve and delta_soc < min_delta:
         return _empty(
@@ -1031,18 +1080,13 @@ def evaluate_charge_tonight_cloudy(
 
 
 
-def get_day_pv_forecast_sum(
+def _day_pv_frame(
     target_day: str,
     *,
     as_of: datetime | None = None,
     db_path: str | None = None,
-    until_hour: int | None = None,
-) -> float | None:
-    """Suma prognozy na dzień — pod regułę pochmurno / sugestie baterii.
-
-    Gdy ``ACCU_CS4_UI=1`` i Accu = pochmurny → suma z modelu CS4 (shadow dual).
-    until_hour: jeśli podane (np. 13), suma tylko godzin ``hour < until_hour``.
-    """
+):
+    """Ramka godzinowa prognozy PV na dzień (routing CS4 vs ensemble) albo None."""
     as_of = as_of or datetime.now()
     db_path = db_path or _db_path()
     try:
@@ -1069,13 +1113,50 @@ def get_day_pv_forecast_sum(
                 use_actual_pv=False,
             )
             day_df = pred[pred['day'] == target_day] if not pred.empty else pred
-        if day_df.empty:
+        if day_df is None or day_df.empty:
             return None
+        return day_df
+    except Exception:
+        return None
+
+
+def get_day_pv_forecast_sum(
+    target_day: str,
+    *,
+    as_of: datetime | None = None,
+    db_path: str | None = None,
+    until_hour: int | None = None,
+) -> float | None:
+    """Suma prognozy na dzień — pod regułę pochmurno / sugestie baterii.
+
+    Gdy ``ACCU_CS4_UI=1`` i Accu = pochmurny → suma z modelu CS4 (shadow dual).
+    until_hour: jeśli podane (np. 13), suma tylko godzin ``hour < until_hour``.
+    """
+    day_df = _day_pv_frame(target_day, as_of=as_of, db_path=db_path)
+    if day_df is None:
+        return None
+    try:
         if until_hour is not None:
             day_df = day_df[day_df['hour'].astype(int) < int(until_hour)]
             if day_df.empty:
                 return 0.0
         return round(float(day_df['predicted_kwh'].sum()), 2)
+    except Exception:
+        return None
+
+
+def get_day_pv_hourly_kwh(
+    target_day: str,
+    *,
+    as_of: datetime | None = None,
+    db_path: str | None = None,
+) -> dict[int, float] | None:
+    """Prognoza PV jutro godzina po godzinie: {godzina: kWh} (ta sama ścieżka co suma dnia)."""
+    day_df = _day_pv_frame(target_day, as_of=as_of, db_path=db_path)
+    if day_df is None:
+        return None
+    try:
+        return {int(h): float(v) for h, v in zip(day_df['hour'], day_df['predicted_kwh'])}
     except Exception:
         return None
 

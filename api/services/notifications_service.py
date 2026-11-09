@@ -331,6 +331,8 @@ def maybe_upsert_charge_tonight_cloudy(db: Session, user_id: int) -> Notificatio
         travel_mild_buffer=bool(hh.get('travel_mild_buffer')),
         floor_heating=bool(hh.get('floor_heating')),
         floor_heating_kwh=float(hh.get('floor_heating_kwh') or 0.0) or None,
+        plan_extra_kwh=float(hh.get('plan_extra_kwh') or 0.0),
+        plan_note=str(hh.get('plan_note') or ''),
     )
     if not rule.triggered:
         _mark_unread_type_read(db, user_id, NOTIF_TYPE_CHARGE_TONIGHT_CLOUDY)

@@ -764,6 +764,148 @@ def yesterday_had_przetwory(db, user_id: int, day: date | None = None) -> bool:
     return 'przetwory' in events_for_day(db, user_id, target)
 
 
+# Plan dnia z aplikacji (kWh na jedno włączenie — jak katalog w mobile/household.types.ts).
+# Tylko AGD / gotowanie, które pobiera prąd z baterii przed startem PV.
+# Pominięte: śniadanie (stały bufor), podłogówka / grzejnik (osobny budżet), komputery, kolacja,
+# przetwory i klimatyzacja (inne reguły), wyjazd / ferie.
+HOUSEHOLD_PLAN_KWH: dict[str, float] = {
+    'obiad': 2.2,
+    'piekarnik': 2.0,
+    'pranie': 1.5,
+    'zmywarka': 1.2,
+    'suszarka': 1.2,
+    'chleb': 0.8,
+    'odkurzacz': 0.2,
+}
+PLAN_LABELS: dict[str, str] = {
+    'obiad': 'obiad',
+    'piekarnik': 'piekarnik',
+    'pranie': 'pranie',
+    'zmywarka': 'zmywarka',
+    'suszarka': 'suszarka',
+    'chleb': 'chleb',
+    'odkurzacz': 'odkurzacz',
+}
+PLAN_CLOUDY_HORIZON_HOUR = 13
+PLAN_PV_START_KWH_PER_H = float(os.getenv('BATTERY_PLAN_PV_START_KWH_H', '0.8'))
+
+
+def _plan_weak_day_pv_kwh() -> float:
+    """Dzień „słaby” = poniżej progu, od którego dach zwykle pokrywa szczyt (jak B2 zima)."""
+    from src.optimization.battery_advisor import _b2_pv_skip_kwh
+
+    return float(os.getenv('BATTERY_PLAN_WEAK_DAY_PV_KWH', str(_b2_pv_skip_kwh())))
+
+
+def _plan_clock_min(value: str | None) -> int | None:
+    text = (value or '').strip()
+    if len(text) < 4 or ':' not in text:
+        return None
+    try:
+        hh, mm = text.split(':', 1)
+        h, m = int(hh), int(mm[:2])
+    except ValueError:
+        return None
+    if not (0 <= h <= 23 and 0 <= m <= 59):
+        return None
+    return h * 60 + m
+
+
+def events_with_times_for_day(db, user_id: int, day: date) -> list[tuple[str, str | None]]:
+    """(typ, godzina) dla dnia: godzina = start albo planowana (może być None)."""
+    from api.models import HouseholdEvent
+
+    try:
+        rows = (
+            db.query(HouseholdEvent.event_type, HouseholdEvent.start_time, HouseholdEvent.planned_time)
+            .filter(HouseholdEvent.user_id == user_id, HouseholdEvent.event_date == day.isoformat())
+            .all()
+        )
+    except Exception:
+        return []
+    out: list[tuple[str, str | None]] = []
+    for r in rows:
+        if r.event_type:
+            out.append((_normalize_event_type(r.event_type), r.start_time or r.planned_time))
+    return out
+
+
+def plan_extra_from_events(
+    events: list[tuple[str, str | None]],
+    *,
+    pv_hourly: dict[int, float] | None,
+    day_pv_kwh: float | None,
+) -> dict:
+    """kWh planu jutra do doliczenia do nocnego ładowania.
+
+    Słaby dzień (PV poniżej progu): liczymy do 13:00 + zapas na obiad (z wpisu albo domyślny).
+    Dzień słoneczny: tylko ikony z godziną przed startem produkcji (śniadanie jest już w buforze).
+    Ikony bez godziny (poza obiadem w słaby dzień) nie są liczone — można je przesunąć na PV.
+    """
+    empty = {'kwh': 0.0, 'items': [], 'mode': None, 'horizon_min': None, 'pv_start_hour': None}
+    hourly = pv_hourly or {}
+    day_pv = day_pv_kwh if day_pv_kwh is not None else (sum(hourly.values()) if hourly else None)
+    if day_pv is None:
+        return empty
+    pv_start_hour = next(
+        (h for h in sorted(hourly) if hourly[h] >= PLAN_PV_START_KWH_PER_H),
+        None,
+    )
+    weak = day_pv < _plan_weak_day_pv_kwh() or pv_start_hour is None
+    if weak:
+        horizon = PLAN_CLOUDY_HORIZON_HOUR * 60
+        mode = 'weak'
+    else:
+        horizon = pv_start_hour * 60
+        mode = 'sunny'
+
+    items: list[tuple[str, float, str | None]] = []
+    has_lunch = False
+    for etype, clock in events:
+        kwh = HOUSEHOLD_PLAN_KWH.get(etype)
+        if not kwh:
+            continue
+        minute = _plan_clock_min(clock)
+        if etype == 'obiad':
+            has_lunch = True
+            if weak or (minute is not None and minute < horizon):
+                items.append((etype, kwh, clock))
+        elif minute is not None and minute < horizon:
+            items.append((etype, kwh, clock))
+    if weak and not has_lunch:
+        items.append(('obiad', HOUSEHOLD_PLAN_KWH['obiad'], None))
+
+    total = round(sum(k for _, k, _ in items), 2)
+    return {
+        'kwh': total,
+        'items': items,
+        'mode': mode,
+        'horizon_min': horizon,
+        'pv_start_hour': pv_start_hour,
+    }
+
+
+def plan_note_text(plan: dict) -> str:
+    """Jedno zdanie do treści sugestii: co z planu dnia dodano do ładowania."""
+    kwh = float(plan.get('kwh') or 0.0)
+    if kwh <= 0:
+        return ''
+    names: list[str] = []
+    for etype, _kwh, clock in plan.get('items', []):
+        label = PLAN_LABELS.get(etype, etype)
+        if label not in names:
+            names.append(label + (f' {clock}' if clock else ''))
+    horizon = int(plan.get('horizon_min') or 0)
+    if plan.get('mode') == 'weak':
+        scope = f'słaba produkcja, liczę do {horizon // 60}:{horizon % 60:02d} z zapasem na obiad'
+    else:
+        scope = f'do startu produkcji ok. {horizon // 60}:{horizon % 60:02d}'
+    return (
+        f'Plan na jutro ({scope}): {", ".join(names)} — ok. '
+        f'{f"{kwh:.1f}".replace(".", ",")} kWh dodane do ładowania.'
+    )
+
+
 def household_night_flags(
     db,
     user_id: int,
@@ -789,6 +931,18 @@ def household_night_flags(
     )
     towel = has_towel_heater(tonight) or has_towel_heater(tomorrow)
     breakfast_tomorrow = has_breakfast(tomorrow)
+    plan = {'kwh': 0.0, 'items': [], 'mode': None, 'horizon_min': None, 'pv_start_hour': None}
+    try:
+        from src.optimization.battery_advisor import get_day_pv_hourly_kwh
+
+        tomorrow_day = d + timedelta(days=1)
+        plan = plan_extra_from_events(
+            events_with_times_for_day(db, user_id, tomorrow_day),
+            pv_hourly=get_day_pv_hourly_kwh(tomorrow_day.isoformat(), as_of=as_of),
+            day_pv_kwh=tomorrow_pv_kwh,
+        )
+    except Exception:
+        pass
     travel = has_travel_mode(tonight) or has_travel_mode(tomorrow)
     laundry_skip = should_skip_fc_for_laundry(
         tomorrow_types=tomorrow,
@@ -805,6 +959,9 @@ def household_night_flags(
         'laundry_skip': laundry_skip,
         'floor_heating': floor,
         'floor_heating_kwh': floor_kwh,
+        'plan_extra_kwh': 0.0 if travel else plan['kwh'],
+        'plan_note': '' if travel else plan_note_text(plan),
+        'plan': plan,
     }
 
 
@@ -1114,6 +1271,8 @@ def _compose_home_suggestion(
         travel_mild_buffer=bool(hh.get('travel_mild_buffer')),
         floor_heating=bool(hh.get('floor_heating')),
         floor_heating_kwh=float(hh.get('floor_heating_kwh') or 0.0) or None,
+        plan_extra_kwh=float(hh.get('plan_extra_kwh') or 0.0),
+        plan_note=str(hh.get('plan_note') or ''),
     )
 
     weekend = is_weekend(d) or is_public_holiday(d)
