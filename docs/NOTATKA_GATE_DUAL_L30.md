@@ -38,8 +38,10 @@ PYTHONPATH=$PWD ./venv/bin/python scripts/train/train_xgb_ts_shadow.py \
 1. **Dual reporting** w każdym weekly train (RF16 / CS4 / XGB+TS):
    - **Shuffle Test MAE** — jak dotychczas (kontrola, gate Δ vs prev ≤ +0,02 → ACCEPT / REVIEW)
    - **L30 chrono MAE** — holdout ostatnich 30 dni do `train_end` (uczciwy błąd referencyjny)
+   - **Chrono 20%** — ostatnie 20% dni do `train_end` (kolumny `chrono20_*` od **08.11**; **nie** gate, **nie** ucina `.joblib`). Pierwsza liczba w CSV dopiero po weekly **15.11**.
 2. **Produkcja `.joblib`:** zawsze **expanding** od `ML_TRAIN_MIN_START` → **wczoraj** (`train_end=auto`). L30 **nie** ucina danych treningowych. RF po wyborze hiperparametrów dostaje **refit na pełnym oknie** (jak XGB+TS).
 3. **Soft gate L30 (październik / okres przejściowy):** MAE w okolicy **~0,75–1,0** → `INFO` / powyżej → `WATCH`. **`hard_reject=False` zawsze** — brak fałszywego alarmu / auto-rollback z samego L30.
+4. **Shadow cap @05 (od 08.11, nie w apce):** cięcie gdy chmura 6–20 ≥ **88%** i ENS @05 ≤ **10 kWh**. Bias kWh z poprzednich **28** dni o chmurze ≥ 88% (min. 3, bias ≥ 0). Próg **90%** omija **01.11** (88,96%). Samo zejście progu bez sufitu ENS szkodzi dniom z wysoką chmurą NWP i Fox ~20 kWh. Na serii do 08.11: **7** cięć, **0** szkód, WAPE **16,4→15,8%**. `FORECAST_OPERATIONAL_ADJUST` zostaje **wyłączony**.
 
 ---
 
@@ -52,6 +54,7 @@ PYTHONPATH=$PWD ./venv/bin/python scripts/train/train_xgb_ts_shadow.py \
 | XGB+TS shadow + dual | [`scripts/train/train_xgb_ts_shadow.py`](../scripts/train/train_xgb_ts_shadow.py) |
 | Podsumowanie po weekly | [`scripts/train/weekly_dual_gate_report.py`](../scripts/train/weekly_dual_gate_report.py) |
 | Launchd weekly | [`mlops/train_dual_weekly.sh`](../mlops/train_dual_weekly.sh) |
+| Shadow cap @05 (nie apka) | [`scripts/analysis/shadow_morning_cloud_cap.py`](../scripts/analysis/shadow_morning_cloud_cap.py) → `morning_cloud_cap_shadow.csv` |
 | Historia CSV | `data/processed/weekly_dual_metrics.csv` |
 | Summary RF | `data/processed/hourly_model_tuning_summary_{production,cs4}.csv` (kolumny `l30_*`, `soft_gate_*`) |
 
