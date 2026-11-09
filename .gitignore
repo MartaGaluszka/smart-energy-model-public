@@ -92,3 +92,9 @@ docs/SCIAG_PREZENTACJA_ZALICZENIE.md
 **/xcuserdata/
 mobile/GoogleService-Info.plist
 mobile/android/app/google-services.json
+
+# Narzędzia lokalne: worker / Cursor (adresy sieci domowej, ścieżki /Users, telemetria)
+.aider*
+.cursor/
+.work-items/
+*.tar.gz
