@@ -88,6 +88,7 @@ describe('Tab1Page household calendar', () => {
         {
           provide: BatteryStateService,
           useValue: {
+            state: () => null,
             loadSettings: jasmine.createSpy('loadSettings'),
             persistAcPowerKw: () => of(void 0),
           },
