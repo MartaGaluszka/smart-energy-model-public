@@ -17,6 +17,7 @@ from api.schemas.household import (
     HouseholdCustomTypeResponse,
     HouseholdEventCreate,
     HouseholdEventResponse,
+    HouseholdEventUpdate,
 )
 
 router = APIRouter(prefix='/api/v1/household', tags=['household'], dependencies=[Depends(get_current_user)])
@@ -57,6 +58,19 @@ def _require_own_custom(db: Session, user_id: int, event_type: str) -> None:
     )
     if row is None:
         raise ApiError(400, 'CUSTOM_TYPE_NOT_FOUND', 'Nie ma takiej własnej pozycji.')
+
+
+def _event_response(row: HouseholdEvent) -> HouseholdEventResponse:
+    return HouseholdEventResponse(
+        id=row.id,
+        event_date=row.event_date,
+        event_type=row.event_type,
+        impact=row.impact,
+        note=row.note,
+        start_time=row.start_time,
+        duration_min=row.duration_min,
+        planned_time=row.planned_time,
+    )
 
 
 @router.get('/custom-types', response_model=list[HouseholdCustomTypeResponse], summary='Własne pozycje planu')
@@ -147,10 +161,7 @@ def list_events(
     if date_to:
         query = query.filter(HouseholdEvent.event_date <= date_to)
     rows = query.order_by(HouseholdEvent.event_date).all()
-    return [
-        HouseholdEventResponse(id=r.id, event_date=r.event_date, event_type=r.event_type, impact=r.impact, note=r.note)
-        for r in rows
-    ]
+    return [_event_response(r) for r in rows]
 
 
 @router.post('/events', response_model=HouseholdEventResponse, status_code=201, summary='Dodanie wydarzenia')
@@ -165,13 +176,28 @@ def create_event(
     db.add(row)
     db.commit()
     db.refresh(row)
-    return HouseholdEventResponse(
-        id=row.id,
-        event_date=row.event_date,
-        event_type=row.event_type,
-        impact=row.impact,
-        note=row.note,
+    return _event_response(row)
+
+
+@router.patch('/events/{event_id}', response_model=HouseholdEventResponse, summary='Początek i czas programu AGD')
+def update_event(
+    event_id: int,
+    body: HouseholdEventUpdate,
+    current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> HouseholdEventResponse:
+    row = (
+        db.query(HouseholdEvent)
+        .filter(HouseholdEvent.id == event_id, HouseholdEvent.user_id == current_user.id)
+        .first()
     )
+    if row is None:
+        raise ApiError(404, 'EVENT_NOT_FOUND', 'Wydarzenie nie istnieje')
+    for field in body.model_fields_set:
+        setattr(row, field, getattr(body, field))
+    db.commit()
+    db.refresh(row)
+    return _event_response(row)
 
 
 @router.delete('/events/{event_id}', status_code=204, response_model=None, summary='Usunięcie wydarzenia')

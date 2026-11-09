@@ -96,6 +96,10 @@ class HouseholdEvent(Base):
     event_type: Mapped[str] = mapped_column(String(30), nullable=False)
     impact: Mapped[str] = mapped_column(String(20), default='neutral', nullable=False)
     note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Czas „na ścianie” (HH:MM, lokalnie). Brak start_time = jeszcze nie zrobione.
+    start_time: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)
+    duration_min: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    planned_time: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 

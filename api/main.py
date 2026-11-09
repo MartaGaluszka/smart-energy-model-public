@@ -110,10 +110,15 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        # Własne walidatory (field_validator → ValueError) wkładają wyjątek do ctx — zamień na tekst.
+        detail = [
+            {**err, 'ctx': {k: str(v) for k, v in err['ctx'].items()}} if err.get('ctx') else err
+            for err in exc.errors()
+        ]
         return JSONResponse(
             status_code=422,
             content={
-                'detail': exc.errors(),
+                'detail': detail,
                 'code': 'VALIDATION_ERROR',
                 'request_id': getattr(request.state, 'request_id', None),
             },

@@ -47,6 +47,29 @@ def init_db() -> None:
     _ensure_battery_strategy_columns()
     _ensure_custom_type_archived()
     _allow_household_event_duplicates()
+    _ensure_household_event_time_columns()
+
+
+def _ensure_household_event_time_columns() -> None:
+    """Początek, czas programu i planowana godzina AGD — ALTER na istniejącej tabeli."""
+    from sqlalchemy import text
+
+    columns: list[tuple[str, str]] = [
+        ('start_time', 'VARCHAR(5)'),
+        ('duration_min', 'INTEGER'),
+        ('planned_time', 'VARCHAR(5)'),
+    ]
+    with engine.begin() as conn:
+        if settings.DATABASE_URL.startswith('sqlite'):
+            existing = {
+                row[1] for row in conn.execute(text('PRAGMA table_info(household_events)')).fetchall()
+            }
+            for col, col_type in columns:
+                if existing and col not in existing:
+                    conn.execute(text(f'ALTER TABLE household_events ADD COLUMN {col} {col_type}'))
+            return
+        for col, col_type in columns:
+            conn.execute(text(f'ALTER TABLE household_events ADD COLUMN IF NOT EXISTS {col} {col_type}'))
 
 
 def _allow_household_event_duplicates() -> None:
