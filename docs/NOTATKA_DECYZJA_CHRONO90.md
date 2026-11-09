@@ -1,6 +1,6 @@
 # Decyzja: chrono-holdout 90 dni (zamiast 20%) jako raport nieblokujący
 
-**Data:** 2026-11-09 · **Status:** wdrożone w kodzie, czeka na commit · **Powiązane:** [`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md)
+**Data:** 2026-11-09 · **Status:** wdrożone i zacommitowane · **Powiązane:** [`NOTATKA_GATE_DUAL_L30.md`](NOTATKA_GATE_DUAL_L30.md)
 
 ## TL;DR
 
