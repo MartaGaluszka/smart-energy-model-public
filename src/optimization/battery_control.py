@@ -195,6 +195,29 @@ def _topup_from_inter_window(advice: BatteryAdvice) -> MorningTopupPlan | None:
     )
 
 
+def _headroom_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
+    """Słoneczny poranek, SoC poniżej ~70%: drugie ładowanie nocy, nie pełnienie pod eksport."""
+    from src.optimization.battery_advisor import fc_minutes_for_delta_soc, sunny_night_soc
+
+    soc = advice.snapshot.soc_percent if advice.snapshot else None
+    if soc is None:
+        return None
+    target = sunny_night_soc()
+    delta = target - soc
+    if delta < morning_topup_min_delta_soc():
+        return None
+    minutes = fc_minutes_for_delta_soc(delta)
+    cheap_end = planned_morning_stop_at(advice.as_of)
+    max_minutes = max(0.0, (cheap_end - advice.as_of).total_seconds() / 60.0)
+    minutes = min(minutes, max_minutes)
+    if minutes < 3.0:
+        return None
+    stop_at = advice.as_of + timedelta(minutes=minutes)
+    if stop_at > cheap_end:
+        stop_at = cheap_end
+    return MorningTopupPlan(target_soc=target, fc_minutes=minutes, stop_at=stop_at)
+
+
 def compute_morning_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
     """Poranny top-up @~4:00: bilans między oknami lub (legacy) słabe PV + SoC < floor."""
     if advice.context != 'morning':
@@ -206,7 +229,8 @@ def compute_morning_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
         if plan is not None:
             return plan
     if not _morning_pv_weak(advice):
-        return None
+        # 22:00 mogło nie ruszyć (nieświeży SoC). O 4:00 dobij tylko do ~70%, nie do 90–95%.
+        return _headroom_topup(advice)
     soc = advice.snapshot.soc_percent if advice.snapshot else None
     if soc is None or soc >= morning_soc_floor():
         return None
@@ -243,10 +267,34 @@ def pre_cheap_apply_trigger(advice: BatteryAdvice) -> bool:
     return compute_pre_cheap_topup(advice) is not None
 
 
+def soc_snapshot_max_age_hours() -> float:
+    """Świeży odczyt do decyzji „już pełna — zgaś ForceCharge”. Starszy SoC tej decyzji nie podejmuje."""
+    return _env_float('BATTERY_SOC_MAX_AGE_HOURS', 0.75)
+
+
+def _snapshot_fresh(advice: BatteryAdvice) -> bool:
+    snap = advice.snapshot
+    if snap is None or snap.soc_percent is None:
+        return False
+    if snap.age_hours is None:
+        return True
+    return snap.age_hours <= soc_snapshot_max_age_hours()
+
+
 def _night_should_release_windows(advice: BatteryAdvice) -> bool:
-    """Jutro duży dach: nie zostawiaj harmonogramu, który i tak dobije baterię do 100%."""
+    """Zgaś harmonogram tylko gdy świeży SoC jest już na celu dużego dachu.
+
+    Odczyt sprzed godzin (jak 76% o 21:15 przy prawdziwych ~12%) nie może wyłączyć ładowania.
+    """
+    if not _snapshot_fresh(advice):
+        return False
     rule = advice.charge_tonight
-    if rule is None or rule.triggered:
+    if rule is None or rule.triggered or rule.skip_reason != 'full':
+        return False
+    from src.optimization.battery_advisor import sunny_night_soc
+
+    soc = advice.snapshot.soc_percent if advice.snapshot else None
+    if soc is None or soc < sunny_night_soc():
         return False
     pv = rule.tomorrow_pv_kwh
     return pv is not None and pv >= morning_cloudy_pv_kwh_threshold()
@@ -586,10 +634,18 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
             actions.append(ControlAction('noop', 'Tryb letni — bez automatycznego ForceCharge.'))
         elif topup and advice.as_of.hour < 6:
             soc_txt = f'{soc:.0f}%' if soc is not None else '?'
-            fc1, fc2 = g12w_force_charge_windows(enabled=True)
+            from src.optimization.battery_advisor import sunny_night_soc
+
+            if abs(topup.target_soc - sunny_night_soc()) < 0.05:
+                fc1 = _disabled_window()
+                fc2 = ForceChargeWindow(enabled=True, start_hour=4.0, end_hour=6.0)
+                window_label = 'Poranny dobij do ~70% @4:00: tylko okno 04–06 (duży dach).'
+            else:
+                fc1, fc2 = g12w_force_charge_windows(enabled=True)
+                window_label = 'Poranny top-up @~4:00: Fox okna 22–01 + 04–06 (G12w tanio).'
             actions.append(ControlAction(
                 'set_force_charge_windows',
-                'Poranny top-up @~4:00: Fox okna 22–01 + 04–06 (G12w tanio).',
+                window_label,
                 {'period1': fc1, 'period2': fc2},
             ))
             actions.append(ControlAction(
@@ -602,7 +658,13 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
                 f'~{topup.fc_minutes:.0f} min FC, stop {topup.stop_at.strftime("%H:%M")} '
                 f'(30 min ≈ +50 pp).'
             )
-        elif advice.as_of.hour < 6 and not _morning_pv_weak(advice):
+        elif (
+            advice.as_of.hour < 6
+            and not _morning_pv_weak(advice)
+            and _snapshot_fresh(advice)
+            and soc is not None
+            and soc >= _env_float('BATTERY_SUNNY_NIGHT_SOC', 70.0)
+        ):
             actions.append(ControlAction(
                 'set_work_mode',
                 'Słoneczny dzień — bez doładowania o 4:00, miejsce na produkcję od ~7:00.',
@@ -617,6 +679,11 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
                 'O 4:00 bez FC — dzień nie jest pochmurny. 22:00 zostaje buforem na awarię, '
                 'nie pełnieniem pod eksport.'
             )
+        elif advice.as_of.hour < 6 and not _morning_pv_weak(advice) and not _snapshot_fresh(advice):
+            actions.append(ControlAction(
+                'noop',
+                'SoC nieświeży — o 4:00 bez gaszenia okien i bez pełnienia na ślepym odczycie.',
+            ))
         elif rec == 'ŁADUJ Z SIECI (TANIO)':
             actions.append(ControlAction(
                 'set_force_charge_windows',

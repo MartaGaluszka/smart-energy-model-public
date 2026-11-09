@@ -1984,14 +1984,25 @@ def advise(context: Context, as_of: datetime | None = None) -> BatteryAdvice:
         tomorrow = (date.fromisoformat(target_day) + timedelta(days=1)).isoformat()
         tomorrow_pv = get_day_pv_forecast_sum(tomorrow, as_of=as_of)
         tomorrow_t = get_day_mean_temp_c(tomorrow)
+        soc_for_rule = soc
+        max_age = float(os.getenv('BATTERY_SOC_MAX_AGE_HOURS', '0.75'))
+        soc_stale = snap.age_hours is not None and snap.age_hours > max_age
+        if soc_stale:
+            # Nie udawaj, że 76% sprzed 3 h to stan o 22:00 — to gasiło ładowanie przy pustej baterii.
+            soc_for_rule = None
         cloudy_rule = evaluate_charge_tonight_cloudy(
-            soc_percent=soc,
+            soc_percent=soc_for_rule,
             tomorrow_pv_kwh=tomorrow_pv,
             as_of=as_of,
             tomorrow_temp_c=tomorrow_t,
         )
         if snap.timestamp:
             details.append(f'Ostatni odczyt: {snap.timestamp}')
+        if soc_stale:
+            details.append(
+                f'SoC nieświeży ({snap.age_hours:.1f} h > {max_age:.2f} h) — '
+                'bez decyzji „już pełna”. Drugie ładowanie zostaje na 4:00.'
+            )
         if soc is not None:
             details.append(f'SoC: {soc:.0f}%')
         if tomorrow_pv is not None:

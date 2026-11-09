@@ -43,7 +43,8 @@ Bez T: PV < 12 kWh → 90%, inaczej **70%**.
 Dwa ładowania nocy (zima, także niedziela → poniedziałek):
 
 - **22:00** — duże PV (≥ 12 kWh): tylko okno 22–01, cel ~70%, stop po wyliczonych minutach. Słaby dzień: okna 22–01 i 04–06, cel 95% (albo 80–90%).
-- **4:00** — drugie ładowanie do ~90% tylko gdy prognoza dnia jest słaba i SoC spadł poniżej progu. Słoneczny dzień: SelfUse i oba okna ForceCharge wyłączone.
+- **4:00** — słaby dzień: drugie ładowanie do ~90%, gdy SoC spadł poniżej progu. Duży dach i SoC już ≥ ~70% (świeży odczyt): SelfUse i okna wyłączone. Duży dach, ale SoC poniżej ~70% (22:00 nie ruszyło): dobij tylko do ~70% oknem 04–06.
+- SoC starszy niż ~45 min nie może zgasić ForceCharge. Taka decyzja („już pełna”) wymaga świeżego odczytu.
 
 **Lato (do ~14.09) — po 25–26.08:**
 

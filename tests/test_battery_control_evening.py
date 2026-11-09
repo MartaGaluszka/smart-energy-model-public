@@ -268,6 +268,76 @@ def test_advise_evening_pomin_when_b2_not_triggered(_eval, _t, _pv_sum, _pv_out,
     assert 'Jutro dużo PV' in advice.action
 
 
+@patch('src.optimization.inter_window_charge.compute_inter_window_charge_plan')
+@patch('src.optimization.battery_advisor.get_battery_snapshot')
+@patch('src.optimization.battery_advisor.get_pv_outlook')
+@patch('src.optimization.battery_advisor.get_day_pv_forecast_sum', return_value=15.5)
+@patch('src.optimization.battery_advisor.get_day_mean_temp_c', return_value=2.0)
+def test_advise_evening_stale_76_does_not_skip_as_full(_t, _pv_sum, _pv_out, _snap, _iw):
+    """Noc 08→09.11: log 76% sprzed 3 h nie może wyłączyć ForceCharge."""
+    from src.optimization.battery_advisor import evaluate_charge_tonight_cloudy
+
+    _snap.return_value = BatterySnapshot('2026-11-08T17:55:33', 76.0, None, None, None, 3.3)
+    _pv_out.return_value = _pv()
+    _iw.return_value = MagicMock(triggered=False, horizon_label='', skip_reason='', target_soc_percent=None)
+    with patch(
+        'src.optimization.battery_advisor.evaluate_charge_tonight_cloudy',
+        wraps=evaluate_charge_tonight_cloudy,
+    ) as ev:
+        advice = advise('evening', as_of=datetime(2026, 11, 8, 21, 15))
+    assert ev.call_args.kwargs['soc_percent'] is None
+    assert advice.charge_tonight is not None
+    assert advice.charge_tonight.triggered is False
+    assert any('nieświeży' in line for line in advice.details)
+    plan = build_plan(advice)
+    assert plan.actions[0].kind == 'noop'
+    assert not any(a.kind == 'set_work_mode' for a in plan.actions)
+
+
+@patch('src.optimization.inter_window_charge.compute_inter_window_charge_plan')
+@patch('src.optimization.battery_advisor.get_battery_snapshot')
+@patch('src.optimization.battery_advisor.get_pv_outlook')
+@patch('src.optimization.battery_advisor.get_day_pv_forecast_sum', return_value=15.5)
+@patch('src.optimization.battery_advisor.get_day_mean_temp_c', return_value=-1.0)
+def test_advise_evening_fresh_low_soc_charges_to_70(_t, _pv_sum, _pv_out, _snap, _iw):
+    """Świeże ~23% i duży dach: pierwsze ładowanie o 22:00 do ~70%, tylko okno 22–01."""
+    _snap.return_value = BatterySnapshot('2026-11-08T21:58:40', 23.0, None, None, None, 0.05)
+    _pv_out.return_value = _pv()
+    _iw.return_value = MagicMock(triggered=False, horizon_label='', skip_reason='', target_soc_percent=None)
+    advice = advise('evening', as_of=datetime(2026, 11, 8, 22, 2))
+    rule = advice.charge_tonight
+    assert rule is not None and rule.triggered is True
+    assert rule.target_soc_percent == 70.0
+    plan = build_plan(advice)
+    windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
+    assert windows.params['period1'].enabled is True
+    assert windows.params['period2'].enabled is False
+    assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
+
+
+@patch('src.optimization.inter_window_charge.compute_inter_window_charge_plan')
+@patch('src.optimization.battery_advisor.get_battery_snapshot')
+@patch('src.optimization.battery_advisor.get_pv_outlook')
+@patch('src.optimization.battery_advisor.get_day_pv_forecast_sum', return_value=6.0)
+@patch('src.optimization.battery_advisor.get_day_mean_temp_c', return_value=-1.0)
+def test_advise_evening_cloudy_charges_to_95_with_both_windows(_t, _pv_sum, _pv_out, _snap, _iw):
+    """Pochmurny jutro: 22:00 do 95%, okna 22–01 i 04–06. Nie schodzimy do headroomu 70%."""
+    _snap.return_value = BatterySnapshot('2026-11-09T21:50:00', 23.0, None, None, None, 0.1)
+    _pv_out.return_value = _pv()
+    _iw.return_value = MagicMock(triggered=False, horizon_label='', skip_reason='', target_soc_percent=None)
+    advice = advise('evening', as_of=datetime(2026, 11, 9, 22, 2))
+    rule = advice.charge_tonight
+    assert rule is not None and rule.triggered is True
+    assert rule.target_soc_percent == 95.0
+    plan = build_plan(advice)
+    windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
+    assert windows.params['period1'].enabled is True
+    assert windows.params['period1'].start_hour == 22.0
+    assert windows.params['period2'].enabled is True
+    assert windows.params['period2'].start_hour == 4.0
+    assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
+
+
 def test_format_advice_and_plan_evening_labels():
     rule = ChargeTonightCloudyRule(
         triggered=True,
@@ -451,31 +521,75 @@ def test_morning_apply_allowed_before_six_only():
     assert morning_apply_allowed(datetime(2026, 11, 3, 6, 0)) is False
 
 
-def test_morning_sunny_accu_skips_borderline_pv():
-    """Niedziela: Accu jasny i PV ~12 kWh — o 4:00 nie dobijać, miejsce na dach od 7:00."""
+def test_morning_stale_high_soc_does_not_fill_on_sunny_day():
+    """Ślepe 76% o 4:00 przy dużym dachu nie włącza pełnych okien zimowych."""
     advice = _advice_morning(
-        as_of=datetime(2026, 11, 8, 4, 0),
+        as_of=datetime(2026, 11, 9, 4, 0),
         recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
         morning_pv=6.0,
     )
-    advice.snapshot = BatterySnapshot(None, 50.0, None, None, None, None)
+    advice.snapshot = BatterySnapshot('2026-11-08T17:55:00', 76.0, None, None, None, 10.0)
     with patch(
         'src.optimization.battery_advisor.get_day_pv_forecast_sum',
-        return_value=11.5,
+        return_value=15.5,
     ), patch(
         'src.optimization.battery_control._accu_regime_for_day',
         return_value='jasny',
     ):
-        assert compute_morning_topup(advice) is None
         plan = build_plan(advice)
-    kinds = [a.kind for a in plan.actions]
-    assert 'set_work_mode' in kinds
-    assert any(a.params.get('mode') == 'SelfUse' for a in plan.actions if a.kind == 'set_work_mode')
-    assert not any(
-        a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode'
+    assert plan.actions[0].kind == 'noop'
+    assert not any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
+
+
+def test_morning_sunny_low_soc_tops_up_only_to_headroom():
+    """Duży dach i SoC 10% o 4:00 — dobij do ~70%, nie gaś ładowania i nie idź do 90%."""
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 9, 4, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=6.0,
     )
+    advice.snapshot = BatterySnapshot('2026-11-09T03:55:00', 10.0, None, None, None, 0.1)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=15.5,
+    ), patch(
+        'src.optimization.battery_control._accu_regime_for_day',
+        return_value='jasny',
+    ):
+        topup = compute_morning_topup(advice)
+        plan = build_plan(advice)
+    assert topup is not None
+    assert topup.target_soc == 70.0
+    assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
     windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
-    assert windows.params['period2'].enabled is False
+    assert windows.params['period1'].enabled is False
+    assert windows.params['period2'].enabled is True
+
+
+def test_morning_cloudy_low_soc_tops_up_to_90_not_70():
+    """Pochmurny dzień o 4:00: SoC 10% dobija do ~90% oboma oknami, nie do headroomu 70%."""
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 10, 4, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=2.0,
+    )
+    advice.snapshot = BatterySnapshot('2026-11-10T03:55:00', 10.0, None, None, None, 0.1)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=6.0,
+    ), patch(
+        'src.optimization.battery_control._accu_regime_for_day',
+        return_value='pochmurny',
+    ):
+        topup = compute_morning_topup(advice)
+        plan = build_plan(advice)
+    assert topup is not None
+    assert topup.target_soc == 90.0
+    assert topup.target_soc != 70.0
+    windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
+    assert windows.params['period1'].enabled is True
+    assert windows.params['period2'].enabled is True
+    assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
 
 
 def test_morning_collapsed_pv_tops_up_even_if_accu_was_sunny():
@@ -503,6 +617,7 @@ def test_morning_sunny_apply_releases_windows_without_force_charge():
         recommendation='SOC OK',
         morning_pv=15.0,
     )
+    advice.snapshot = BatterySnapshot('2026-11-03T03:50:00', 82.0, None, None, None, 0.2)
     with patch(
         'src.optimization.battery_advisor.get_day_pv_forecast_sum',
         return_value=20.0,
@@ -635,10 +750,22 @@ def test_evening_sunny_first_charge_keeps_only_2201_window():
     assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
 
 
+def test_evening_stale_soc_does_not_turn_off_charging():
+    """76% sprzed 3 h nie może zgasić ForceCharge, gdy bateria jest już pusta."""
+    rule = _b2_rule(triggered=False)
+    rule = replace(rule, tomorrow_pv_kwh=15.5, skip_reason='full', soc_percent=76.0, target_soc_percent=70.0)
+    advice = _advice_evening(as_of=datetime(2026, 11, 8, 22, 0), rule=rule)
+    advice.snapshot = BatterySnapshot('2026-11-08T17:55:00', 76.0, None, None, None, 3.3)
+    plan = build_plan(advice)
+    assert plan.actions[0].kind == 'noop'
+    assert not any(a.kind == 'set_force_charge_windows' for a in plan.actions)
+
+
 def test_evening_sunny_tomorrow_releases_force_charge_windows():
     rule = _b2_rule(triggered=False)
-    rule = replace(rule, tomorrow_pv_kwh=18.6, skip_reason='covered')
+    rule = replace(rule, tomorrow_pv_kwh=18.6, skip_reason='full', soc_percent=80.0, target_soc_percent=70.0)
     advice = _advice_evening(as_of=datetime(2026, 11, 8, 22, 5), rule=rule)
+    advice.snapshot = BatterySnapshot('2026-11-08T22:00:00', 80.0, None, None, None, 0.1)
     plan = build_plan(advice)
     windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
     assert windows.params['period1'].enabled is False
