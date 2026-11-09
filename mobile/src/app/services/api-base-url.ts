@@ -16,18 +16,16 @@ function isLoopbackHost(host: string | undefined): boolean {
  * Placeholder z environment.prod.ts NIGDY nie idzie do Simulatora — to był
  * błąd po `npm run build` (domyślnie production) zamiast `npm run build:sim`.
  */
-export function resolveApiBaseUrl(): string {
+export function resolveApiBaseUrl(host: string | undefined = globalThis.location?.hostname): string {
   const configured = environment.apiBaseUrl;
 
   if (isPlaceholderApiUrl(configured)) {
-    return resolveLocalDevApiUrl();
+    return resolveLocalDevApiUrl(host);
   }
 
   if (environment.production) {
     return configured;
   }
-
-  const host = globalThis.location?.hostname;
 
   // iOS Simulator + loopback w WebView → zawsze IP Maca z build:sim (nie 127.0.0.1 telefonu).
   if (
@@ -64,11 +62,10 @@ function isPlaceholderApiUrl(url: string): boolean {
   }
 }
 
-function resolveLocalDevApiUrl(): string {
+function resolveLocalDevApiUrl(host: string | undefined): string {
   if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios' && SIMULATOR_API_ORIGIN) {
     return SIMULATOR_API_ORIGIN;
   }
-  const host = globalThis.location?.hostname;
   if (host && !isLoopbackHost(host)) {
     return `http://${host}:8000`;
   }
