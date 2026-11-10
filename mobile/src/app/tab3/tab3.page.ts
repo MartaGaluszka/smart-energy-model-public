@@ -312,11 +312,22 @@ export class Tab3Page implements AfterViewInit, OnDestroy, ViewDidEnter {
     return this.state.note || 'Brak zarchiwizowanej prognozy dla tego dnia.';
   }
 
+  /**
+   * Jutro / pojutrze: okna Południowa (12:00) i Popołudniowa (16:00) pokazują zapowiedź
+   * okna, nawet gdy dzisiejszy run już zapisał prognozę na te dni (zostaje tylko Poranna).
+   */
+  private get showWindowAnnouncementOnly(): boolean {
+    return this.selectedIsFuture && this.selectedRunLabel !== 'daily'
+      && RUN_WINDOW_HOUR[this.selectedRunLabel] !== undefined;
+  }
+
   get selectedDaily(): ForecastValidationDailyRow | null {
+    if (this.showWindowAnnouncementOnly) return null;
     return this.state.daily.find((d) => d.run_label === this.selectedRunLabel) ?? null;
   }
 
   get selectedHourlyRows(): ForecastValidationHourlyRow[] {
+    if (this.showWindowAnnouncementOnly) return [];
     return this.state.hourlyValidation
       .filter((row) => row.run_label === this.selectedRunLabel)
       .slice()
