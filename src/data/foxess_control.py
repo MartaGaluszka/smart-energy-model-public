@@ -156,7 +156,10 @@ class FoxEssControl:
             return {'dry_run': True, 'action': 'set_work_schedule', **payload}
 
         self._ensure_device()
-        result = foxess.set_schedule(periods=groups, enable=enable)
+        # Pusta lista grup przy wyłączaniu kasowałaby harmonogram osobnym zapisem.
+        # Sam przełącznik wystarcza, żeby falownik przestał ładować z sieci.
+        periods = None if not enable else groups
+        result = foxess.set_schedule(periods=periods, enable=enable)
         if result is None:
             raise RuntimeError('FoxESS set_schedule() nie powiodło się.')
         return {'dry_run': False, 'action': 'set_work_schedule', **payload}

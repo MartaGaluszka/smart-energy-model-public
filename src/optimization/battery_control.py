@@ -581,7 +581,10 @@ def evening_stop_if_due(*, dry_run: bool = True, as_of: datetime | None = None) 
         plan.notes.append(f'⚠️ Brak FoxESS: {exc}')
         return 'fox_error', plan, []
 
-    if not work_mode_is_force_charge(state.work_mode):
+    schedule_on = bool(getattr(state, 'schedule_enabled', False))
+    mode_on = work_mode_is_force_charge(state.work_mode)
+    # SelfUse przy włączonym harmonogramie nadal ładuje, dopóki okres ma fdPwr > 0.
+    if not schedule_on and not mode_on:
         sess['stop_done'] = True
         sess['stopped_at'] = as_of.isoformat(timespec='seconds')
         sess['verified_mode'] = state.work_mode
@@ -590,8 +593,17 @@ def evening_stop_if_due(*, dry_run: bool = True, as_of: datetime | None = None) 
 
     plan = build_evening_stop_plan(as_of)
     plan.dry_run = dry_run
-    plan.notes.append(f'Fox nadal ForceCharge ({state.work_mode}) — wysyłam SelfUse.')
-    results = execute_plan(plan, controller, dry_run=dry_run)
+    results: list[dict[str, Any]] = []
+    if schedule_on:
+        plan.notes.append('Harmonogram ForceCharge nadal włączony — wyłączam go.')
+        try:
+            results.append(controller.set_work_schedule([], enable=False, dry_run=dry_run))
+        except RuntimeError as exc:
+            plan.notes.append(f'⚠️ set_schedule: {exc}')
+            return 'still_force_charge', plan, results
+    if mode_on:
+        plan.notes.append(f'Fox nadal ForceCharge ({state.work_mode}) — wysyłam SelfUse.')
+        results.extend(execute_plan(plan, controller, dry_run=dry_run))
 
     if dry_run:
         return 'would_stop', plan, results
@@ -602,8 +614,13 @@ def evening_stop_if_due(*, dry_run: bool = True, as_of: datetime | None = None) 
         plan.notes.append(f'⚠️ Ponowny odczyt FoxESS nieudany: {exc}')
         return 'still_force_charge', plan, results
 
-    if work_mode_is_force_charge(after.work_mode):
-        plan.notes.append('Po komendzie Fox nadal ForceCharge — kolejny tick powtórzy SelfUse.')
+    still_on = work_mode_is_force_charge(after.work_mode) or bool(
+        getattr(after, 'schedule_enabled', False)
+    )
+    if still_on:
+        plan.notes.append(
+            'Po komendzie ładowanie nadal włączone — kolejny tick powtórzy stop.'
+        )
         return 'still_force_charge', plan, results
 
     sess['stop_done'] = True
@@ -651,7 +668,7 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
             actions.append(ControlAction(
                 'set_work_mode',
                 f'ForceCharge: SoC {soc_txt} → ~{topup.target_soc:.0f}% przed 6:00.',
-                {'mode': 'ForceCharge'},
+                {'mode': 'ForceCharge', 'max_soc': topup.target_soc},
             ))
             notes.append(
                 f'Poranny top-up @4:00: okno 04–06 włączone, ΔSoC → {topup.target_soc:.0f}%, '
@@ -694,7 +711,7 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
                 actions.append(ControlAction(
                     'set_work_mode',
                     'Natychmiastowe ładowanie z sieci do 6:00 (ForceCharge).',
-                    {'mode': 'ForceCharge'},
+                    {'mode': 'ForceCharge', 'max_soc': morning_topup_target_soc()},
                 ))
                 stop = planned_morning_stop_at(advice.as_of)
                 notes.append(
@@ -751,8 +768,11 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
             if is_cheap_zone(advice.as_of):
                 actions.append(ControlAction(
                     'set_work_mode',
-                    f'B2: ForceCharge {soc_txt} → ~{target_txt} (okna API + harmonogram).',
-                    {'mode': 'ForceCharge'},
+                    f'B2: ForceCharge {soc_txt} → ~{target_txt} (harmonogram z mocą).',
+                    {
+                        'mode': 'ForceCharge',
+                        'max_soc': rule.target_soc_percent,
+                    },
                 ))
             else:
                 notes.append(
@@ -794,7 +814,7 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
             actions.append(ControlAction(
                 'set_work_mode',
                 f'ForceCharge: SoC {soc_txt} → ~{pre_topup.target_soc:.0f}% przed 15:00.',
-                {'mode': 'ForceCharge'},
+                {'mode': 'ForceCharge', 'max_soc': pre_topup.target_soc},
             ))
             notes.append(
                 f'Południowy bilans: ΔSoC → {pre_topup.target_soc:.0f}%, '
@@ -879,6 +899,132 @@ def _diff_notes(actions: list[ControlAction], state: BatteryControlState) -> lis
     return diffs
 
 
+def fox_charge_power_w() -> int:
+    """Moc okresu ForceCharge w harmonogramie. Bez niej (0 W) falownik nie bierze prądu z sieci."""
+    return max(0, int(_env_float('BATTERY_FC_POWER_W', 12000)))
+
+
+def periods_for_clock_window(
+    start_hour: float,
+    end_hour: float,
+    *,
+    max_soc: float,
+    power_w: int | None = None,
+    min_soc: float = 10.0,
+) -> list[dict[str, Any]]:
+    """Okno zegarowe → okresy harmonogramu Fox.
+
+    Koniec jest wyłączny (15:00 → ostatnia minuta 14:59), tak jak ``set_period`` w foxesscloud.
+    Okno przechodzące przez północ (22:00–01:00, 22:00–06:00) rozpada się na dwa okresy,
+    bo jeden wpis harmonogramu nie może zawinąć doby.
+    """
+    start = float(start_hour) % 24.0
+    end = float(end_hour)
+    if end == 0 and start > 0:
+        end = 24.0
+    elif end <= start:
+        end = end + 24.0
+    if end <= start:
+        return []
+    spans = [(start, min(end, 24.0))]
+    if end > 24.0:
+        spans.append((0.0, end - 24.0))
+    power = fox_charge_power_w() if power_w is None else int(power_w)
+    target = int(round(max_soc))
+    periods: list[dict[str, Any]] = []
+    for span_start, span_end in spans:
+        end_minute = int(round(span_end * 60)) - 1
+        start_minute = int(round(span_start * 60))
+        if end_minute < start_minute:
+            continue
+        periods.append({
+            'startHour': start_minute // 60,
+            'startMinute': start_minute % 60,
+            'endHour': end_minute // 60,
+            'endMinute': end_minute % 60,
+            'workMode': 'ForceCharge',
+            'isRemainMode': False,
+            'extraParam': {
+                'minSocOnGrid': int(min_soc),
+                'maxSoc': target,
+                'fdSoc': target,
+                'fdPwr': power,
+            },
+        })
+    return periods
+
+
+def _enabled_charge_windows(plan: ControlPlan) -> list[ForceChargeWindow]:
+    windows: list[ForceChargeWindow] = []
+    for action in plan.actions:
+        if action.kind != 'set_force_charge_windows':
+            continue
+        for key in ('period1', 'period2'):
+            window = action.params.get(key)
+            if isinstance(window, ForceChargeWindow) and window.enabled:
+                windows.append(window)
+    return windows
+
+
+def _plan_intends_grid_charge(plan: ControlPlan) -> bool:
+    return any(
+        action.kind == 'set_work_mode' and action.params.get('mode') == 'ForceCharge'
+        for action in plan.actions
+    )
+
+
+def _plan_max_soc(plan: ControlPlan) -> float | None:
+    for action in plan.actions:
+        if action.kind == 'set_work_mode' and action.params.get('mode') == 'ForceCharge':
+            raw = action.params.get('max_soc')
+            if raw is not None:
+                return float(raw)
+    return None
+
+
+def schedule_groups_for_plan(plan: ControlPlan) -> list[dict[str, Any]]:
+    """Okna z planu (pochmurno / słońce / 13–15) jako okresy harmonogramu z mocą.
+
+    Pusty wynik: plan nie każe ładować z sieci. Decyzja „czy ładować” zostaje
+    w advisorze; tu jest tylko tłumaczenie okien, które plan już wybrał.
+    Samo zostawione okno nocne (SoC już w celu, bez trybu ForceCharge) nie startuje ładowania.
+    """
+    if plan.context not in ('evening', 'morning', 'pre_cheap'):
+        return []
+    if not _plan_intends_grid_charge(plan):
+        return []
+    windows = _enabled_charge_windows(plan)
+    if not windows:
+        return []
+    max_soc = _plan_max_soc(plan)
+    if max_soc is None:
+        max_soc = 100.0
+    groups: list[dict[str, Any]] = []
+    for window in windows:
+        groups.extend(periods_for_clock_window(
+            window.start_hour,
+            window.end_hour,
+            max_soc=max_soc,
+        ))
+    return groups
+
+
+def schedule_should_disable(plan: ControlPlan) -> bool:
+    """Plan gasi okna (słoneczny poranek / rezygnacja z FC) — wyłącz też harmonogram."""
+    if plan.context not in ('evening', 'morning', 'pre_cheap'):
+        return False
+    saw_windows = False
+    for action in plan.actions:
+        if action.kind != 'set_force_charge_windows':
+            continue
+        saw_windows = True
+        for key in ('period1', 'period2'):
+            window = action.params.get(key)
+            if isinstance(window, ForceChargeWindow) and window.enabled:
+                return False
+    return saw_windows
+
+
 def execute_plan(
     plan: ControlPlan,
     controller: FoxEssControl | None = None,
@@ -895,16 +1041,59 @@ def execute_plan(
         except (ValueError, RuntimeError):
             fox_schedule_on = False
 
+    charge_groups = schedule_groups_for_plan(plan)
+    release_schedule = schedule_should_disable(plan) and not charge_groups
+    if charge_groups:
+        plan.notes.append(
+            'Ładowanie idzie harmonogramem Fox (fdPwr + maxSoc). '
+            'Tryb ForceCharge ten falownik pomija, a force=1 gasi harmonogram.'
+        )
+        try:
+            results.append(controller.set_work_schedule(
+                charge_groups,
+                enable=True,
+                dry_run=dry_run,
+            ))
+        except RuntimeError as exc:
+            plan.notes.append(f'⚠️ set_schedule: {exc}')
+            results.append({
+                'dry_run': dry_run,
+                'action': 'set_work_schedule',
+                'error': str(exc),
+            })
+    elif release_schedule:
+        plan.notes.append('Plan gasi okna ForceCharge — wyłączam harmonogram.')
+        try:
+            results.append(controller.set_work_schedule(
+                [],
+                enable=False,
+                dry_run=dry_run,
+            ))
+        except RuntimeError as exc:
+            plan.notes.append(f'⚠️ set_schedule: {exc}')
+            results.append({
+                'dry_run': dry_run,
+                'action': 'set_work_schedule',
+                'error': str(exc),
+            })
+
     for action in plan.actions:
         if action.kind == 'noop':
             results.append({'dry_run': dry_run, 'action': 'noop', 'description': action.description})
             continue
         if action.kind == 'set_force_charge_windows':
-            # evening/morning apply: okna API (22–01, 04–06) muszą iść mimo harmonogramu
-            # trybu pracy — sam ForceCharge bez set_charge nie ładuje z sieci (inc. 03.11 @22).
-            if fox_schedule_on and plan.context not in ('evening', 'morning', 'pre_cheap'):
+            if charge_groups or release_schedule:
+                results.append({
+                    'dry_run': True,
+                    'action': 'noop',
+                    'skipped': True,
+                    'reason': 'fox_schedule_periods' if charge_groups else 'fox_schedule_disabled',
+                })
+                continue
+            # set_charge z force=1 wyłącza harmonogram, a to jedyna droga ładowania z sieci.
+            if fox_schedule_on:
                 plan.notes.append(
-                    'Harmonogram FoxESS włączony — pomijam set_charge (tylko peak).'
+                    'Harmonogram FoxESS włączony — nie ruszam set_charge (zostawiłby fdPwr=0 albo zgasił okres).'
                 )
                 results.append({
                     'dry_run': dry_run,
@@ -913,20 +1102,12 @@ def execute_plan(
                     'reason': 'fox_schedule_enabled',
                 })
                 continue
-            charge_force = 0
-            if fox_schedule_on and plan.context in ('evening', 'morning', 'pre_cheap'):
-                # Fox odrzuca set_charge przy włączonym harmonogramie (errno w logu 05.11 22:00).
-                # force=1 najpierw wyłącza flagę harmonogramu, potem zapisuje okna FC.
-                charge_force = 0 if dry_run else 1
-                plan.notes.append(
-                    'Harmonogram FoxESS włączony — wyłączam go (force) i ustawiam okna ForceCharge.'
-                )
             try:
                 results.append(controller.set_force_charge_windows(
                     period1=action.params.get('period1'),
                     period2=action.params.get('period2'),
                     dry_run=dry_run,
-                    force=charge_force,
+                    force=0,
                 ))
             except RuntimeError as exc:
                 plan.notes.append(f'⚠️ set_charge: {exc}')
@@ -937,11 +1118,18 @@ def execute_plan(
                 })
         elif action.kind == 'set_work_mode':
             mode = action.params['mode']
-            force = 1 if (not dry_run and mode == 'ForceCharge') else 0
+            if charge_groups and mode == 'ForceCharge':
+                results.append({
+                    'dry_run': True,
+                    'action': 'noop',
+                    'skipped': True,
+                    'reason': 'inverter_ignores_forcecharge_mode',
+                })
+                continue
             results.append(controller.set_work_mode(
                 mode,
                 dry_run=dry_run,
-                force=force,
+                force=0,
             ))
         elif action.kind == 'set_min_soc':
             results.append(controller.set_min_soc(

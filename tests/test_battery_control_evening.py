@@ -20,6 +20,8 @@ from src.optimization.battery_control import (
     evening_apply_allowed,
     count_real_applies_today,
     evening_stop_if_due,
+    periods_for_clock_window,
+    schedule_groups_for_plan,
     morning_apply_allowed,
     compute_morning_topup,
     execute_plan,
@@ -144,9 +146,15 @@ def test_build_plan_evening_charge_at_22_includes_force_charge():
     assert p2.enabled and p2.start_hour == 4.0 and p2.end_hour == 6.0
 
 
+def _schedule_call(ctrl):
+    args, kwargs = ctrl.set_work_schedule.call_args
+    groups = args[0] if args else kwargs['groups']
+    return groups, kwargs
+
+
 @patch('src.optimization.battery_control.FoxEssControl')
-def test_execute_plan_evening_still_set_charge_when_fox_schedule_on(_fox):
-    """Inc. 03.11 @22: pomijanie set_charge przy wł. harmonogramie blokowało ładowanie."""
+def test_execute_plan_evening_charges_via_schedule(_fox):
+    """Pochmurna noc: 22–01 i 04–06 idą harmonogramem z mocą, bez gaszenia go przez force=1."""
     rule = ChargeTonightCloudyRule(
         triggered=True,
         soc_percent=10.0,
@@ -156,31 +164,67 @@ def test_execute_plan_evening_still_set_charge_when_fox_schedule_on(_fox):
         recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
         title='',
         body='',
-        target_soc_percent=60.0,
+        target_soc_percent=95.0,
         fc_minutes=51.0,
     )
     advice = _advice_evening(as_of=datetime(2026, 11, 3, 22, 0), rule=rule)
     plan = build_plan(advice)
     ctrl = _fox.return_value
     ctrl.read_state.return_value = replace(_fox_state('SelfUse'), schedule_enabled=True)
-    ctrl.set_force_charge_windows.return_value = {'dry_run': False, 'action': 'set_force_charge_windows'}
-    ctrl.set_work_mode.return_value = {'dry_run': False, 'action': 'set_work_mode'}
-    results = execute_plan(plan, controller=ctrl, dry_run=False)
-    assert ctrl.set_force_charge_windows.called
-    assert ctrl.set_force_charge_windows.call_args.kwargs.get('force') == 1
-    skipped = [r for r in results if r.get('skipped')]
-    assert not skipped
-    assert any('wyłączam go (force)' in n for n in plan.notes)
+    ctrl.set_work_schedule.return_value = {'dry_run': False, 'action': 'set_work_schedule'}
+    execute_plan(plan, controller=ctrl, dry_run=False)
+    ctrl.set_force_charge_windows.assert_not_called()
+    ctrl.set_work_mode.assert_not_called()
+    groups, kwargs = _schedule_call(ctrl)
+    assert kwargs['enable'] is True
+    assert kwargs['dry_run'] is False
+    assert [(g['startHour'], g['endHour'], g['endMinute']) for g in groups] == [
+        (22, 23, 59),
+        (0, 0, 59),
+        (4, 5, 59),
+    ]
+    assert all(g['extraParam']['fdPwr'] == 12000 for g in groups)
+    assert all(g['extraParam']['maxSoc'] == 95 for g in groups)
+    assert any('harmonogramem Fox' in n for n in plan.notes)
 
 
 @patch('src.optimization.battery_control.FoxEssControl')
-def test_execute_plan_pre_cheap_set_charge_when_fox_schedule_on(_fox):
-    advice = _advice_evening(as_of=datetime(2026, 11, 3, 12, 0), rule=_b2_rule(triggered=False))
+def test_execute_plan_evening_sunny_only_2201_toward_70(_fox):
+    rule = ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=50.0,
+        tomorrow_pv_kwh=18.6,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='',
+        body='',
+        target_soc_percent=70.0,
+        fc_minutes=12.0,
+    )
+    plan = build_plan(_advice_evening(as_of=datetime(2026, 11, 8, 22, 2), rule=rule))
+    ctrl = _fox.return_value
+    ctrl.read_state.return_value = _fox_state('SelfUse')
+    ctrl.set_work_schedule.return_value = {'dry_run': False, 'action': 'set_work_schedule'}
+    execute_plan(plan, controller=ctrl, dry_run=False)
+    groups, kwargs = _schedule_call(ctrl)
+    assert kwargs['enable'] is True
+    assert [(g['startHour'], g['startMinute'], g['endHour'], g['endMinute']) for g in groups] == [
+        (22, 0, 23, 59),
+        (0, 0, 0, 59),
+    ]
+    assert all(g['extraParam']['maxSoc'] == 70 for g in groups)
+    assert all(g['extraParam']['fdPwr'] > 0 for g in groups)
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_execute_plan_pre_cheap_charges_1315_via_schedule(_fox):
+    advice = _advice_evening(as_of=datetime(2026, 11, 3, 13, 0), rule=_b2_rule(triggered=False))
     advice.context = 'pre_cheap'
     plan = ControlPlan(
         context='pre_cheap',
         as_of=advice.as_of,
-        recommendation='ŁADUJ 13:00–15:00 (G12w TANIO)',
+        recommendation='ŁADUJ 13:00–15:00 (BILANS)',
         actions=[
             ControlAction(
                 'set_force_charge_windows',
@@ -190,18 +234,30 @@ def test_execute_plan_pre_cheap_set_charge_when_fox_schedule_on(_fox):
                     'period2': ForceChargeWindow(True, 13.0, 15.0),
                 },
             ),
+            ControlAction(
+                'set_work_mode',
+                'do 98%',
+                {'mode': 'ForceCharge', 'max_soc': 98.0},
+            ),
         ],
         notes=[],
         dry_run=False,
     )
     ctrl = _fox.return_value
     ctrl.read_state.return_value = replace(_fox_state('SelfUse'), schedule_enabled=True)
-    ctrl.set_force_charge_windows.return_value = {'dry_run': False, 'action': 'set_force_charge_windows'}
-    results = execute_plan(plan, controller=ctrl, dry_run=False)
-    assert ctrl.set_force_charge_windows.called
-    assert ctrl.set_force_charge_windows.call_args.kwargs.get('force') == 1
-    assert not any(r.get('skipped') for r in results)
-    assert any('wyłączam go (force)' in n for n in plan.notes)
+    ctrl.set_work_schedule.return_value = {'dry_run': False, 'action': 'set_work_schedule'}
+    execute_plan(plan, controller=ctrl, dry_run=False)
+    ctrl.set_force_charge_windows.assert_not_called()
+    ctrl.set_work_mode.assert_not_called()
+    groups, kwargs = _schedule_call(ctrl)
+    assert kwargs['enable'] is True
+    assert [(g['startHour'], g['endHour'], g['endMinute']) for g in groups] == [
+        (22, 23, 59),
+        (0, 5, 59),
+        (13, 14, 59),
+    ]
+    assert all(g['extraParam']['maxSoc'] == 98 for g in groups)
+    assert all(g['extraParam']['fdPwr'] == 12000 for g in groups)
 
 
 @patch('src.optimization.battery_advisor.get_battery_snapshot')
@@ -929,6 +985,30 @@ def test_evening_stop_skips_command_when_already_selfuse(_fox, tmp_path, monkeyp
 
 
 @patch('src.optimization.battery_control.FoxEssControl')
+def test_evening_stop_disables_schedule_when_mode_already_selfuse(_fox, tmp_path, monkeypatch):
+    """SelfUse + włączony harmonogram nadal ładuje. Timer musi zgasić okres, nie tylko tryb."""
+    monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(tmp_path / 'sess.json'))
+    save_evening_session(
+        {'day': '2026-11-03', 'stop_at': '2026-11-03T22:30:00', 'stop_done': False}
+    )
+    ctrl = _fox.return_value
+    ctrl.read_state.side_effect = [
+        replace(_fox_state('SelfUse'), schedule_enabled=True),
+        _fox_state('SelfUse'),
+    ]
+    ctrl.set_work_schedule.return_value = {
+        'action': 'set_work_schedule',
+        'dry_run': False,
+        'enable': False,
+    }
+    status, _plan, _results = evening_stop_if_due(dry_run=False, as_of=datetime(2026, 11, 3, 22, 40))
+    assert status == 'stopped'
+    ctrl.set_work_schedule.assert_called_once_with([], enable=False, dry_run=False)
+    ctrl.set_work_mode.assert_not_called()
+    assert load_evening_session()['stop_done'] is True
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
 def test_evening_stop_if_due_self_use(_fox, tmp_path, monkeypatch):
     sess_path = tmp_path / 'battery_evening_session.json'
     monkeypatch.setenv('BATTERY_EVENING_SESSION_FILE', str(sess_path))
@@ -1012,6 +1092,164 @@ def test_detect_outage_last_night_database_error(tmp_path):
         str(db),
         reference=datetime(2026, 11, 3, 21, 15),
     ) == (False, None, None, None)
+
+
+def test_periods_split_midnight_and_stop_one_minute_early():
+    night = periods_for_clock_window(22.0, 1.0, max_soc=95)
+    morning = periods_for_clock_window(4.0, 6.0, max_soc=90)
+    midday = periods_for_clock_window(13.0, 15.0, max_soc=98, power_w=12000)
+    assert [(p['startHour'], p['endHour'], p['endMinute']) for p in night] == [
+        (22, 23, 59),
+        (0, 0, 59),
+    ]
+    assert morning[0]['startHour'] == 4 and morning[0]['endHour'] == 5
+    assert midday[0]['endHour'] == 14 and midday[0]['endMinute'] == 59
+    assert midday[0]['extraParam'] == {
+        'minSocOnGrid': 10,
+        'maxSoc': 98,
+        'fdSoc': 98,
+        'fdPwr': 12000,
+    }
+    assert all(p['workMode'] == 'ForceCharge' for p in night + morning + midday)
+
+
+def test_windows_without_force_charge_intent_do_not_schedule():
+    plan = ControlPlan(
+        context='pre_cheap',
+        as_of=datetime(2026, 11, 10, 13, 0),
+        recommendation='SOC OK — POMIŃ FORCE CHARGE',
+        actions=[
+            ControlAction(
+                'set_force_charge_windows',
+                'zostaw noc',
+                {
+                    'period1': ForceChargeWindow(True, 22.0, 6.0),
+                    'period2': ForceChargeWindow(False, 13.0, 15.0),
+                },
+            ),
+        ],
+        notes=[],
+        dry_run=True,
+    )
+    assert schedule_groups_for_plan(plan) == []
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_execute_plan_morning_cloudy_topup_uses_0406(_fox):
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 3, 4, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=3.0,
+    )
+    advice.snapshot = BatterySnapshot(None, 50.0, None, None, None, None)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=4.0,
+    ):
+        plan = build_plan(advice)
+    ctrl = _fox.return_value
+    ctrl.read_state.return_value = _fox_state('SelfUse')
+    ctrl.set_work_schedule.return_value = {'dry_run': False, 'action': 'set_work_schedule'}
+    execute_plan(plan, controller=ctrl, dry_run=False)
+    groups, kwargs = _schedule_call(ctrl)
+    assert kwargs['enable'] is True
+    assert any(g['startHour'] == 4 and g['endHour'] == 5 for g in groups)
+    assert all(g['extraParam']['maxSoc'] == int(morning_topup_target_soc()) for g in groups)
+    assert all(g['extraParam']['fdPwr'] > 0 for g in groups)
+    ctrl.set_work_mode.assert_not_called()
+    ctrl.set_force_charge_windows.assert_not_called()
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_execute_plan_sunny_morning_disables_schedule(_fox):
+    plan = ControlPlan(
+        context='morning',
+        as_of=datetime(2026, 11, 10, 4, 0),
+        recommendation='POCZEKAJ NA PV',
+        actions=[
+            ControlAction('set_work_mode', 'słońce', {'mode': 'SelfUse'}),
+            ControlAction(
+                'set_force_charge_windows',
+                'gaś',
+                {
+                    'period1': ForceChargeWindow(False, 0.0, 0.0),
+                    'period2': ForceChargeWindow(False, 0.0, 0.0),
+                },
+            ),
+        ],
+        notes=[],
+        dry_run=False,
+    )
+    ctrl = _fox.return_value
+    ctrl.read_state.return_value = replace(_fox_state('SelfUse'), schedule_enabled=True)
+    ctrl.set_work_schedule.return_value = {'dry_run': False, 'action': 'set_work_schedule', 'enable': False}
+    ctrl.set_work_mode.return_value = {'dry_run': False, 'action': 'set_work_mode'}
+    execute_plan(plan, controller=ctrl, dry_run=False)
+    ctrl.set_work_schedule.assert_called_once_with([], enable=False, dry_run=False)
+    ctrl.set_work_mode.assert_called_once_with('SelfUse', dry_run=False, force=0)
+    ctrl.set_force_charge_windows.assert_not_called()
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_execute_plan_stale_noop_does_not_touch_schedule(_fox):
+    plan = ControlPlan(
+        context='morning',
+        as_of=datetime(2026, 11, 10, 4, 0),
+        recommendation='noop',
+        actions=[ControlAction('noop', 'SoC nieświeży')],
+        notes=[],
+        dry_run=False,
+    )
+    ctrl = _fox.return_value
+    ctrl.read_state.return_value = replace(_fox_state('SelfUse'), schedule_enabled=True)
+    execute_plan(plan, controller=ctrl, dry_run=False)
+    ctrl.set_work_schedule.assert_not_called()
+    ctrl.set_work_mode.assert_not_called()
+    ctrl.set_force_charge_windows.assert_not_called()
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_execute_plan_peak_selfuse_leaves_schedule_on(_fox):
+    plan = ControlPlan(
+        context='peak',
+        as_of=datetime(2026, 11, 10, 17, 0),
+        recommendation='self',
+        actions=[ControlAction('set_work_mode', 'szczyt', {'mode': 'SelfUse'})],
+        notes=[],
+        dry_run=False,
+    )
+    ctrl = _fox.return_value
+    ctrl.read_state.return_value = replace(_fox_state('SelfUse'), schedule_enabled=True)
+    ctrl.set_work_mode.return_value = {'dry_run': False, 'action': 'set_work_mode'}
+    execute_plan(plan, controller=ctrl, dry_run=False)
+    ctrl.set_work_schedule.assert_not_called()
+    ctrl.set_work_mode.assert_called_once_with('SelfUse', dry_run=False, force=0)
+
+
+@patch('src.optimization.battery_control.FoxEssControl')
+def test_execute_plan_dry_run_does_not_read_or_write_fox(_fox):
+    rule = ChargeTonightCloudyRule(
+        triggered=True,
+        soc_percent=10.0,
+        tomorrow_pv_kwh=6.0,
+        soc_below=40.0,
+        weak_pv_below=12.0,
+        recommendation='ŁADUJ OD 22:00 (B2 T+PV)',
+        title='',
+        body='',
+        target_soc_percent=95.0,
+        fc_minutes=51.0,
+    )
+    plan = build_plan(_advice_evening(as_of=datetime(2026, 11, 3, 22, 0), rule=rule))
+    ctrl = _fox.return_value
+    ctrl.set_work_schedule.return_value = {'dry_run': True, 'action': 'set_work_schedule'}
+    execute_plan(plan, controller=ctrl, dry_run=True)
+    ctrl.read_state.assert_not_called()
+    ctrl.set_force_charge_windows.assert_not_called()
+    ctrl.set_work_mode.assert_not_called()
+    _groups, kwargs = _schedule_call(ctrl)
+    assert kwargs['dry_run'] is True
+    assert kwargs['enable'] is True
 
 
 def test_detect_outage_last_night_operational_error(tmp_path):
