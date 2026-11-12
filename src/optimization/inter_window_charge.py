@@ -254,10 +254,10 @@ def compute_inter_window_charge_plan(
             skip_reason='pv_covers_or_wear',
         )
 
-    from src.optimization.battery_advisor import fc_minutes_for_delta_soc
+    from src.optimization.battery_advisor import fc_apply_minutes_for_delta_soc
 
     delta = max(0.0, target_soc - float(soc_percent))
-    minutes = fc_minutes_for_delta_soc(delta)
+    minutes = fc_apply_minutes_for_delta_soc(delta)
     stop_at: datetime | None = None
     if context == 'morning':
         stop = as_of.replace(hour=6, minute=0, second=0, microsecond=0)

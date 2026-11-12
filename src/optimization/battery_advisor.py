@@ -443,6 +443,16 @@ def fc_minutes_for_delta_soc(delta_soc: float) -> float:
     return round(max(0.0, delta_soc) * minutes_30 / per_30, 1)
 
 
+def fc_undershoot_margin_pp() -> float:
+    """Case 12.11 @4:00: cel 70%, fakt 64% — ramp 5 kW + load w trakcie FC."""
+    return float(os.getenv('BATTERY_FC_UNDERSHOOT_MARGIN_PP', '6'))
+
+
+def fc_apply_minutes_for_delta_soc(delta_soc: float) -> float:
+    """Timer na falownik: teoretyczny ΔSoC + margines niedoszłości (domyślnie +6 pp)."""
+    return fc_minutes_for_delta_soc(max(0.0, delta_soc) + fc_undershoot_margin_pp())
+
+
 def estimate_expensive_load_kwh(t_mean_c: float) -> float:
     intercept = float(os.getenv('BATTERY_LOAD_EXP_INTERCEPT_KWH', str(LOAD_EXP_INTERCEPT_KWH)))
     slope = float(os.getenv('BATTERY_LOAD_EXP_SLOPE_PER_C', str(LOAD_EXP_SLOPE_PER_C)))
@@ -1214,6 +1224,63 @@ def get_day_mean_temp_c(
               AND temperature_celsius IS NOT NULL
             ''',
             (target_day,),
+        ).fetchone()
+        conn.close()
+        if row and row[0] is not None:
+            return round(float(row[0]), 1)
+        return None
+    except Exception:
+        return None
+
+
+def get_night_mean_temp_c(
+    as_of: datetime,
+    *,
+    db_path: str | None = None,
+) -> float | None:
+    """Tśr nocy 22:00–06:00 z weather_data (Open-Meteo archive, potem forecast).
+
+    Okno: dzień roboczy G12w — od 22:00 dnia poprzedniego do 6:00 ``as_of``.
+    Preferuje ``OpenMeteo-archive``, żeby nie uśredniać duplikatów ensemble.
+    """
+    db_path = db_path or _db_path()
+    if not os.path.exists(db_path):
+        return None
+    night_start = as_of.replace(hour=22, minute=0, second=0, microsecond=0)
+    if as_of.hour < 22:
+        night_start -= timedelta(days=1)
+    night_end = night_start + timedelta(hours=8)
+    start_s = night_start.strftime('%Y-%m-%d %H:%M:%S')
+    end_s = night_end.strftime('%Y-%m-%d %H:%M:%S')
+    sources = (
+        'OpenMeteo-archive',
+        'OpenMeteo-forecast',
+        'OpenMeteo-forecast-ensemble-icon_seamless+ukmo_seamless',
+    )
+    try:
+        conn = sqlite3.connect(db_path)
+        for source in sources:
+            row = conn.execute(
+                '''
+                SELECT AVG(temperature_celsius)
+                FROM weather_data
+                WHERE timestamp >= ? AND timestamp < ?
+                  AND temperature_celsius IS NOT NULL
+                  AND data_source = ?
+                ''',
+                (start_s, end_s, source),
+            ).fetchone()
+            if row and row[0] is not None:
+                conn.close()
+                return round(float(row[0]), 1)
+        row = conn.execute(
+            '''
+            SELECT AVG(temperature_celsius)
+            FROM weather_data
+            WHERE timestamp >= ? AND timestamp < ?
+              AND temperature_celsius IS NOT NULL
+            ''',
+            (start_s, end_s),
         ).fetchone()
         conn.close()
         if row and row[0] is not None:

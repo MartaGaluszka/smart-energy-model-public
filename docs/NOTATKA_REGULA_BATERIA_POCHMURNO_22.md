@@ -43,7 +43,7 @@ Bez T: PV < 12 kWh → 90%, inaczej **70%**.
 Dwa ładowania nocy (zima, także niedziela → poniedziałek):
 
 - **22:00** — duże PV (≥ 12 kWh): tylko okno 22–01, cel ~70%, stop po wyliczonych minutach. Słaby dzień: okna 22–01 i 04–06, cel 95% (albo 80–90%).
-- **4:00** — słaby dzień: drugie ładowanie do ~90%, gdy SoC spadł poniżej progu. Duży dach i SoC już ≥ ~70% (świeży odczyt): SelfUse i okna wyłączone. Duży dach, ale SoC poniżej ~70% (22:00 nie ruszyło): dobij tylko do ~70% oknem 04–06.
+- **4:00** — słaby dzień: drugie ładowanie do ~90%, gdy SoC spadł poniżej progu. Duży dach i SoC już ≥ celu (świeży odczyt): SelfUse i okna wyłączone. Duży dach, Tnoc ≥ **10°C**: dobij do ~70% oknem 04–06. **Tnoc < 10°C** (Open-Meteo archive 22–6): +**2,5 pp / °C** (`BATTERY_MORNING_HEAT_PP_PER_C`), sufit **95%**. Case **12.11**: Tnoc **~4°C** → **85%** — 70% skończyło się na ~10% zanim PV pokrył load (~5 kWh z baterii, import domu ~0,5 kWh). Brak T + ZIMNO → fallback **85%**.
 - SoC starszy niż ~45 min nie może zgasić ForceCharge. Taka decyzja („już pełna”) wymaga świeżego odczytu.
 
 **Lato (do ~14.09) — po 25–26.08:**
@@ -76,6 +76,10 @@ TO
 | `BATTERY_MORNING_TOWEL_HEATER_KWH` | **0,75** | szacunek **grzejnik łazienka** całą noc (**12→13.10**); kalendarz `grzejnik_lazienka` |
 | `BATTERY_MORNING_SOC_FLOOR` | **80** | **@~4:00** (launchd **4:00**): poniżej → top-up w oknie Fox **04–06** (G12w tanio) |
 | `BATTERY_MORNING_TOPUP_TARGET` | **90** | cel SoC po porannym FC (ΔSoC × 30 min / 50 pp, stop przed 6:00) |
+| `BATTERY_MORNING_SUNNY_RESERVE_SOC` | **85** | fallback @4:00 gdy **brak T nocy** + ZIMNO (równe Tnoc **4°C**) |
+| `BATTERY_MORNING_HEAT_T_REF_C` | **10** | powyżej — bez extra SoC (ogrzewanie off) |
+| `BATTERY_MORNING_HEAT_PP_PER_C` | **2,5** | pp SoC / °C poniżej T_ref; **12.11** Tnoc **4°C** → **85%** |
+| `BATTERY_MORNING_SUNNY_TARGET_MAX` | **95** | sufit celu przy dużym dachu (mróz) |
 | `BATTERY_MORNING_CLOUDY_PV_KWH` | **12** | suma PV doby &lt; próg → „słabe PV” (razem z &lt;8 kWh rano 5–12h) |
 
 ### Lekcja 12→13.10 — „miało starczyć” przy 50%@22
@@ -94,7 +98,8 @@ Kalendarz / pomiary: [`PROJEKT_APLIKACJA_MOBILNA.md`](PROJEKT_APLIKACJA_MOBILNA.
 | `BATTERY_SUMMER_TOMORROW_MAX_KWH` | **10** | jutro do 10 kWh = nadal lato |
 | `BATTERY_B2_PV_SKIP_KWH` | **12** | dach pokrywa szczyt (jesień/łagodna zima) |
 | `BATTERY_B2_MILD_WEAK_PV_KWH` | **8** | T ≥ 5°C, słaby dach → cel 80% |
-| `BATTERY_FC_MINUTES_PER_50_SOC` | **30** | 30 min ≈ +50 pp |
+| `BATTERY_FC_MINUTES_PER_50_SOC` | **30** | 30 min ≈ +50 pp (wzór teoretyczny) |
+| `BATTERY_FC_UNDERSHOOT_MARGIN_PP` | **6** | extra ΔSoC w **timerze** FC (case **12.11**: cel 70%, fakt **64%**) |
 | `BATTERY_FC_MIN_WORTH_KWH` | **2** | poniżej — nie warto vs cykl |
 | `BATTERY_FC_MIN_DELTA_SOC` | **15** | poniżej — za krótki impuls |
 | `BATTERY_TARIFF_SPREAD_PLN_PER_KWH` | **0,36** | G12w droga−tania (szacunek) |

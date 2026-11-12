@@ -4,6 +4,7 @@ from datetime import datetime
 
 from src.optimization.battery_advisor import (
     evaluate_charge_tonight_cloudy,
+    fc_apply_minutes_for_delta_soc,
     fc_minutes_for_delta_soc,
     winter_night_target_soc,
 )
@@ -17,6 +18,9 @@ def test_thirty_min_is_fifty_percent():
     assert fc_minutes_for_delta_soc(50) == 30
     assert fc_minutes_for_delta_soc(25) == 15
     assert fc_minutes_for_delta_soc(0) == 0
+    # Case 12.11: 26% → 70% bez marginesu 26,4 min i stop na 64%. +6 pp → 30 min.
+    assert fc_minutes_for_delta_soc(44) == 26.4
+    assert fc_apply_minutes_for_delta_soc(44) == 30.0
 
 
 def test_winter_target_table():

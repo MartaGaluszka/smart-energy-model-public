@@ -138,6 +138,60 @@ def morning_topup_min_delta_soc() -> float:
     return _env_float('BATTERY_MORNING_TOPUP_MIN_DELTA', 5.0)
 
 
+def morning_sunny_reserve_soc() -> float:
+    """Fallback @4:00 gdy brak T nocy i ZIMNO/AWARIA (kalibracja 12.11 ≈ 4°C → 85%)."""
+    return _env_float('BATTERY_MORNING_SUNNY_RESERVE_SOC', 85.0)
+
+
+def morning_heat_t_ref_c() -> float:
+    """Powyżej tej Tnoc ogrzewanie nie dolicza SoC ponad headroom 70%."""
+    return _env_float('BATTERY_MORNING_HEAT_T_REF_C', 10.0)
+
+
+def morning_heat_pp_per_c() -> float:
+    """pp SoC na 1°C poniżej T_ref. Case 12.11: Tnoc 4°C → +15 pp → 85%."""
+    return _env_float('BATTERY_MORNING_HEAT_PP_PER_C', 2.5)
+
+
+def morning_sunny_target_max_soc() -> float:
+    return _env_float('BATTERY_MORNING_SUNNY_TARGET_MAX', 95.0)
+
+
+def sunny_morning_target_soc_for_temp(
+    night_temp_c: float | None,
+    *,
+    zimno: bool = False,
+) -> float:
+    """Cel SoC @4:00 przy dużym dachu — zależy od T nocy (Open-Meteo).
+
+    T ≥ 10°C → 70%. Każdy °C poniżej +2,5 pp (12.11: 4°C → 85%). Sufit 95%.
+    Brak T: ZIMNO/AWARIA → 85%, inaczej 70%.
+    """
+    from src.optimization.battery_advisor import sunny_night_soc
+
+    headroom = sunny_night_soc()
+    if night_temp_c is None:
+        return morning_sunny_reserve_soc() if zimno else headroom
+    extra = max(0.0, (morning_heat_t_ref_c() - float(night_temp_c)) * morning_heat_pp_per_c())
+    return round(min(morning_sunny_target_max_soc(), max(headroom, headroom + extra)), 1)
+
+
+def _morning_reserve_recommendation(advice: BatteryAdvice) -> bool:
+    rec = advice.recommendation or ''
+    return rec.startswith('ZIMNO') or rec.startswith('AWARIA')
+
+
+def _sunny_morning_target_soc(advice: BatteryAdvice) -> float:
+    """Cel poranny przy dużym dachu: Tnoc × pp/°C, nie stałe 70/85."""
+    from src.optimization.battery_advisor import get_night_mean_temp_c
+
+    night_t = get_night_mean_temp_c(advice.as_of)
+    return sunny_morning_target_soc_for_temp(
+        night_t,
+        zimno=_morning_reserve_recommendation(advice),
+    )
+
+
 @dataclass
 class MorningTopupPlan:
     target_soc: float
@@ -196,17 +250,24 @@ def _topup_from_inter_window(advice: BatteryAdvice) -> MorningTopupPlan | None:
 
 
 def _headroom_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
-    """Słoneczny poranek, SoC poniżej ~70%: drugie ładowanie nocy, nie pełnienie pod eksport."""
-    from src.optimization.battery_advisor import fc_minutes_for_delta_soc, sunny_night_soc
+    """Słoneczny poranek, SoC poniżej celu: drugie ładowanie nocy, nie pełnienie pod eksport.
+
+    Cel rośnie gdy noc jest zimna (Tnoc vs 10°C). Case 12.11: Tnoc ~4°C, 70% → SoC 10%
+    zanim PV pokrył load (~5 kWh z baterii).
+    """
+    from src.optimization.battery_advisor import fc_apply_minutes_for_delta_soc
 
     soc = advice.snapshot.soc_percent if advice.snapshot else None
     if soc is None:
         return None
-    target = sunny_night_soc()
+    # Ślepy SoC (np. 76% sprzed 3–10 h) nie wolno traktować jako bazy do dobicia headroom/rezerwy.
+    if not _snapshot_fresh(advice):
+        return None
+    target = _sunny_morning_target_soc(advice)
     delta = target - soc
     if delta < morning_topup_min_delta_soc():
         return None
-    minutes = fc_minutes_for_delta_soc(delta)
+    minutes = fc_apply_minutes_for_delta_soc(delta)
     cheap_end = planned_morning_stop_at(advice.as_of)
     max_minutes = max(0.0, (cheap_end - advice.as_of).total_seconds() / 60.0)
     minutes = min(minutes, max_minutes)
@@ -238,9 +299,9 @@ def compute_morning_topup(advice: BatteryAdvice) -> MorningTopupPlan | None:
     delta = max(0.0, target - soc)
     if delta < morning_topup_min_delta_soc():
         return None
-    from src.optimization.battery_advisor import fc_minutes_for_delta_soc
+    from src.optimization.battery_advisor import fc_apply_minutes_for_delta_soc
 
-    minutes = fc_minutes_for_delta_soc(delta)
+    minutes = fc_apply_minutes_for_delta_soc(delta)
     cheap_end = planned_morning_stop_at(advice.as_of)
     max_minutes = max(0.0, (cheap_end - advice.as_of).total_seconds() / 60.0)
     minutes = min(minutes, max_minutes)
@@ -414,9 +475,19 @@ def validate_apply_request(
 
 def planned_stop_at(advice: BatteryAdvice) -> datetime | None:
     rule = advice.charge_tonight
-    if not rule or not rule.triggered or not rule.fc_minutes:
+    if not rule or not rule.triggered:
         return None
-    return advice.as_of + timedelta(minutes=float(rule.fc_minutes))
+    from src.optimization.battery_advisor import fc_apply_minutes_for_delta_soc
+
+    soc = advice.snapshot.soc_percent if advice.snapshot else None
+    target = rule.target_soc_percent
+    if soc is not None and target is not None:
+        minutes = fc_apply_minutes_for_delta_soc(target - soc)
+    elif rule.fc_minutes:
+        minutes = float(rule.fc_minutes)
+    else:
+        return None
+    return advice.as_of + timedelta(minutes=minutes)
 
 
 def _session_path() -> str:
@@ -651,12 +722,18 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
             actions.append(ControlAction('noop', 'Tryb letni — bez automatycznego ForceCharge.'))
         elif topup and advice.as_of.hour < 6:
             soc_txt = f'{soc:.0f}%' if soc is not None else '?'
-            from src.optimization.battery_advisor import sunny_night_soc
-
-            if abs(topup.target_soc - sunny_night_soc()) < 0.05:
+            iw_on = bool(advice.inter_window and advice.inter_window.triggered)
+            if not _morning_pv_weak(advice) and not iw_on:
                 fc1 = _disabled_window()
                 fc2 = ForceChargeWindow(enabled=True, start_hour=4.0, end_hour=6.0)
-                window_label = 'Poranny dobij do ~70% @4:00: tylko okno 04–06 (duży dach).'
+                from src.optimization.battery_advisor import get_night_mean_temp_c
+
+                night_t = get_night_mean_temp_c(advice.as_of)
+                t_txt = f'Tnoc {night_t:.0f}°C, ' if night_t is not None else ''
+                window_label = (
+                    f'Poranny dobij do ~{topup.target_soc:.0f}% @4:00 ({t_txt}duży dach): '
+                    'tylko okno 04–06.'
+                )
             else:
                 fc1, fc2 = g12w_force_charge_windows(enabled=True)
                 window_label = 'Poranny top-up @~4:00: Fox okna 22–01 + 04–06 (G12w tanio).'
@@ -680,7 +757,7 @@ def build_plan(advice: BatteryAdvice, *, state: BatteryControlState | None = Non
             and not _morning_pv_weak(advice)
             and _snapshot_fresh(advice)
             and soc is not None
-            and soc >= _env_float('BATTERY_SUNNY_NIGHT_SOC', 70.0)
+            and soc >= _sunny_morning_target_soc(advice)
         ):
             actions.append(ControlAction(
                 'set_work_mode',

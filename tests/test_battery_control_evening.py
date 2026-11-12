@@ -12,6 +12,7 @@ from src.optimization.battery_advisor import (
     ChargeTonightCloudyRule,
     PvOutlook,
     advise,
+    get_night_mean_temp_c,
 )
 from src.optimization.battery_advisor import format_advice
 from src.data.foxess_control import BatteryControlState, ForceChargeWindow
@@ -28,7 +29,9 @@ from src.optimization.battery_control import (
     g12w_force_charge_windows,
     morning_cloudy_apply_trigger,
     morning_soc_floor,
+    morning_sunny_reserve_soc,
     morning_topup_target_soc,
+    sunny_morning_target_soc_for_temp,
     stop_fox_quota_status,
     format_plan,
     work_mode_is_force_charge,
@@ -597,8 +600,41 @@ def test_morning_stale_high_soc_does_not_fill_on_sunny_day():
     assert not any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
 
 
-def test_morning_sunny_low_soc_tops_up_only_to_headroom():
-    """Duży dach i SoC 10% o 4:00 — dobij do ~70%, nie gaś ładowania i nie idź do 90%."""
+def test_get_night_mean_temp_c_prefers_archive(tmp_path):
+    db = tmp_path / 'weather.db'
+    import sqlite3
+
+    conn = sqlite3.connect(db)
+    conn.execute(
+        'CREATE TABLE weather_data (timestamp TEXT, temperature_celsius REAL, data_source TEXT)'
+    )
+    conn.executemany(
+        'INSERT INTO weather_data VALUES (?,?,?)',
+        [
+            ('2026-11-11 22:00:00', 4.0, 'OpenMeteo-archive'),
+            ('2026-11-12 00:00:00', 3.9, 'OpenMeteo-archive'),
+            ('2026-11-12 05:00:00', 4.1, 'OpenMeteo-archive'),
+            ('2026-11-11 22:00:00', 9.0, 'OpenMeteo-forecast'),
+        ],
+    )
+    conn.commit()
+    conn.close()
+    assert get_night_mean_temp_c(datetime(2026, 11, 12, 4, 0), db_path=str(db)) == 4.0
+
+
+def test_sunny_morning_target_soc_scales_with_night_temp():
+    """Kalibracja 12.11: Tnoc 4°C → 85%. Cieplej mniej, mróz — sufit 95%."""
+    assert sunny_morning_target_soc_for_temp(12.0) == 70.0
+    assert sunny_morning_target_soc_for_temp(10.0) == 70.0
+    assert sunny_morning_target_soc_for_temp(4.0) == 85.0
+    assert sunny_morning_target_soc_for_temp(0.0) == 95.0
+    assert sunny_morning_target_soc_for_temp(-5.0) == 95.0
+    assert sunny_morning_target_soc_for_temp(None, zimno=True) == morning_sunny_reserve_soc()
+    assert sunny_morning_target_soc_for_temp(None, zimno=False) == 70.0
+
+
+def test_morning_sunny_zimno_tops_up_to_reserve_not_70():
+    """Case 12.11: Tnoc 4°C + duży dach — dobij do ~85%, nie 70% i nie 90%."""
     advice = _advice_morning(
         as_of=datetime(2026, 11, 9, 4, 0),
         recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
@@ -611,15 +647,117 @@ def test_morning_sunny_low_soc_tops_up_only_to_headroom():
     ), patch(
         'src.optimization.battery_control._accu_regime_for_day',
         return_value='jasny',
+    ), patch(
+        'src.optimization.battery_advisor.get_night_mean_temp_c',
+        return_value=4.0,
+    ):
+        topup = compute_morning_topup(advice)
+        plan = build_plan(advice)
+    assert topup is not None
+    assert topup.target_soc == 85.0
+    assert topup.target_soc != 70.0
+    assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
+    windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
+    assert windows.params['period1'].enabled is False
+    assert windows.params['period2'].enabled is True
+
+
+def test_morning_sunny_low_soc_without_zimno_tops_up_to_70():
+    """Duży dach, Tnoc ≥ 10°C — headroom ~70% nawet bez ZIMNO."""
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 9, 4, 0),
+        recommendation='SOC OK — POMIŃ FORCE CHARGE',
+        morning_pv=6.0,
+    )
+    advice.snapshot = BatterySnapshot('2026-11-09T03:55:00', 10.0, None, None, None, 0.1)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=15.5,
+    ), patch(
+        'src.optimization.battery_control._accu_regime_for_day',
+        return_value='jasny',
+    ), patch(
+        'src.optimization.battery_advisor.get_night_mean_temp_c',
+        return_value=12.0,
     ):
         topup = compute_morning_topup(advice)
         plan = build_plan(advice)
     assert topup is not None
     assert topup.target_soc == 70.0
     assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
-    windows = next(a for a in plan.actions if a.kind == 'set_force_charge_windows')
-    assert windows.params['period1'].enabled is False
-    assert windows.params['period2'].enabled is True
+
+
+def test_morning_zimno_at_70_still_tops_up_on_sunny_day():
+    """72% przy Tnoc 4°C nie gasi FC — cel ~85%."""
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 12, 4, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=6.0,
+    )
+    advice.snapshot = BatterySnapshot('2026-11-12T03:55:00', 72.0, None, None, None, 0.1)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=15.5,
+    ), patch(
+        'src.optimization.battery_control._accu_regime_for_day',
+        return_value='jasny',
+    ), patch(
+        'src.optimization.battery_advisor.get_night_mean_temp_c',
+        return_value=4.0,
+    ):
+        topup = compute_morning_topup(advice)
+        plan = build_plan(advice)
+    assert topup is not None
+    assert topup.target_soc == 85.0
+    assert any(a.params.get('mode') == 'ForceCharge' for a in plan.actions if a.kind == 'set_work_mode')
+
+
+def test_morning_fc_timer_adds_undershoot_margin_for_70_target():
+    """12.11: 26% → 70% ma iść 30 min (44+6 pp), nie 26,4 min które skończyły na 64%."""
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 12, 4, 0),
+        recommendation='SOC OK — POMIŃ FORCE CHARGE',
+        morning_pv=6.0,
+    )
+    advice.snapshot = BatterySnapshot('2026-11-12T03:55:00', 26.0, None, None, None, 0.1)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=15.5,
+    ), patch(
+        'src.optimization.battery_control._accu_regime_for_day',
+        return_value='jasny',
+    ), patch(
+        'src.optimization.battery_advisor.get_night_mean_temp_c',
+        return_value=12.0,
+    ):
+        topup = compute_morning_topup(advice)
+    assert topup is not None
+    assert topup.target_soc == 70.0
+    assert topup.fc_minutes == 30.0
+    assert topup.stop_at == datetime(2026, 11, 12, 4, 30)
+
+
+def test_morning_mild_night_keeps_headroom_even_if_zimno():
+    """Tnoc 12°C: bez extra ogrzewania — 70%, nawet przy etykiecie ZIMNO."""
+    advice = _advice_morning(
+        as_of=datetime(2026, 11, 12, 4, 0),
+        recommendation='ZIMNO + WYSOKI LOAD — REZERWA',
+        morning_pv=6.0,
+    )
+    advice.snapshot = BatterySnapshot('2026-11-12T03:55:00', 10.0, None, None, None, 0.1)
+    with patch(
+        'src.optimization.battery_advisor.get_day_pv_forecast_sum',
+        return_value=15.5,
+    ), patch(
+        'src.optimization.battery_control._accu_regime_for_day',
+        return_value='jasny',
+    ), patch(
+        'src.optimization.battery_advisor.get_night_mean_temp_c',
+        return_value=12.0,
+    ):
+        topup = compute_morning_topup(advice)
+    assert topup is not None
+    assert topup.target_soc == 70.0
 
 
 def test_morning_cloudy_low_soc_tops_up_to_90_not_70():
@@ -677,6 +815,9 @@ def test_morning_sunny_apply_releases_windows_without_force_charge():
     with patch(
         'src.optimization.battery_advisor.get_day_pv_forecast_sum',
         return_value=20.0,
+    ), patch(
+        'src.optimization.battery_advisor.get_night_mean_temp_c',
+        return_value=12.0,
     ):
         assert morning_cloudy_apply_trigger(advice) is True
         plan = build_plan(advice)
@@ -726,8 +867,9 @@ def test_morning_topup_half_battery_to_ninety_at_0400():
         topup = compute_morning_topup(advice)
     assert topup is not None
     assert topup.target_soc == morning_topup_target_soc()
-    assert topup.fc_minutes == 24.0
-    assert topup.stop_at == datetime(2026, 11, 3, 4, 24)
+    # 90−50 = 40 pp + 6 pp margines niedoszłości → 27,6 min (case 12.11).
+    assert topup.fc_minutes == 27.6
+    assert topup.stop_at == datetime(2026, 11, 3, 4, 27, 36)
 
 
 def test_build_plan_morning_rezerwa_starts_force_charge():
