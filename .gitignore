@@ -1,0 +1,8 @@
+.env
+data/
+reports/
+venv/
+__pycache__/
+node_modules/
+*.joblib
+.DS_Store
